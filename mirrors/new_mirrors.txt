@@ -1,0 +1,15 @@
+AlienBOB https://slackware.uk/people/alien/sbrepos/
+AlienBOB https://slackware.nl/people/alien/sbrepos/
+AlienBOB-Multilib https://slackware.uk/people/alien/multilib/
+AlienBOB-Multilib https://slackware.nl/people/alien/multilib/
+AlienBOB-Restricted https://slackware.uk/people/alien/restricted_sbrepos/
+AlienBOB-Restricted https://slackware.nl/people/alien/restricted_sbrepos/
+Cinnamon https://slackware.uk/csb/
+Mate https://slackware.uk/msb/
+Slackel https://slackware.uk/slackel/
+Salix https://slackware.uk/salix/
+SlackDCE https://slackware.halpanet.org/slackdce/packages/
+SlackPack https://ftp.sotirov-bg.net/pub/contrib/slackware/packages/
+Slackers https://slackers.it/repository/
+Ponce https://ponce.cc/slackware/
+Slint https://slackware.uk/slint/

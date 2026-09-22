@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <filter id="shadow" x="0" y="0" width="48" height="48" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Estrela de 8 pontas (Star Burst) -->
+  <path d="M 24 3 
+           L 29 12 
+           L 38.85 9.15 
+           L 36 19 
+           L 45 24 
+           L 36 29 
+           L 38.85 38.85 
+           L 29 36 
+           L 24 45 
+           L 19 36 
+           L 9.15 38.85 
+           L 12 29 
+           L 3 24 
+           L 12 19 
+           L 9.15 9.15 
+           L 19 12 Z" 
+        fill="#F8931F" 
+        stroke="#C84800" 
+        stroke-width="1.5" 
+        stroke-linejoin="round"
+        filter="url(#shadow)" />
+
+  <!-- Seta para baixo -->
+  <path d="M 20 18.5 C 20 17.67 20.67 17 21.5 17 H 26.5 C 27.33 17 28 17.67 28 18.5 V 23.5 H 32 C 32.8 23.5 33.2 24.47 32.65 25.05 L 24.65 32.25 C 24.28 32.58 23.72 32.58 23.35 32.25 L 15.35 25.05 C 14.8 24.47 15.2 23.5 16 23.5 H 20 Z" 
+        fill="#FFE4B8" />
+</svg>

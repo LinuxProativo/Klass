@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# Slackware SlackBuild script for klass
+#
+# Copyright 2026 mxnt <m10ferrari1200@gmail.com>
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ''AS IS'' AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+# EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES FROM OUT OF OR IN CONNECTION
+# WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+[ "$UID" != "0" ] && echo "run as root" && exit
+
+cd $(dirname $0) ; CWD=$(pwd)
+SRC_DIR="$(cd $CWD/.. && pwd)"
+
+PRGNAM=klass
+
+if [ -z "$VERSION" ] && [ -f "$SRC_DIR/src/Version.hpp" ]; then
+  VERSION=$(grep -i "VERSION" "$SRC_DIR/src/Version.hpp" | sed -n 's/.*"\([^"]*\)".*/\1/p' | head -n1)
+fi
+
+BUILD=${BUILD:-1}
+TAG=${TAG:-_mxnt}
+PKGTYPE=${PKGTYPE:-txz}
+
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    i?86) ARCH=i686 ;;
+       *) ARCH=$(uname -m) ;;
+  esac
+fi
+
+TMP=${TMP:-/tmp/mxnt}
+PKG=$TMP/package-$PRGNAM
+OUTPUT=${OUTPUT:-/tmp}
+
+rm -rf $PKG $TMP/$PRGNAM-$VERSION
+mkdir -p $TMP $PKG $OUTPUT $TMP/$PRGNAM-$VERSION
+
+cp -a \
+  $SRC_DIR/src \
+  $SRC_DIR/icons \
+  $SRC_DIR/mirrors \
+  $SRC_DIR/lang \
+  $SRC_DIR/CMakeLists.txt \
+  $SRC_DIR/klass.{desktop,png} $TMP/$PRGNAM-$VERSION
+cd $TMP/$PRGNAM-$VERSION
+
+chown -R root:root .
+find . \
+  \( -perm 777 -o -perm 775 -o -perm 711 -o -perm 555 -o -perm 511 \) \
+  -exec chmod 755 {} \; -o \
+  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 400 \) \
+  -exec chmod 644 {} \;
+
+mkdir -p build
+cd build
+  cmake -DCMAKE_BUILD_TYPE=Release ..
+  make -j$(($(nproc) + 1))
+  make install DESTDIR=$PKG
+cd ..
+
+find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
+
+mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
+cp -a $SRC_DIR/LICENSE $SRC_DIR/ChangeLog $PKG/usr/doc/$PRGNAM-$VERSION/
+cp -a $CWD/$PRGNAM.SlackBuild $PKG/usr/doc/$PRGNAM-$VERSION/
+
+mkdir -p $PKG/install
+cat $CWD/slack-desc > $PKG/install/slack-desc
+cat $CWD/slack-required > $PKG/install/slack-required
+cat $CWD/doinst.sh > $PKG/install/doinst.sh
+
+cd $PKG
+/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
+/sbin/upgradepkg --install-new --reinstall $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE

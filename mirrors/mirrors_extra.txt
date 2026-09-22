@@ -1,0 +1,3 @@
+ZenWalk https://slackware.uk/zenwalk/x86_64/current/zenwalk/
+Slack-a-Roni https://slackware.lngn.net/pub/x86_64/slackware64-current/
+Slack-a-Roni https://slackware.lngn.net/pub/aarch64/slackwareaarch64-current/

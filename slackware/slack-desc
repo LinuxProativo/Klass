@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+     |-----handy-ruler------------------------------------------------------|
+klass: klass (Qt package manager for Slackware)
+klass:
+klass: Klass (SlacKware cLASSification Package Manager) is a graphical
+klass: package manager developed in modern C++ using Qt.
+klass:
+klass: It simplifies package management on Slackware, reduces the risk
+klass: of breaking the system, and helps maintain a minimalist setup
+klass: by giving users greater control over installed packages.
+klass:
+klass: Homepage: https://github.com/LinuxProativo/klass
+klass:

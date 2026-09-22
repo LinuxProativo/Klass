@@ -1,0 +1,7 @@
+#ifndef VERSION_HPP
+#define VERSION_HPP
+
+@DEBUG@
+#define VERSION "@VERSION@"
+
+#endif

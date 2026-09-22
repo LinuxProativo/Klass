@@ -1,0 +1,9 @@
+#!/bin/bash
+
+TS_FILE="klass_pt_BR.ts"
+
+echo "Buscando arquivos para tradução..."
+lupdate-qt6 -recursive ../src -ts $TS_FILE
+
+[ $? -eq 0 ] && echo "Sucesso! Arquivo $TS_FILE gerado/atualizado." && exit
+echo "Erro ao gerar o arquivo de tradução. Verifique se o 'lupdate' está instalado."

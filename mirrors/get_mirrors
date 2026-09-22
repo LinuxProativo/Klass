@@ -1,0 +1,154 @@
+#!/bin/bash
+
+MIRRORS_FILE="new_mirrors.txt"
+EXTRAS_FILE="mirrors_extra.txt"
+OUTPUT_FILE="valid_mirrors.txt"
+VERSIONS=("15.0" "current")
+EXTRAS=("extra-15.0" "slint-15.0")
+IS_LATEST=("msb")
+IS_PACKAGE=("ponce")
+NEW_PATTERN_REPOS=("Ponce" "Slackers" "SlackPack")
+VALID_ARCHS="x86|x86_64|armv7hl|i486|i586|i686|noarch"
+TIMEOUT=12
+
+> "$OUTPUT_FILE"
+
+get_dirs() {
+    local url="$1"
+    curl -s --connect-timeout $TIMEOUT "$url" | \
+    grep -oE 'href="[^"]+/"' | \
+    sed 's/href="//;s/"//' | \
+    grep -vE '^\.\./|http|html|people|Donate|Slackware|favicon|csb|slkbuild' | \
+    grep -E "$VALID_ARCHS" | \
+    sort -u
+}
+
+get_dirs2() {
+    curl -s --connect-timeout $TIMEOUT "$1" | \
+    grep -oE 'href="[^"]+/"' | \
+    sed 's/href="//;s/"//' | sed 's|^\./||' | \
+    grep -vE '^\.\./|http|html|people|Donate|Slackware|favicon' | \
+    grep -E '15\.0|current' | \
+    sort -u
+}
+
+is_valid_repo() {
+    echo "Validate $1"
+    local url="$1"
+    local status=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout $TIMEOUT "${url}GPG-KEY")
+    echo "$status" != "404"
+    [[ "$status" != "404" ]]
+}
+
+check_new_pattern() {
+    local url="$1"
+    for item in "${NEW_PATTERN_REPOS[@]}"; do
+        if [[ "$url" == *"$item"* ]]; then return 0; fi
+    done
+    return 1
+}
+
+check_is_latest() {
+    local url="$1"
+    for item in "${IS_LATEST[@]}"; do
+        if [[ "$url" == *"$item"* ]]; then return 0; fi
+    done
+    return 1
+}
+
+check_is_package() {
+    local url="$1"
+    for item in "${IS_PACKAGE[@]}"; do
+        if [[ "$url" == *"$item"* ]]; then return 0; fi
+    done
+    return 1
+}
+
+while IFS=' ' read -r BASE_NAME mirror || [ -n "$BASE_NAME" ]; do
+    [[ -z "$BASE_NAME" || "$BASE_NAME" =~ ^# ]] && continue
+    echo "[*] Analisando: $BASE_NAME ($mirror)"
+
+    if [[ "${NEW_PATTERN_REPOS[*]}" =~ "$BASE_NAME" ]]; then
+        get_dirs2 "${mirror%/}/" | while read -r dir; do
+            if check_is_package "$mirror"; then
+                FULL_URL="${mirror%/}/${dir}packages/"
+            else
+                FULL_URL="${mirror%/}/${dir}"
+            fi
+            if is_valid_repo "$FULL_URL"; then
+                [[ "$FULL_URL" == *"extra"* ]] && suffix="-extra" || suffix=""
+                [[ "$FULL_URL" == *"testing"* ]] && suffix="-testing"
+                echo "${BASE_NAME}${suffix} : ${FULL_URL}" >> "$OUTPUT_FILE"
+            fi
+        done
+        continue
+    fi
+
+    if check_is_latest "$mirror"; then
+        for ver in "${VERSIONS[@]}"; do
+            URL_LATEST="${mirror%/}/$ver/latest/"
+            if [ "$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout $TIMEOUT "$URL_LATEST")" == "200" ]; then
+                get_dirs "$URL_LATEST" | while read -r arq; do
+                    FULL_URL="${URL_LATEST}${arq}"
+                    if is_valid_repo "$FULL_URL"; then
+                        [[ "$FULL_URL" == *"extra"* ]] && suffix="-extra" || suffix=""
+                        echo "${BASE_NAME}${suffix} : ${FULL_URL}" >> "$OUTPUT_FILE"
+                    fi
+                done
+            fi
+        done
+        continue
+    fi
+
+    FOUND_V_A=false
+    IS_MULTILIB=false
+
+    for ver in "${VERSIONS[@]}"; do
+        URL_VER="${mirror%/}/$ver/"
+        if [ "$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout $TIMEOUT "$URL_VER")" == "200" ]; then
+            if [[ "$URL_VER" == *"multilib"* ]]; then
+                if is_valid_repo "$URL_VER"; then
+                    [[ "$URL_VER" == *"extra"* ]] && suffix="-extra" || suffix=""
+                    echo "${BASE_NAME}${suffix} : ${URL_VER}" >> "$OUTPUT_FILE"
+                fi
+                IS_MULTILIB=true
+            else
+                get_dirs "$URL_VER" | while read -r arq; do
+                    FULL_URL="${URL_VER}${arq}"
+                    if is_valid_repo "$FULL_URL"; then
+                        [[ "$FULL_URL" == *"extra"* ]] && suffix="-extra" || suffix=""
+                        echo "${BASE_NAME}${suffix} : ${FULL_URL}" >> "$OUTPUT_FILE"
+                    fi
+                done
+            fi
+            FOUND_V_A=true
+        fi
+    done
+
+    if [ "$IS_MULTILIB" = false ] && [ "$FOUND_V_A" = false ]; then
+        get_dirs "${mirror%/}/" | while read -r arq; do
+            for ver in "${VERSIONS[@]}" "${EXTRAS[@]}"; do
+                URL_ARQ_VER="${mirror%/}/${arq}${ver}/"
+                if [ "$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout $TIMEOUT "$URL_ARQ_VER")" == "200" ]; then
+                    if is_valid_repo "$URL_ARQ_VER"; then
+                        [[ "$URL_ARQ_VER" == *"extra"* ]] && suffix="-extra" || suffix=""
+                        echo "${BASE_NAME}${suffix} : ${URL_ARQ_VER}" >> "$OUTPUT_FILE"
+                    fi
+                fi
+            done
+        done
+    fi
+done < "$MIRRORS_FILE"
+
+while IFS=' ' read -r BASE_NAME mirror || [ -n "$BASE_NAME" ]; do
+    [[ -z "$BASE_NAME" || "$BASE_NAME" =~ ^# ]] && continue
+    echo "[*] Testando disponibilidade de: $BASE_NAME ($mirror)"
+
+    if is_valid_repo "$URL_ARQ_VER"; then
+        echo "[+] Mirror válido! Enviando para o destino..."
+        echo "${BASE_NAME} : ${mirror%/}/" >> "$OUTPUT_FILE"
+    else
+        echo "[-] Erro ($status): $BASE_NAME está indisponível ou offline."
+    fi
+
+done < "$EXTRAS_FILE"

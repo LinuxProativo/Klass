@@ -1,0 +1,20 @@
+[Desktop Entry]
+Name=Klass
+Name[pt_BR]=Klass
+GenericName=Package Manager
+GenericName[pt_BR]=Gerenciador de Pacotes
+Comment=Graphical package manager for Slackware
+Comment[pt_BR]=Gerenciador de pacotes gráfico para o Slackware
+Exec=klass
+Icon=klass
+Terminal=false
+Type=Application
+Categories=System;PackageManager;Qt;
+StartupNotify=true
+Path=
+MimeType=
+TerminalOptions=
+X-DBUS-ServiceName=
+X-DBUS-StartupType=
+X-KDE-SubstituteUID=false
+X-KDE-Username=
