@@ -17,6 +17,8 @@
 
 ## 🔍 Visão Geral
 
+> VERSÃO BETA
+
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacotes gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
 Ele foi desenvolvido com o objetivo de facilitar o gerenciamento de pacotes no
@@ -174,6 +176,8 @@ $ chmox +x ./klass.SlackBuild
 $ sudo ./klass.SlackBuild 
 ```
 
+Essa versão do Slackbuild já faz a instalação e atualização do pacote no sistema.
+
 ## ⭐️ Experiência de usuário
 
 A interface, a arquitetura e o comportamento do programa é pensado em experiência de
@@ -190,7 +194,7 @@ usuário e redução de curva de aprendizagem. Dentre os principais:
 
 ## Comportamento e Configurações
 
-/usr/lib/klass ...
+/usr/lib/klass ... COMPLETAR
 
 ## 🛡️ Segurança do Helper
 
@@ -297,7 +301,7 @@ Segue as implementações para o futuro:
 
 ## Contrubuição
 
-...
+COMPLETAR
 
 ## 📬 Contato & Suporte
 
