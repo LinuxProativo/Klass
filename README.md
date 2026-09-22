@@ -24,6 +24,18 @@
 >
 > Ainda precisa de implementações no caso de precisar gerar um novo initrd e
 > demais opções em caso de necessidade.
+>
+> Ainda não há uma rotina pós-instalação no programa para capturar os arquivos.new
+> que o doinst.sh deixou para trás.
+>
+> Ajustes já mapeados para a próxima versão:
+> - atualização do grub
+> - rodar ldconfig
+> - detecção de arquivos .new
+> - operações de atualização de icone, desktop, etc, por garantia. 
+> - lidar com kernel generico
+> - tentativa de autoreinstalação de modulos dkms.
+> - melhorar a documentação do readme.
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacotes gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
@@ -290,6 +302,11 @@ Segue as implementações para o futuro:
   - Verificação de dependencias estimadas.
   - Integrador AppImage.
   - Plugin de configuração e instalação de drivers nvidia.
+  - Remoção de pacotes obsoletos oficiais. 
+
+A remoção de pacotes obsoletos vai ignorar por padrão pacotes de terceiros e só
+vai agir em pacotes sem tag e tags tipo _slack*. Para quem criar os próprios pacotes,
+adicionar essas tags resolvem remoções acidentais.
 
 > **INTEGRAÇÃO FLATPAK:**  
 > Só SSSSEEEEE eu tiver muita vontade, SSSSEEEEE eu achar que vai ser útil e vai valer
