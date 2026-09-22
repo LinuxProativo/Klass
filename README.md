@@ -17,7 +17,13 @@
 
 ## 🔍 Visão Geral
 
-> VERSÃO BETA
+> VERSÃO BETA - AVISOS
+>
+> AINDA não há verificações relacionadas ao uso de NVIDIA, VirtualBox e nem opções
+> de como proceder ao atualizar o kernel.
+>
+> Ainda precisa de implementações no caso de precisar gerar um novo initrd e
+> demais opções em caso de necessidade.
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacotes gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
