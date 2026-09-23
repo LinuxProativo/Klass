@@ -34,14 +34,14 @@ DownloadResult Utils::download(const QUrl &url, const QByteArray &range, const s
         request.setRawHeader("Range", range);
 
     QEventLoop loop;
-    QNetworkAccessManager nam;
+    static QNetworkAccessManager nam;
     QNetworkReply *reply = nam.get(request);
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
 
     QTimer timer;
     if (cancelCheck) {
         QObject::connect(&timer, &QTimer::timeout, [&] {
-            if (cancelCheck()) {
+            if (reply->isRunning() && cancelCheck()) {
                 reply->abort();
                 loop.quit();
             }
@@ -58,6 +58,8 @@ DownloadResult Utils::download(const QUrl &url, const QByteArray &range, const s
     if (result.error == QNetworkReply::NoError && result.statusCode >= 200 && result.statusCode < 300) {
         result.success = true;
         result.data = reply->readAll();
+    } else {
+        result.success = false;
     }
 
     reply->deleteLater();
@@ -136,15 +138,15 @@ void Utils::setAutostart(const bool enable) {
 
         QTextStream out(&file);
         out << "[Desktop Entry]\n"
-            << "Type=Application\n"
-            << "Name=Klass Package Manager\n"
-            << "Comment=Starts the Klass Package Manager in the background\n"
-            << "Exec=klass --autostart\n"
-            << "Icon=klass\n"
-            << "Terminal=false\n"
-            << "Categories=System;Utility;\n"
-            << "X-GNOME-Autostart-enabled=true\n"
-            << "X-KDE-autostart-after=panel\n";
+                << "Type=Application\n"
+                << "Name=Klass Package Manager\n"
+                << "Comment=Starts the Klass Package Manager in the background\n"
+                << "Exec=klass --autostart\n"
+                << "Icon=klass\n"
+                << "Terminal=false\n"
+                << "Categories=System;Utility;\n"
+                << "X-GNOME-Autostart-enabled=true\n"
+                << "X-KDE-autostart-after=panel\n";
 
         file.close();
         return;
