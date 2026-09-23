@@ -13,7 +13,6 @@
  * @brief Initializes the path locator and configures directory string fallbacks.
  */
 DefaultPath::DefaultPath(): oldDir(dir) {
-    debug = new Debug::Debug();
     static const QRegularExpression regex("\\/(?:.(?!\\/))+$");
     oldDir = oldDir.remove(regex);
 }
@@ -38,11 +37,12 @@ QString DefaultPath::findPath(const QString &str) {
  * @return The validated path or an empty string if not found.
  */
 QString DefaultPath::defaultPath(const QString &str) {
+    Debug::Debug debug;
     if (auto defDir = findPath(str); QFileInfo::exists(defDir)) {
-        debug->msg(QString("Directory for %1").arg(str), "DefaultPath", {defDir, Debug::Violet, Debug::Orange});
+        debug.msg(QString("Directory for %1").arg(str), "DefaultPath", {defDir, Debug::Violet, Debug::Orange});
         return defDir;
     }
 
-    debug->msg(QString("No directory defined for %1").arg(str), "DefaultPath", {Debug::LightRed});
+    debug.msg(QString("No directory defined for %1").arg(str), "DefaultPath", {Debug::LightRed});
     return {};
 }

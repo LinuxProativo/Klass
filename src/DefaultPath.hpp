@@ -26,7 +26,6 @@ public:
 private:
     QString findPath(const QString &str);
 
-    Debug::Debug *debug{};
     QString dir{QCoreApplication::applicationDirPath()}, oldDir{};
     QString px{"/usr/local/share/klass"}, newPx{"/usr/share/klass"};
 };
