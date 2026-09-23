@@ -14,10 +14,9 @@ void UpdateWorker::start() {
     Debug::Debug().msg("Start Worker for CheckUpdate", "UpdateWorker");
     check();
 
-    timer = new QTimer(this);
-    timer->setInterval(1000 * 60 * 30);
-    connect(timer, &QTimer::timeout, this, &UpdateWorker::check);
-    timer->start();
+    updateTimer.setInterval(1000 * 60 * 30);
+    connect(&updateTimer, &QTimer::timeout, this, &UpdateWorker::check);
+    updateTimer.start();
 }
 
 /**

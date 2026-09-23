@@ -16,19 +16,17 @@ class UpdateWorker final : public QObject {
     Q_OBJECT
 
 public:
-    explicit UpdateWorker() = default;
+    UpdateWorker() = default;
 
-public slots:
     void start();
 
 signals:
     void updateAvailable();
 
-private slots:
+private:
     void check();
 
-private:
-    QTimer *timer{};
+    QTimer updateTimer;
 };
 
 #endif
