@@ -16,7 +16,7 @@ class MessageReceiver : public QObject {
     Q_OBJECT
 
 public slots:
-    void receivedMessage(int instanceId, const QByteArray &message);
+    void receivedMessage(int, const QByteArray &message);
 
 signals:
     void arg(const QString &lst);
