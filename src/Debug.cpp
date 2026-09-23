@@ -46,10 +46,10 @@ namespace Debug {
         const QVariant colorSentinel{Color()};
 
         for (const QVariant &arg: args) {
-            if (isType(arg, stringSentinel)) {
+            if (arg.typeId() == QMetaType::QString) {
                 parm = arg.toString();
                 p = ": ";
-            } else if (isType(arg, colorSentinel)) {
+            } else if (arg.typeId() == QMetaType::Int) {
                 const int colorIdx = arg.toInt();
                 if (fcolor.isEmpty())
                     fcolor = getColor(colorIdx);

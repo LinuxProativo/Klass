@@ -49,9 +49,6 @@ namespace Debug {
         explicit Debug() = default;
 
         static void msg(const QString &str, const QString &name = "DEBUG", const QVariantList &args = {});
-
-    private:
-        static bool isType(const QVariant &v, const QVariant &t) { return v.typeId() == t.typeId(); }
     };
 }
 
