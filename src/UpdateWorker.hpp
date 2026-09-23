@@ -25,8 +25,6 @@ signals:
 
 private:
     void check();
-
-    QTimer updateTimer;
 };
 
 #endif
