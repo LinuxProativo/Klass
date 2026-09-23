@@ -233,11 +233,13 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
     if (!removeList.isEmpty()) {
         runTask("/sbin/removepkg", removeList);
     }
+
     if (!installList.isEmpty()) {
         QStringList args;
         args << "--install-new" << installList;
         runTask("/sbin/upgradepkg", args);
     }
+
     if (!reinstallList.isEmpty()) {
         QStringList args;
         args << "--install-new" << "--reinstall" << reinstallList;

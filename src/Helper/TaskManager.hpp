@@ -26,8 +26,8 @@ public:
 
     void cancelCommand();
 
-    signals:
-        void commandFinished();
+signals:
+    void commandFinished();
 
 private:
     QLocalSocket *socket{};
