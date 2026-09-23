@@ -493,6 +493,8 @@ void Klass::onSearchTextChanged(const QString &text) const {
 void Klass::onUpdateFinished() {
     mirrorManager->pendingUpdate(false);
     updateNotificationShown = false;
+    tray->resetIcon();
+    tray->getTray()->setToolTip(tr("Klass Package Manager"));
     packagesManager->reload();
     loadRepositoryTabs();
 }
@@ -676,6 +678,11 @@ void Klass::onUpdateAvailable() {
     updateNotificationShown = true;
     const auto title = tr("Database Update Available").toStdString();
     const auto text = tr("A newer Slackware package database is available.").toStdString();
+
+    const auto getTray = tray->getTray();
+    getTray->setIcon(QIcon(DefaultPath().defaultPath("icons/available.svg")));
+    getTray->setToolTip(tr("Klass Package Manager - Database Updates are Available") + "!");
+
     notify_send(title.c_str(), text.c_str(), pathIcon.c_str());
 }
 

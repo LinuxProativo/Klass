@@ -15,7 +15,11 @@
  * @param settingsManager Manager responsible for saving and loading application configurations.
  */
 SysTray::SysTray(QWidget *parent, QLocalSocket *helperSocket, SettingsManager *settingsManager) : QObject(parent) {
-    trayMenu = new QMenu();
+#undef signals
+    notify_init("Klass");
+#define signals public
+
+    trayMenu = new QMenu(parent);
     const auto *quitAction = trayMenu->addAction(tr("Quit"));
 
     connect(quitAction, &QAction::triggered, [helperSocket, parent, settingsManager]() {
@@ -30,7 +34,7 @@ SysTray::SysTray(QWidget *parent, QLocalSocket *helperSocket, SettingsManager *s
     });
 
     trayIcon = new QSystemTrayIcon(this);
-    trayIcon->setIcon(QIcon(DefaultPath().defaultPath("klass.png")));
+    trayIcon->setIcon(trayicon);
     trayIcon->setContextMenu(trayMenu);
     trayIcon->setToolTip(tr("Klass Package Manager"));
 

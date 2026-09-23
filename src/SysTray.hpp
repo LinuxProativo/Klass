@@ -23,8 +23,6 @@
  * @param ico The file path or system name of the icon to display.
  */
 inline void notify_send(const char *title, const char *msg, const char *ico) {
-    notify_init("Klass");
-
     NotifyNotification *n = notify_notification_new(title, msg, ico);
     notify_notification_set_timeout(n, 5000);
 
@@ -42,11 +40,14 @@ class SysTray : public QObject {
     Q_OBJECT
 
 public:
-    explicit SysTray(QWidget *parent = nullptr, QLocalSocket *helperSocket = nullptr, SettingsManager *settingsManager = nullptr);
+    explicit SysTray(QWidget *parent = {}, QLocalSocket *helperSocket = {}, SettingsManager *settingsManager = {});
 
     [[nodiscard]] QSystemTrayIcon *getTray() const { return trayIcon; }
 
+    void resetIcon() const { trayIcon->setIcon(trayicon); }
 private:
+    QIcon trayicon = QIcon(DefaultPath().defaultPath("icons/tray.svg"));
+
     QSystemTrayIcon *trayIcon{};
     QMenu *trayMenu{};
 };
