@@ -277,7 +277,26 @@ para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre 
   como o klass se conecta imediatamente ao abrir o Helper, nunca que um processo cliente
   modificado teria tempo de ser executado e de pular na frente do programa para se
   conectar ao Helper, a menos que esteja em segundo plano esperando a oportunidade de
-  tentar e ser rejeitado pelas demais proteções. 
+  tentar `(o chamado Race Condition)` e ser rejeitado pelas demais proteções. 
+
+- **Isolamento via Namespace Abstrato (Abstract Namespace)**  
+  Para eliminar riscos associados a arquivos residuais no sistema de arquivos, o
+  servidor de comunicação local (`QLocalServer`) foi configurado utilizando a
+  opção `AbstractNamespaceOption` junto com `WorldAccessOption`. Isso traz duas
+  grandes vantagens de segurança e resiliência:
+
+    * **Inexistência de Arquivo Físico**  
+      Com o `AbstractNamespaceOption`, o socket não cria um arquivo especial em
+      diretórios públicos (como `/tmp`). Com isso, elimina-se completamente qualquer
+      vetor de ataque baseado em manipulação de links simbólicos (Symlink Attacks),
+      Race Conditions no sistema de arquivos ou sequestro de caminhos de arquivos.
+
+    * **Limpeza Garantida pelo Kernel**  
+      O socket fica vinculado diretamente ao ecossistema de rede do kernel Linux.
+      Se o Helper ou o sistema sofrerem uma queda inesperada, o socket é destruído
+      instantaneamente pelo sistema operacional. Isso evita o problema de sockets
+      **"órfãos"** no sistema, que poderiam bloquear reinicializações ou ser
+      inspecionados por invasores.
 
 - **Validação das Requisições**  
   Antes de executar as operações, o Helper realiza validações básicas dos parâmetros
