@@ -84,7 +84,7 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
                         const qint64 bytesWritten = file.write(res.data);
                         file.close();
 
-                        if (bytesWritten >= 0) {
+                        if (bytesWritten >= 0 && !operationCancelled) { // NOLINT
                             success = true;
                             socket->write(OUTPUT + QByteArray("    --> Download File ") + targetUrl.toUtf8() + SEP);
                         }
@@ -102,8 +102,7 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
 
     if (!operationCancelled) {
         socket->write(
-            OUTPUT + QByteArray("\nUpdated DataBase Successful!") + SEP + QByteArray("DONE") + SEP +
-            QByteArray("UPDATE_DONE") + SEP);
+            OUTPUT + QByteArray("\nUpdated DataBase Successful!") + SEP + QByteArray("UPDATE_DONE") + SEP);
     } else {
         socket->write(LOG + QByteArray("Cancelled Update.") + SEP);
     }
@@ -221,8 +220,6 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
     socket->write(OUTPUT + QByteArray("==================================================\n") + SEP);
 
     auto runTask = [&](const QString &cmd, const QStringList &args) {
-        if (args.isEmpty() || operationCancelled) return;
-
         QEventLoop loop;
         connect(task, &TaskManager::commandFinished, &loop, &QEventLoop::quit);
 
@@ -246,6 +243,32 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         runTask("/sbin/upgradepkg", args);
     }
 
+    if (!installList.isEmpty() || !reinstallList.isEmpty() || !removeList.isEmpty()) {
+        socket->write(OUTPUT + QByteArray("\n==================================================") + SEP);
+        socket->write(OUTPUT + QByteArray("Running System Post-Configuration ...") + SEP);
+        socket->write(OUTPUT + QByteArray("==================================================\n") + SEP);
+
+        if (QFile::exists("/sbin/ldconfig")) {
+            socket->write(OUTPUT + QByteArray("Updating shared libraries cache (ldconfig)...") + SEP);
+            runTask("/sbin/ldconfig", {});
+        }
+
+        if (QFile::exists("/usr/bin/update-mime-database")) {
+            socket->write(OUTPUT + QByteArray("\nUpdating MIME database...") + SEP);
+            runTask("/usr/bin/update-mime-database", {"/usr/share/mime"});
+        }
+
+        if (QFile::exists("/usr/bin/mandb")) {
+            socket->write(OUTPUT + QByteArray("\nUpdating man page database (mandb)...") + SEP);
+            runTask("/usr/bin/mandb", {"-q"});
+        }
+
+        if (QFile::exists("/usr/bin/update-desktop-database")) { //TODO passar para escolha manual
+            socket->write(OUTPUT + QByteArray("\nUpdating desktop database...") + SEP);
+            runTask("/usr/bin/update-desktop-database", {"-q"});
+        }
+    }
+
     // NOLINTBEGIN
     if (operationCancelled) {
         socket->write(OUTPUT + QByteArray("Operations were interrupted.") + SEP);
@@ -255,8 +278,7 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
     // NOLINTEND
 
     socket->write(OUTPUT + QByteArray("\nAll operations completed successfully!") + SEP);
-    socket->write(LOG + QByteArray("Transaction Finished.") + SEP);
-    socket->write(QByteArray("TRANSACTION_DONE") + SEP + QByteArray("DONE") + SEP);
+    socket->write(LOG + QByteArray("Transaction Finished.") + SEP + QByteArray("TRANSACTION_DONE") + SEP);
 }
 
 /**
