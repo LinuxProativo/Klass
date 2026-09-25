@@ -24,13 +24,7 @@ bool RepoManager::writeLines(const QString &path, const QStringList &lines) {
         return false;
 
     QTextStream out(&sf);
-    for (int i = 0; i < lines.size(); ++i) {
-        out << lines[i];
-        if (i < lines.size() - 1) {
-            out << '\n';
-        }
-    }
-    out << '\n';
+    out << lines.join(u'\n') << u'\n';
 
     return sf.commit();
 }
