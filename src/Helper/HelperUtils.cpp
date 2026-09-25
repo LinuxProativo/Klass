@@ -268,7 +268,8 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             runTask("/usr/bin/update-desktop-database", {"-q"});
         }
 
-        if (QFile::exists("/usr/share/icons/hicolor/icon-theme.cache") && QFile::exists("/usr/bin/gtk-update-icon-cache")) {
+        if (QFile::exists("/usr/share/icons/hicolor/icon-theme.cache") &&
+            QFile::exists("/usr/bin/gtk-update-icon-cache")) {
             socket->write(OUTPUT + QByteArray("\nUpdating icon cache...") + SEP);
             runTask("/usr/bin/gtk-update-icon-cache", {"-q", "-f", "/usr/share/icons/hicolor"});
         }
