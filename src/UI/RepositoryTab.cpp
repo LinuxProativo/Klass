@@ -485,12 +485,12 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
 
     if (showCategories) {
         catList->clear();
-        root = new QTreeWidgetItem(catList, QStringList{QStringLiteral("Overview")});
+        root = new QTreeWidgetItem(catList, QStringList{tr("Overview")});
         root->setExpanded(true);
     }
 
     const QString curRepo = this->property("repoName").toString();
-    const bool isMultiple = (curRepo == QLatin1String("Multiple"));
+    const bool isMultiple = (curRepo == ALL_REPOSITORIES);
 
     auto statusOf = [&](const PkgInfo &p) -> RuleSt {
         return ruleStatuses.value({p.name, p.version, p.repoName}, RuleSt::Normal);
@@ -507,15 +507,11 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
     QSet<QString> categories;
     QStandardItem *rootItem = packageModel->invisibleRootItem();
 
-    for (auto it = groupedPackages.begin(); it != groupedPackages.end(); ++it) {
-        const QList<PkgInfo> &pkgVersions = it.value();
+    for (const QList<PkgInfo> &pkgVersions: std::as_const(groupedPackages)) {
         if (pkgVersions.isEmpty())
             continue;
 
-        const PkgInfo *installedPkg{};
-        const PkgInfo *metaPkg{};
-        const PkgInfo *prioritizedPkg{};
-        const PkgInfo *slackwarePkg{};
+        const PkgInfo *installedPkg{}, *metaPkg{}, *prioritizedPkg{}, *slackwarePkg{};
 
         for (const auto &pkg: pkgVersions) {
             if (!prioritizedPkg && statusOf(pkg) == RuleSt::Prioritized)
@@ -832,14 +828,14 @@ QList<PendingPkg> RepositoryTab::collectNewInstalls() const {
 
     const bool attachTestingEnabled = this->property("attachTesting").toBool();
 
-    for (auto it = globalByName.constBegin(); it != globalByName.constEnd(); ++it) {
-        if (const QString &pkgName = it.key(); installedNames.contains(pkgName))
+    for (auto [pkgName, pkgList]: std::as_const(globalByName).asKeyValueRange()) {
+        if (installedNames.contains(pkgName))
             continue;
 
         const PkgInfo *bestCand = nullptr;
         int maxPriority = -1;
 
-        for (const auto &pkg: it.value()) {
+        for (const auto &pkg: pkgList) {
             if (pkg.isInstalled || !RepositoryTabUtils::isHierarchyRepo(pkg.repoName) ||
                 (!attachTestingEnabled && pkg.repoName.contains(SLACK_TESTING)) ||
                 ruleStatuses.value({pkg.name, pkg.version, pkg.repoName},

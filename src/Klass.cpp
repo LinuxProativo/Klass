@@ -31,7 +31,7 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
 
     settingsManager = new SettingsManager(this);
     tray = new SysTray(this, helper->socket(), settingsManager);
-    packagesManager = new Packages();
+    packagesManager = new Packages(this);
 
     about = new About(this);
     logView = new ChangeLog(this);
@@ -282,12 +282,12 @@ void Klass::loadRepositoryTabs() {
     QHash<QString, QSet<QString> > repoTagsCache;
     repoTagsCache.reserve(repoMap.size());
 
-    for (auto it = repoMap.begin(); it != repoMap.end(); ++it) {
-        totalRepoPackages += static_cast<int>(it.value().packages.size());
-        mMap.insert(it.key(), it.value().mirrorUrl);
+    for (auto [repoName, repoData]: repoMap.asKeyValueRange()) {
+        totalRepoPackages += static_cast<int>(repoData.packages.size());
+        mMap.insert(repoName, repoData.mirrorUrl);
 
-        QSet<QString> &tags = repoTagsCache[it.key()];
-        for (const auto &pkg: it.value().packages) {
+        QSet<QString> &tags = repoTagsCache[repoName];
+        for (const auto &pkg: repoData.packages) {
             const int buildPos = static_cast<int>(pkg.version.lastIndexOf(u'-'));
             const QString build = buildPos >= 0 ? pkg.version.mid(buildPos + 1) : pkg.version;
 
@@ -303,18 +303,13 @@ void Klass::loadRepositoryTabs() {
     QSet<std::pair<QString, QString> > existingPackages;
     existingPackages.reserve(totalRepoPackages);
 
-    for (auto it = repoMap.begin(); it != repoMap.end(); ++it) {
-        const auto &repoPackages = it.value().packages;
-        allPkgs.append(repoPackages);
-        for (const auto &pkg: repoPackages)
+    for (const auto &[repoName, repoData]: repoMap.asKeyValueRange()) {
+        allPkgs.append(repoData.packages);
+        for (const auto &pkg: repoData.packages)
             existingPackages.insert({pkg.name, pkg.version});
     }
 
-    QStringList sortedRepos;
-    sortedRepos.reserve(repoMap.size());
-    for (auto it = repoMap.keyBegin(); it != repoMap.keyEnd(); ++it)
-        sortedRepos.append(*it);
-
+    QStringList sortedRepos = repoMap.keys();
     sortedRepos.removeOne(SLACK_OFICIAL);
     sortedRepos.removeOne(SLACK_PATCHES);
     sortedRepos.removeOne(SLACK_TESTING);
@@ -366,9 +361,8 @@ void Klass::loadRepositoryTabs() {
             ++installedTagPos;
         const QString installedTag = installedTagPos < instBuild.length() ? instBuild.mid(installedTagPos) : QString{};
 
-        for (auto it = repoMap.constBegin(); it != repoMap.constEnd(); ++it) {
-            const QString &rName = it.key();
-            const auto &availList = it.value().packages;
+        for (const auto &[rName, repoData]: repoMap.asKeyValueRange()) {
+            const auto &availList = repoData.packages;
 
             auto match = std::ranges::find_if(availList, [&](const PkgInfo &p) {
                 return p.name == inst.name;
@@ -401,8 +395,8 @@ void Klass::loadRepositoryTabs() {
         }
     }
 
-    for (auto it = extraRepoPackages.begin(); it != extraRepoPackages.end(); ++it)
-        allPkgs.append(it.value());
+    for (const auto &pkgsList: std::as_const(extraRepoPackages))
+        allPkgs.append(pkgsList);
     allPkgs.append(orphanPackages);
 
     const QHash<PkgKey, RuleSt> ruleStatuses = RulesManager::resolveStatuses(allPkgs, currentRules);
