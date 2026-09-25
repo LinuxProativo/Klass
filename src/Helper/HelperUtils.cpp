@@ -274,7 +274,8 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             runTask("/usr/bin/gtk-update-icon-cache", {"-q", "-f", "/usr/share/icons/hicolor"});
         }
 
-        if (QFile::exists("/usr/share/glib-2.0/schemas") && QFile::exists("/usr/bin/glib-compile-schemas")) {
+        if (QFile::exists("/usr/share/glib-2.0/schemas") &&
+            QFile::exists("/usr/bin/glib-compile-schemas")) {
             socket->write(OUTPUT + QByteArray("\nCompiling GLib schemas...") + SEP);
             runTask("/usr/bin/glib-compile-schemas", {"/usr/share/glib-2.0/schemas"});
         }
