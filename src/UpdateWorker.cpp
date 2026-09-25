@@ -11,7 +11,7 @@
  * @brief Starts periodic update checks.
  */
 void UpdateWorker::start() {
-    Debug::Debug().msg("Start Worker for CheckUpdate", "UpdateWorker");
+    Debug::msg("Start Worker for CheckUpdate", "UpdateWorker");
     check();
 
     QTimer updateTimer;

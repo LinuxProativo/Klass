@@ -21,7 +21,6 @@
 #include <utility>
 
 #include <CategoryFilterProxyModel.hpp>
-#include <Debug.hpp>
 #include <Packages.hpp>
 #include <RulesManager.hpp>
 #include <SlackwareDefines.hpp>
@@ -150,7 +149,6 @@ private:
     QVBoxLayout *layout{}, *repoLayout{};
     QWidget *detailsPanel{};
 
-    Debug::Debug *debug{};
     Packages *packagesManager{};
     TableView *packageTable{};
     TreeWidget *catList{};

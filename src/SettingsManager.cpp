@@ -12,8 +12,8 @@
  */
 SettingsManager::SettingsManager(QWidget *window) : win(window) {
     if (win) {
-        Debug::Debug().msg("Primary screen resolution", "SettingsManager",
-            {QString("%1x%2").arg(QString::number(rect.width()), QString::number(rect.height()))});
+        Debug::msg("Primary screen resolution", "SettingsManager",
+                   {QString("%1x%2").arg(I(rect.width()), I(rect.height()))});
 
         win->setMinimumSize(defSize());
         win->setGeometry(windowGeometry());

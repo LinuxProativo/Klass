@@ -39,7 +39,7 @@ void Packages::reload() {
 void Packages::updateChecksums() {
     checksumCache.clear();
     if (!QDir(KLASS_DATABASE).exists()) {
-        debug->msg("Base Directory not Found for Checksums", "Packages", {KLASS_DATABASE, Debug::LightRed});
+        Debug::msg("Base Directory not Found for Checksums", "Packages", {KLASS_DATABASE, DColor::LightRed});
         return;
     }
 
@@ -99,7 +99,7 @@ void Packages::updateChecksums() {
         }
 
         checksumCache.insert(repoName, repoChecksums);
-        debug->msg("Checksums Loaded for Repo: " + repoName, "Packages", {QString::number(repoChecksums.size())});
+        Debug::msg("Checksums Loaded for Repo: " + repoName, "Packages", {QString::number(repoChecksums.size())});
     }
 }
 
@@ -177,7 +177,7 @@ void Packages::loadAvailablePackages() {
     availableCache.clear();
 
     if (!QDir(KLASS_DATABASE).exists()) {
-        debug->msg("Base Directory not Found", "Packages", {KLASS_DATABASE, Debug::LightRed});
+        Debug::msg("Base Directory not Found", "Packages", {KLASS_DATABASE, DColor::LightRed});
         return;
     }
 
@@ -245,7 +245,7 @@ void Packages::loadAvailablePackages() {
                 resolvedUrl = thirdPartyMap.value(repoName, QString{});
             }
 
-            debug->msg("Category Found in " + repoName, "Packages", {hasCats ? "true" : "false"});
+            Debug::msg("Category Found in " + repoName, "Packages", {hasCats ? "true" : "false"});
             availableCache.insert(repoName, {hasCats, resolvedUrl, std::move(packageList)});
         }
     }
@@ -258,7 +258,7 @@ void Packages::loadInstalledPackages() {
     installedCache.clear();
 
     if (const QDir dir(SLACK_PACKAGES); !dir.exists()) {
-        debug->msg("PkgTools Directory not Found", "Packages", {SLACK_PACKAGES, Debug::LightRed});
+        Debug::msg("PkgTools Directory not Found", "Packages", {SLACK_PACKAGES, DColor::LightRed});
         return;
     }
 

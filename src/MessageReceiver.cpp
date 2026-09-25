@@ -11,6 +11,6 @@
  * @param message The received arguments as a byte array.
  */
 void MessageReceiver::receivedMessage(int, const QByteArray &message) {
-    Debug::Debug().msg("Arguments received", "MessageReceiver", {message});
+    Debug::msg("Arguments received", "MessageReceiver", {message});
     emit arg(message);
 }

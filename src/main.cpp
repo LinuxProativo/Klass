@@ -51,7 +51,6 @@ int main(int argc, char *argv[]) {
 
     SingleApplication app(argc, argv, true, SingleApplication::Mode::SecondaryNotification);
     const MessageReceiver msg;
-    const Debug::Debug debug;
     bool autostart = false;
 
     QApplication::setApplicationName("Klass");
@@ -60,8 +59,8 @@ int main(int argc, char *argv[]) {
     QApplication::setApplicationVersion(VERSION);
     Theme::applyTheme();
 
-    debug.msg("Program version", "Main", {QApplication::applicationVersion()});
-    debug.msg("Program pid", "Main", {QString::number(QApplication::applicationPid())});
+    Debug::msg("Program version", "Main", {QApplication::applicationVersion()});
+    Debug::msg("Program pid", "Main", {QString::number(QApplication::applicationPid())});
 
     const QCommandLineOption autoStartOption("autostart", QObject::tr("Start the application in system tray."));
     const QCommandLineOption packageOption(QStringList() << "p" << "package",
@@ -75,10 +74,10 @@ int main(int argc, char *argv[]) {
     parser.process(app);
 
     if (app.isSecondary()) {
-        debug.msg("New instance, passing the arguments", "Main");
+        Debug::msg("New instance, passing the arguments", "Main");
         if (parser.isSet(packageOption)) {
             QString pkg = parser.value(packageOption);
-            debug.msg("Processing package from secondary instance", "Main", {pkg});
+            Debug::msg("Processing package from secondary instance", "Main", {pkg});
             app.sendMessage(pkg.toUtf8());
         }
         return 0;
@@ -95,10 +94,10 @@ int main(int argc, char *argv[]) {
 
     if (auto trFile = DefaultPath().defaultPath(QString("lang/klass_%1.qm").arg(lang));
         translator.load(trFile)) {
-        debug.msg("Loading translation", "Translator", {trFile, Debug::LightGreen});
+        Debug::msg("Loading translation", "Translator", {trFile, DColor::LightGreen});
         SingleApplication::installTranslator(&translator);
     } else {
-        debug.msg("Translation not available", "Translator", {Debug::LightRed});
+        Debug::msg("Translation not available", "Translator", {DColor::LightRed});
     }
 
     StatusIcons::init(); // Antes do Klass, senão dá ruim.
@@ -110,7 +109,7 @@ int main(int argc, char *argv[]) {
     if (parser.isSet(packageOption)) {
         autostart = true;
         const auto pkg = parser.value(packageOption);
-        debug.msg("Processing package from command line", "Main", {pkg});
+        Debug::msg("Processing package from command line", "Main", {pkg});
         klass.handlePackage(pkg);
     }
 

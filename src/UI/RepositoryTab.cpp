@@ -9,6 +9,7 @@
 
 #include <CenterDelegate.hpp>
 #include <ContextMenu.hpp>
+#include <Debug.hpp>
 #include <Icon.hpp>
 #include <RepositoryTab.hpp>
 #include <RepositoryTabUtils.hpp>
@@ -22,7 +23,6 @@
 RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *packagesManager) : QWidget(parent),
     packagesManager(packagesManager), showCategories(isvisible) {
     this->setAttribute(Qt::WA_StaticContents);
-    debug = new Debug::Debug();
 
     catList = new TreeWidget();
     catList->setHeaderLabel(tr("Categories"));
@@ -211,7 +211,7 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
             nameItem->setData(nPkg.isInstalled, Qt::UserRole + 1);
             nameItem->setData(targetRepoName, Qt::UserRole + 2);
 
-            debug->msg("Package version changed to", "RepositoryTab", {Debug::Cyan, nPkg.version});
+            Debug::msg("Package version changed to", "RepositoryTab", {DColor::Cyan, nPkg.version});
         }
     }
 
@@ -236,7 +236,7 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
 void RepositoryTab::appendFileBatch() {
     const QString localSignature = currentLoadSignature;
     constexpr int BatchSize = 500;
-    debug->msg("Processing file batch for signature", "RepositoryTab", {Debug::Blue, localSignature});
+    Debug::msg("Processing file batch for signature", "RepositoryTab", {DColor::Blue, localSignature});
 
     QList<QTreeWidgetItem *> items;
     items.reserve(BatchSize);
@@ -280,7 +280,7 @@ void RepositoryTab::appendFileBatch() {
         fileList->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
         fileList->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     }
-    debug->msg("Batch processing completed for signature", "RepositoryTab", {Debug::LightGreen, localSignature});
+    Debug::msg("Batch processing completed for signature", "RepositoryTab", {DColor::LightGreen, localSignature});
 }
 
 /**
@@ -305,7 +305,7 @@ void RepositoryTab::onSelectionChanged(const QItemSelection &selected, const QIt
     QString repoName = nameItem->data(Qt::UserRole + 2).toString();
     if (repoName.isEmpty())
         repoName = this->property("repoName").toString();
-    debug->msg("Active repository context", "RepositoryTab", {Debug::Violet, repoName});
+    Debug::msg("Active repository context", "RepositoryTab", {DColor::Violet, repoName});
 
     if (repoName == SLACK_OTHERS)
         repoName.clear();
@@ -314,7 +314,7 @@ void RepositoryTab::onSelectionChanged(const QItemSelection &selected, const QIt
     const QString version = versionItem->text();
     const bool isInstalled = nameItem->data(Qt::UserRole + 1).toBool();
     auto info = packagesManager->getPackageInfo(repoName, name, version);
-    debug->msg("Selected package target", "RepositoryTab", {Debug::Cyan, QString("%1-%2").arg(name, version)});
+    Debug::msg("Selected package target", "RepositoryTab", {DColor::Cyan, QString("%1-%2").arg(name, version)});
 
     if (info.name.isEmpty() && isInstalled && !repoName.isEmpty())
         info = packagesManager->getPackageInfo({}, name, version);

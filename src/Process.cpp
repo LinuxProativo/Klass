@@ -21,5 +21,5 @@ Process::Process(QObject *parent) : QProcess(parent) {
  */
 void Process::processOutput(const bool isError) {
     if (const QByteArray data = isError ? readAllStandardError() : readAllStandardOutput(); !data.isEmpty())
-        Debug::Debug().msg(data, "Helper");
+        Debug::msg(data, "Helper <with Process>");
 }

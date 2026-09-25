@@ -71,7 +71,7 @@ namespace Icon {
 
         if (const QString ico = QStringLiteral("%1/%2.svg").arg(baseIconPath, iconTable[idx].fileName);
             QFileInfo::exists(ico)) {
-            Debug::Debug().msg("Select Icon", "Icon", {ico, Debug::Cyan});
+            Debug::msg("Select Icon", "Icon", {ico, DColor::Cyan});
             return ico;
         }
 

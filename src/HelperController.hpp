@@ -65,7 +65,6 @@ private:
 
     QLocalSocket *helperSocket{};
 
-    Debug::Debug *debug{};
     Process *proc{};
     Terminal *terminalDialog{};
 

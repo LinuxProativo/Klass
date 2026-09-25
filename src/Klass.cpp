@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QStandardPaths>
 
+#include <Debug.hpp>
 #include <Klass.hpp>
 #include <Packages.hpp>
 #include <RepositoryTab.hpp>
@@ -33,7 +34,6 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     packagesManager = new Packages();
 
     about = new About(this);
-    debug = new Debug::Debug();
     logView = new ChangeLog(this);
     installDialog = new InstallPackage::Install(this);
 
@@ -600,7 +600,7 @@ void Klass::handlePackage(const QString &file) const {
  * @brief Handles helper readiness and dispatches the pending action.
  */
 void Klass::onHelperReady() {
-    debug->msg("Helper is ready", "Klass");
+    Debug::msg("Helper is ready", "Klass");
 
     if (const PendingAction pending = helper->pendingAct(); pending == PendingAction::Update) {
         terminalDialog->setWindowTitle(tr("Update Slackware Database"));
@@ -714,11 +714,11 @@ void Klass::changeEvent(QEvent *event) {
     if (event->type() == QEvent::WindowStateChange) {
         switch (this->windowState()) {
             case Qt::WindowNoState:
-                debug->msg("Restoring program window", "Klass");
+                Debug::msg("Restoring program window", "Klass");
                 settingsManager->windowMaximize(false);
                 break;
             case Qt::WindowMaximized:
-                debug->msg("Maximizing program window", "Klass");
+                Debug::msg("Maximizing program window", "Klass");
                 settingsManager->windowGeometry(this->geometry()); // Tem que salvar antes
                 settingsManager->windowMaximize(true);
                 break;

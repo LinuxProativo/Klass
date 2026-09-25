@@ -88,7 +88,6 @@ private:
 
     static void parsePackagesContent(const QString &content, QList<PkgInfo> &packageList);
 
-    Debug::Debug *debug{};
     QMap<QString, QMap<QString, ChecksumEntry> > checksumCache{};
     QList<PkgInfo> installedCache{};
     QMap<QString, RepoData> availableCache{};

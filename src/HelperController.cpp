@@ -18,8 +18,6 @@
  * @param parent Parent object.
  */
 HelperController::HelperController(Terminal *dialog, QObject *parent) : QObject(parent), terminalDialog(dialog) {
-    debug = new Debug::Debug();
-
     proc = new Process(this);
     connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &HelperController::onFinished);
 
@@ -32,9 +30,11 @@ HelperController::HelperController(Terminal *dialog, QObject *parent) : QObject(
     connect(dialog, &Terminal::inputEntered, this, [this](const QByteArray &text) {
         helperSocket->write(QByteArray(INPUT_CHAR) + text + SEP);
     });
+
     connect(dialog, &Terminal::cancelOperationRequest, this, [this] {
         helperSocket->write(QByteArray("CANCEL_OPERATION") + SEP);
     });
+
     connect(dialog, &Terminal::cancelRequested, this, [this] {
         helperSocket->write(QByteArray("CANCEL") + SEP);
     });
@@ -47,8 +47,9 @@ HelperController::HelperController(Terminal *dialog, QObject *parent) : QObject(
 void HelperController::setupHelper(const PendingAction pending) {
     pendingAction = pending;
     helperShutdownRequested = true;
+
     if (helperSocket->state() == QLocalSocket::ConnectedState) {
-        debug->msg("Helper already connected", "HelperController", {Debug::Orange});
+        Debug::msg("Helper already connected", "HelperController", {DColor::Orange});
         emit helperReady();
         return;
     }
@@ -61,7 +62,7 @@ void HelperController::setupHelper(const PendingAction pending) {
 
     if (helperSocket->waitForConnected(300)) {
         emit helperReady();
-        debug->msg("Connected to existing helper", "HelperController");
+        Debug::msg("Connected to existing helper", "HelperController");
         return;
     }
     const QString appPath = QCoreApplication::applicationFilePath();
@@ -83,7 +84,7 @@ void HelperController::setupHelper(const PendingAction pending) {
     args << "env" << envPrefix << appPath << "--helper";
 
     proc->start("pkexec", args);
-    debug->msg("pkexec started", "HelperController");
+    Debug::msg("pkexec started", "HelperController");
 }
 
 /**
@@ -97,7 +98,7 @@ void HelperController::onHelperSocketError(const QLocalSocket::LocalSocketError 
         return;
 
     if (countConnect >= 150) {
-        debug->msg("Helper connection timeout", "HelperController", {Debug::LightRed});
+        Debug::msg("Helper connection timeout", "HelperController", {DColor::LightRed});
 
         QMessageBox::information(
             nullptr,
@@ -125,7 +126,7 @@ void HelperController::onHelperSocketError(const QLocalSocket::LocalSocketError 
  */
 void HelperController::onHelperConnected() {
     if (helperSocket->state() == QLocalSocket::ConnectedState) {
-        debug->msg("Connected to helper", "HelperController", {Debug::LightGreen});
+        Debug::msg("Connected to helper", "HelperController", {DColor::LightGreen});
         emit helperReady();
     }
 
@@ -141,10 +142,11 @@ void HelperController::onHelperConnected() {
 void HelperController::onFinished(const int exitCode, const QProcess::ExitStatus status) {
     Q_UNUSED(status)
     debug->msg("pkexec exited: " + QString::number(exitCode), "HelperController");
+    Debug::msg("pkexec exited: " + QString::number(exitCode), "HelperController");
     helperShutdownRequested = true;
 
     if (const QString err = proc->readAllStandardError(); !err.isEmpty())
-        debug->msg("pkexec stderr: " + err, "HelperController");
+        Debug::msg("pkexec stderr: " + err, "HelperController");
 }
 
 /**
@@ -159,10 +161,10 @@ void HelperController::onHelperReadyRead() {
         } else if (line.startsWith(OUTPUT)) {
             terminalDialog->writeOutput(line.mid(OUTPUT_SIZE) + "\n");
         } else if (line.startsWith(LOG)) {
-            debug->msg(QString::fromUtf8(line.mid(LOG_SIZE)), "Helper");
         } else if (line == "DONE") {
             terminalDialog->writeOutput("\n--- DONE ---\n");
             terminalDialog->setFinished(true);
+            Debug::msg(QString::fromUtf8(line.mid(LOG_SIZE)), "Helper");
         } else if (line == "UPDATE_DONE") {
             emit updateFinished();
         } else if (line == "UPDATE_RULES") {
@@ -170,7 +172,7 @@ void HelperController::onHelperReadyRead() {
         } else if (line == "TRANSACTION_DONE") {
             emit transactionFinished();
         } else if (line.startsWith(ERROR)) {
-            debug->msg(QString::fromUtf8(line.mid(ERROR_SIZE)), "Helper", {Debug::LightRed});
+            Debug::msg(QString::fromUtf8(line.mid(ERROR_SIZE)), "Helper", {DColor::LightRed});
         }
     }
 }

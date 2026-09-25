@@ -100,7 +100,6 @@ private:
     Buttons *btnUpdate{}, *btnUp{}, *btnApply{};
     Buttons *btnSettings{}, *btnChangelog{}, *btnAbout{};
     ChangeLog *logView{};
-    Debug::Debug *debug{};
     InstallPackage::Install *installDialog{};
     HelperController *helper{};
     MirrorManager *mirrorManager{};

@@ -7,6 +7,7 @@
 #include <QRegularExpression>
 #include <QSettings>
 
+#include <Debug.hpp>
 #include <DefaultPath.hpp>
 #include <Mirrors.hpp>
 #include <RepoManager.hpp>
@@ -312,7 +313,7 @@ bool Mirrors::isUpdateRequired() {
     QList<MirrorPlusEntry> repos;
     if (const auto [url, country] = Mirrors::activeOne(); !url.isEmpty())
         repos.append({SLACK_OFICIAL, url});
-    repos.append(Mirrors::listActive());
+    repos.append(listActive());
 
     for (const auto &[name, url]: repos) {
         auto str = "";
@@ -334,10 +335,10 @@ bool Mirrors::isUpdateRequired() {
         local.close();
 
         if (remoteFirstLine != localFirstLine) {
-            Debug::Debug().msg("Update Available in " + name, "RepoManager", {"true"});
+            Debug::msg("Update Available in " + name, "RepoManager", {"true"});
             return true;
         }
-        Debug::Debug().msg("Update Available in " + name, "RepoManager", {"false"});
+        Debug::msg("Update Available in " + name, "RepoManager", {"false"});
     }
     return false;
 }

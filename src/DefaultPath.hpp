@@ -9,8 +9,6 @@
 #include <QCoreApplication>
 #include <QObject>
 
-#include <Debug.hpp>
-
 /**
  * @class DefaultPath
  * @brief Manages file and directory path discovery, supporting fallbacks between local dirs and system paths.

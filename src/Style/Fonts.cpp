@@ -51,8 +51,7 @@ QFont Fonts::getSystemFont() {
                     if (const QStringList fontInfo = match.captured(1).split(u','); fontInfo.size() >= 2) {
                         fontName = fontInfo.at(0).trimmed();
                         pointSize = fontInfo.at(1).toInt();
-                        Debug::Debug().msg("System font", "Fonts",
-                                           {QStringLiteral("%1, %2").arg(fontName, QString::number(pointSize))});
+                        Debug::msg("System font", "Fonts", {QStringLiteral("%1, %2").arg(fontName, I(pointSize))});
                         break;
                     }
                 }
