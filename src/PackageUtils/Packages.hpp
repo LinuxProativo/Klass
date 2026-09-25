@@ -62,9 +62,9 @@ enum class FileFormat {
  * @class Packages
  * @brief Utility manager for scanning, parsing, and listing software packages in the Klass system.
  */
-class Packages {
+class Packages : QObject {
 public:
-    explicit Packages();
+    explicit Packages(QObject *object);
 
     void updateChecksums();
 

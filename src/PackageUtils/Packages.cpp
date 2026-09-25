@@ -17,8 +17,7 @@
 /**
  * @brief Dynamic Structured Constructor. Isolates memory profiles according to selected InitMode strategy.
  */
-Packages::Packages() {
-    debug = new Debug::Debug();
+Packages::Packages(QObject *object) : QObject(object) {
     updateChecksums();
     loadInstalledPackages();
     loadAvailablePackages();
