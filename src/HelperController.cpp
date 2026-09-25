@@ -65,20 +65,20 @@ void HelperController::setupHelper(const PendingAction pending) {
         Debug::msg("Connected to existing helper", "HelperController");
         return;
     }
-    const QString appPath = QCoreApplication::applicationFilePath();
-    QStringList envPrefix;
 
+    QStringList envPrefix;
+    const QString appPath = QCoreApplication::applicationFilePath();
     const QString display = qEnvironmentVariable("DISPLAY");
     const QString xauth = qEnvironmentVariable("XAUTHORITY");
     const QString waylandDisplay = qEnvironmentVariable("WAYLAND_DISPLAY");
     const QString xdgRuntime = qEnvironmentVariable("XDG_RUNTIME_DIR");
     const QString xdgSession = qEnvironmentVariable("XDG_SESSION_TYPE");
 
-    if (!display.isEmpty()) envPrefix << "DISPLAY=" + display;
-    if (!xauth.isEmpty()) envPrefix << "XAUTHORITY=" + xauth;
-    if (!waylandDisplay.isEmpty()) envPrefix << "WAYLAND_DISPLAY=" + waylandDisplay;
-    if (!xdgRuntime.isEmpty()) envPrefix << "XDG_RUNTIME_DIR=" + xdgRuntime;
-    if (!xdgSession.isEmpty()) envPrefix << "XDG_SESSION_TYPE=" + xdgSession;
+    if (!display.isEmpty()) envPrefix << QStringLiteral("DISPLAY=%1").arg(display);
+    if (!xauth.isEmpty()) envPrefix << QStringLiteral("XAUTHORITY=%1").arg(xauth);
+    if (!waylandDisplay.isEmpty()) envPrefix << QStringLiteral("WAYLAND_DISPLAY=%1").arg(waylandDisplay);
+    if (!xdgRuntime.isEmpty()) envPrefix << QStringLiteral("XDG_RUNTIME_DIR=%1").arg(xdgRuntime);
+    if (!xdgSession.isEmpty()) envPrefix << QStringLiteral("XDG_SESSION_TYPE=%1").arg(xdgSession);
 
     QStringList args;
     args << "env" << envPrefix << appPath << "--helper";
@@ -137,11 +137,8 @@ void HelperController::onHelperConnected() {
 /**
  * @brief Handles pkexec process completion.
  * @param exitCode Process exit code.
- * @param status Process exit status.
  */
-void HelperController::onFinished(const int exitCode, const QProcess::ExitStatus status) {
-    Q_UNUSED(status)
-    debug->msg("pkexec exited: " + QString::number(exitCode), "HelperController");
+void HelperController::onFinished(const int exitCode, const QProcess::ExitStatus) {
     Debug::msg("pkexec exited: " + QString::number(exitCode), "HelperController");
     helperShutdownRequested = true;
 
@@ -153,7 +150,7 @@ void HelperController::onFinished(const int exitCode, const QProcess::ExitStatus
  * @brief Processes messages received from helper.
  */
 void HelperController::onHelperReadyRead() {
-    for (const QByteArray data = helperSocket->readAll(); const QByteArray &line : data.split(SEP)) {
+    for (const QByteArray data = helperSocket->readAll(); const QByteArray &line: data.split(SEP)) {
         if (line.isEmpty()) continue;
 
         if (line.startsWith(TASK)) {
@@ -161,16 +158,15 @@ void HelperController::onHelperReadyRead() {
         } else if (line.startsWith(OUTPUT)) {
             terminalDialog->writeOutput(line.mid(OUTPUT_SIZE) + "\n");
         } else if (line.startsWith(LOG)) {
-        } else if (line == "DONE") {
-            terminalDialog->writeOutput("\n--- DONE ---\n");
-            terminalDialog->setFinished(true);
             Debug::msg(QString::fromUtf8(line.mid(LOG_SIZE)), "Helper");
         } else if (line == "UPDATE_DONE") {
             emit updateFinished();
+            terminalDialog->setFinished(true);
         } else if (line == "UPDATE_RULES") {
             emit updateRules();
         } else if (line == "TRANSACTION_DONE") {
             emit transactionFinished();
+            terminalDialog->setFinished(true);
         } else if (line.startsWith(ERROR)) {
             Debug::msg(QString::fromUtf8(line.mid(ERROR_SIZE)), "Helper", {DColor::LightRed});
         }

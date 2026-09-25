@@ -59,7 +59,7 @@ signals:
 private:
     void onHelperSocketError(QLocalSocket::LocalSocketError error);
 
-    void onFinished(int exitCode, QProcess::ExitStatus status);
+    void onFinished(int exitCode, QProcess::ExitStatus);
 
     void onHelperReadyRead();
 
