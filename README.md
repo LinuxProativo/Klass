@@ -28,14 +28,19 @@
 > Ainda não há uma rotina pós-instalação no programa para capturar os arquivos.new
 > que o doinst.sh deixou para trás.
 >
-> Ajustes já mapeados para a próxima versão:
-> - atualização do grub
-> - rodar ldconfig
+> Ajustes já mapeados para as próximas versões estáveis:
+> - atualização do grub e lilo.
 > - detecção de arquivos .new
-> - operações de atualização de icone, desktop, etc, por garantia. 
-> - lidar com kernel generico
+> - lidar com kernel generico.
 > - tentativa de autoreinstalação de modulos dkms.
-> - melhorar a documentação do readme.
+> - IMPLEMENTAR barra de status.
+> - opção de usar ou não o repo testing e extra.
+> - escolher algumas opções de pós-configuração nas configurações.
+> - Rollback em caso de necessidade.
+> - download paralelo opcional.
+> - suporte a checksum mais seguros se disponíveis.
+> - Opção para setar se a assinatura é opcional ou obrigatória para repositórios específicos.
+> - regras avançadas de controle manual.
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacotes gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
@@ -92,11 +97,11 @@ geral dos pacotes (instalação, atualização, etc) segue a mesma lógica.
   pacotes por repositório e não por versão mais alta disponível entre todos os
   repositórios configurados. Em relação ao repositório oficial, `testing`
   **(se configurado)** prioriza `patches`, que prioriza os pacotes oficiais
-  originais, já que no Slackware Stable, as atualizações fica em `patches`.
+  originais, já que no Slackware Stable, as atualizações ficam em `patches`.
   Repositórios de terceiros não se misturam, ao instalar/atualizar os pacotes,
   as dependências são buscadas apenas naquele repositório em que o pacote se encontra,
   pois assim é mais garantido que vai funcionar. Qualquer decisão diferente dessa,
-  cade ao usuário decidir manualmente e se preciso, criar as devidas regras.
+  cabe ao usuário decidir manualmente e se preciso, criar as devidas regras.
 
 - **🌍 Configuração da Mirror Oficial**  
   O projeto se aproveita da lista conveniente do  `slackpkg` em `/etc/slackpkg/mirrors`
@@ -152,7 +157,7 @@ alguém seria doido de mexer nesses pacotes, mas vale o aviso).
 >
 > - Pode haver mais pacotes do `polkit` que pode ser necessário.
 >
-> - Podem haver novos requisitos no futuro, a medida que o projeto evoluir.
+> - Pode haver novos requisitos no futuro, a medida que o projeto evoluir.
 
 ## 📥 Compilação e Instalação
 
@@ -204,15 +209,26 @@ usuário e redução de curva de aprendizagem. Dentre os principais:
 - Interface simplificada.
 - Ícone na área de notificação e opção de inicialização com o sistema.
 - Digita a senha de superusuário apenas uma vez quando é soliciado, isso inicia um
-  helper privilegiado que só tem seu privilégio revogado 30s aṕos fechar o programa
-  para a área de notificação. Assim não fica precisando colocar senha um monte de vez. 
+  helper privilegiado que só tem o seu privilégio revogado 30s aṕos fechar o programa
+  para a área de notificação. Assim, não fica precisando colocar senha um monte de vez. 
 - As informações de pacotes nas tabs de `Informações` e `Arquivos` são copiáveis.
-- **EM BREVE:** pacotes baixados manualmente pode ser instalados via interface usando klass.
+- **EM BREVE:** Pacotes baixados manualmente pode ser instalados via interface usando klass.
 - **EM BREVE:** Pacotes deb e rpm poderão ser convertidos e instalados facilmente.
 
-## Comportamento e Configurações
+## ⚙️ Comportamento e Configurações
 
-/usr/lib/klass ... COMPLETAR
+O gerenciador de pacotes Klass usa o diretório /var/lib/klass para baixar a base de dados
+e fazer o download dos pacotes para a instalação:
+
+- `/var/lib/klass/database`  
+  Onde são baixados a dase de dados de pacotes dos repositórios.
+
+- `/var/lib/klass/packages`  
+  Onde são baixados os pacotes para a instalação ou atualização.
+
+- `/etc/klass/klass.conf`  
+  Onde ficam as configurações do gerenciador de pacotes. 
+
 
 ## 🛡️ Segurança do Helper
 
@@ -248,7 +264,7 @@ para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre 
   O Helper também verifica o UID do processo conectado. Conexões de processos executados
   como **root** são rejeitadas, permitindo apenas clientes executados como usuário comum.
   Estou assumindo que ninguém vai usar Slackware como `root` em condições normais.
-  > **OBS:** Se isso for um inconveniênte pra alguém, talvez eu crio uma config pra isso.
+  > **OBS:** Se isso for um inconveniênte para alguém, talvez eu crio uma config para isso.
 
 - **Confirmação dos privilégios do Helper**  
   Antes de aceitar qualquer operação privilegiada, o Helper verifica se realmente está
@@ -309,7 +325,7 @@ para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre 
 ## 🚀 Futuras Funcionalidades
 
 Segue as implementações para o futuro:
-  - Melhorias no interface.
+  - Melhorias na interface.
   - Rollback de pacotes.
   - Suporte a gerenciamento de Slackbuilds nativo ou plugin sbopkg.
   - Conversão e instalação de pacotes RPM.
@@ -337,9 +353,6 @@ adicionar essas tags resolvem remoções acidentais.
 >
 > **INTEGRAÇÃO SNAP:**  
 > Eu já vi gente (pelo menos um) querendo isso no Slackware. Não vai dá não.
->
-> **AUTOMAÇÕES PARA NVIDIA:**  
-> Não tem um jeito muito fácil, talvéz só via plugin mesmo.
 
 ## Contrubuição
 

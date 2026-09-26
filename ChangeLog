@@ -1,3 +1,15 @@
+Sat Sep 26 15:56:07 -03 2026:
+    - Moved 'klass.conf' configuration file from /val/lib/klass to /etc/klass.
+    - Adjusted and modernized the iteration system when populating tabs and tables.
+    - Added post-installation operations.
+    - Fixed several potential memory leaks.
+    - Minor fix when sending messages to the emulated terminal.
+    - Prevented concurrency issues during file and package downloads.
+    - Minor fixes and optimizations in the system tray.
+    - Optimized UpdateWorker.
+    - Simplified MessageReceiver.
+    - Simplified and optimized the debugging system.
+    - Updated README documentation.
 Tue Sep 22 10:34:39 -03 2026:
     - Database update verification.
     - Official repository configuration.
