@@ -3,12 +3,18 @@
  * @brief Implementation of a custom delegate for selecting versions within Qt view cells.
  */
 
+#include <QAbstractItemView>
 #include <QApplication>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
 
+#include <DefaultPath.hpp>
 #include <VersionComboBoxDelegate.hpp>
+
+inline constexpr int margin = 5;
+inline constexpr int height = 6;
+inline constexpr int iconSize = 16;
 
 /**
  * @brief Constructs a VersionComboBoxDelegate object.
@@ -34,20 +40,46 @@ void VersionComboBoxDelegate::paint(QPainter *painter, const QStyleOptionViewIte
         QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
         style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
 
-        QStyleOptionComboBox boxOption;
-        boxOption.rect = opt.rect;
-        boxOption.state = opt.state | QStyle::State_Enabled;
+        const int buttonSize = qMax(height, opt.rect.height() - margin * 2);
 
-        QRect arrowRect = style->subControlRect(QStyle::CC_ComboBox, &boxOption, QStyle::SC_ComboBoxArrow, opt.widget);
-        boxOption.rect = arrowRect;
+        QRect buttonRect(
+            opt.rect.x() + opt.rect.width() - margin - buttonSize,
+            opt.rect.y() + margin,
+            buttonSize, buttonSize
+        );
+
+        QStyleOptionButton buttonOpt;
+        buttonOpt.rect = buttonRect;
+        buttonOpt.state = QStyle::State_Enabled | QStyle::State_Raised;
+        style->drawPrimitive(QStyle::PE_PanelButtonCommand, &buttonOpt, painter, opt.widget);
+
+        QStyleOptionComboBox boxOption;
+        boxOption.rect = buttonRect;
+        boxOption.state = opt.state | QStyle::State_Enabled;
         style->drawPrimitive(QStyle::PE_IndicatorArrowDown, &boxOption, painter, opt.widget);
 
-        int margin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, nullptr, opt.widget);
-        QRect textRect = opt.rect.adjusted(3, 0, 0, 0);
-        textRect.setRight(arrowRect.left() - margin);
+        const QString currentVersion = index.data(Qt::DisplayRole).toString();
+        int textLeftOffset = 0;
+
+        if (currentVersion != versions.first()) {
+            QIcon updateIcon(DefaultPath().defaultPath("icons/available.svg"));
+
+            QRect iconRect(opt.rect.x() + margin, opt.rect.y() + (opt.rect.height() - iconSize) / 2,
+                           iconSize, iconSize);
+
+            updateIcon.paint(painter, iconRect, Qt::AlignCenter, QIcon::Normal, QIcon::On);
+
+            textLeftOffset = margin + iconSize + (margin / 2);
+        }
+
+        QRect textRect = opt.rect.adjusted(textLeftOffset, 0, 0, 0);
+        textRect.setRight(buttonRect.left() - margin);
+
+        QPalette::ColorRole textRole = opt.state & QStyle::State_Selected ? QPalette::HighlightedText : QPalette::Text;
 
         style->drawItemText(painter, textRect, Qt::AlignVCenter | Qt::AlignLeft, opt.palette,
-                            opt.state.testFlag(QStyle::State_Enabled), opt.text, QPalette::Text);
+                            opt.state.testFlag(QStyle::State_Enabled), opt.text, textRole);
+
         painter->restore();
     } else {
         QStyledItemDelegate::paint(painter, option, index);
@@ -67,29 +99,56 @@ bool VersionComboBoxDelegate::editorEvent(QEvent *event, QAbstractItemModel *mod
     if (event->type() == QEvent::MouseButtonPress) {
         if (const auto *mouseEvent = dynamic_cast<QMouseEvent *>(event); mouseEvent->button() == Qt::LeftButton) {
             if (const QStringList versions = index.data(Qt::UserRole + 3).toStringList(); versions.size() > 1) {
-                const QString currentVersion = index.data(Qt::DisplayRole).toString();
+                const int buttonSize = qMax(height, option.rect.height() - margin * 2);
 
-                QMenu menu;
-                for (int i = 0; i < versions.size(); ++i) {
-                    QAction *action = menu.addAction(versions.at(i));
-                    action->setData(i);
+                const QRect buttonRect(
+                    option.rect.x() + option.rect.width() - margin - buttonSize,
+                    option.rect.y() + margin,
+                    buttonSize, buttonSize
+                );
 
-                    if (versions.at(i) == currentVersion) {
-                        action->setCheckable(true);
-                        action->setChecked(true);
+                if (buttonRect.contains(mouseEvent->pos())) {
+                    auto *pw = const_cast<QWidget *>(option.widget);
+
+                    if (auto *view = qobject_cast<QAbstractItemView *>(const_cast<QWidget *>(option.widget)))
+                        view->setCurrentIndex(index);
+
+                    const QString currentVersion = index.data(Qt::DisplayRole).toString();
+
+                    QMenu menu(pw);
+                    for (int i = 0; i < versions.size(); ++i) {
+                        QAction *action = menu.addAction(versions.at(i));
+                        action->setData(i);
+
+                        if (versions.at(i) == currentVersion) {
+                            action->setCheckable(true);
+                            action->setChecked(true);
+                        }
                     }
-                }
 
-                const QWidget *pw = const_cast<QWidget *>(option.widget);
-                const QPoint globalPos = pw ? pw->mapToGlobal(option.rect.bottomLeft()) : QCursor::pos();
-                const QAction *selectedAction = menu.exec(globalPos);
+                    menu.adjustSize();
 
-                if (selectedAction && selectedAction->text() != currentVersion) {
-                    const int selectedIdx = selectedAction->data().toInt();
-                    model->setData(index, selectedAction->text(), Qt::DisplayRole);
-                    emit versionChanged(index, selectedIdx);
+                    QPoint globalPos = QCursor::pos();
+
+                    if (pw) {
+                        const QPoint buttonBottomRight(buttonRect.x() + buttonRect.width(),
+                                                       buttonRect.y() + buttonRect.height());
+
+                        globalPos = pw->mapToGlobal(buttonBottomRight);
+                        globalPos.setX(globalPos.x() - menu.sizeHint().width() - buttonRect.width());
+                        globalPos.setY(globalPos.y() + 3);
+                    }
+
+                    const QAction *selectedAction = menu.exec(globalPos);
+
+                    if (selectedAction && selectedAction->text() != currentVersion) {
+                        const int selectedIdx = selectedAction->data().toInt();
+                        model->setData(index, selectedAction->text(), Qt::DisplayRole);
+                        emit versionChanged(index, selectedIdx);
+                    }
+
+                    return true;
                 }
-                return true;
             }
         }
     }
