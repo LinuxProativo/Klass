@@ -2,6 +2,6 @@
 #define VERSION_HPP
 
 #define DEBUG
-#define VERSION "2026.09.28"
+#define VERSION "2026.09.29"
 
 #endif
