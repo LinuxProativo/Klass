@@ -43,13 +43,15 @@ void CenterDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option
 
     const bool isPrioritized = index.data(Qt::UserRole + 3).toBool();
     const int packageStatusVal = index.model()->data(index, RepositoryTabUtils::PackageStatusRole).toInt();
-    const bool isExcluded = (packageStatusVal == static_cast<int>(PkgStatus::Excluded));
+    const auto status = static_cast<PkgStatus>(packageStatusVal);
+    const bool isBaseState = status == PkgStatus::Installed || status == PkgStatus::Available;
+    const bool isExcluded = status == PkgStatus::Excluded;
     const bool isInstalled = index.siblingAtColumn(1).data(Qt::UserRole + 1).toBool();
 
     QColor targetColor{};
     bool applyColor = false;
 
-    if (isPrioritized) {
+    if (isPrioritized && isBaseState) {
         targetColor = QColor(COLOR_PURPLE);
         applyColor = true;
     } else if (isExcluded && !isInstalled) {
