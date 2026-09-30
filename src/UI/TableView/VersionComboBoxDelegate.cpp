@@ -8,8 +8,11 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QVersionNumber>
 
 #include <DefaultPath.hpp>
+#include <Packages.hpp>
+#include <SlackwareDefines.hpp>
 #include <VersionComboBoxDelegate.hpp>
 
 inline constexpr int margin = 5;
@@ -42,7 +45,7 @@ void VersionComboBoxDelegate::paint(QPainter *painter, const QStyleOptionViewIte
 
         const int buttonSize = qMax(height, opt.rect.height() - margin * 2);
 
-        QRect buttonRect(
+        const QRect buttonRect(
             opt.rect.x() + opt.rect.width() - margin - buttonSize,
             opt.rect.y() + margin,
             buttonSize, buttonSize
@@ -58,14 +61,98 @@ void VersionComboBoxDelegate::paint(QPainter *painter, const QStyleOptionViewIte
         boxOption.state = opt.state | QStyle::State_Enabled;
         style->drawPrimitive(QStyle::PE_IndicatorArrowDown, &boxOption, painter, opt.widget);
 
-        const QString currentVersion = index.data(Qt::DisplayRole).toString();
+        bool hasUpdate = false;
+        if (const QVariant varPkgs = index.data(Qt::UserRole + 4); varPkgs.canConvert<QList<PkgInfo> >()) {
+            const auto pkgList = varPkgs.value<QList<PkgInfo> >();
+            if (!pkgList.isEmpty()) {
+                bool attachTesting = false;
+                for (const QWidget *w = opt.widget; w; w = w->parentWidget()) {
+                    const QVariant val = w->property("attachTesting");
+                    if (val.isValid()) {
+                        attachTesting = val.toBool();
+                        break;
+                    }
+                }
+
+                bool rowIsTestingOnly = true;
+                for (const auto &p: pkgList) {
+                    if (!p.repoName.contains(SLACK_TESTING)) {
+                        rowIsTestingOnly = false;
+                        break;
+                    }
+                }
+
+                auto getRepoPriority = [attachTesting](const QString &repo, bool testingOnly) -> int {
+                    if ((attachTesting || testingOnly) && repo.contains(SLACK_TESTING))
+                        return 3;
+                    if (repo.contains(SLACK_PATCHES))
+                        return 2;
+                    if (repo.compare(SLACK_OFICIAL) == 0)
+                        return 1;
+                    return 0;
+                };
+
+                auto isVersionNewer = [](const QString &v1, const QString &v2) -> bool {
+                    const QVersionNumber ver1 = QVersionNumber::fromString(v1);
+                    const QVersionNumber ver2 = QVersionNumber::fromString(v2);
+                    if (!ver1.isNull() && !ver2.isNull())
+                        return QVersionNumber::compare(ver1, ver2) > 0;
+                    return v1 > v2;
+                };
+
+                const PkgInfo *installedCandidate = nullptr;
+                for (const auto &p: pkgList) {
+                    if (p.isInstalled) {
+                        installedCandidate = &p;
+                        break;
+                    }
+                }
+
+                const PkgInfo *bestAvailable = nullptr;
+                int maxPriority = -1;
+
+                for (const auto &p: pkgList) {
+                    if (p.isInstalled)
+                        continue;
+
+                    if (p.repoName.contains(SLACK_TESTING) && !attachTesting && !rowIsTestingOnly)
+                        continue;
+
+                    const int priority = getRepoPriority(p.repoName, rowIsTestingOnly);
+                    if (priority > maxPriority) {
+                        maxPriority = priority;
+                        bestAvailable = &p;
+                    } else if (priority == maxPriority && bestAvailable) {
+                        // Se estiverem na mesma prioridade, escolhe a versão mais nova
+                        if (isVersionNewer(p.version, bestAvailable->version)) {
+                            bestAvailable = &p;
+                        }
+                    }
+                }
+
+                if (installedCandidate && bestAvailable) {
+                    const int installedPriority = getRepoPriority(installedCandidate->repoName, rowIsTestingOnly);
+
+                    if (maxPriority > installedPriority)
+                        hasUpdate = true;
+
+                    else if (maxPriority == installedPriority) {
+                        if (bestAvailable->version != installedCandidate->version &&
+                            isVersionNewer(bestAvailable->version, installedCandidate->version)) {
+                            hasUpdate = true;
+                        }
+                    }
+                }
+            }
+        }
+
         int textLeftOffset = 0;
 
-        if (currentVersion != versions.first()) {
+        if (hasUpdate) {
             QIcon updateIcon(DefaultPath().defaultPath("icons/available.svg"));
 
-            QRect iconRect(opt.rect.x() + margin, opt.rect.y() + (opt.rect.height() - iconSize) / 2,
-                           iconSize, iconSize);
+            const QRect iconRect(opt.rect.x() + margin, opt.rect.y() + (opt.rect.height() - iconSize) / 2,
+                                 iconSize, iconSize);
 
             updateIcon.paint(painter, iconRect, Qt::AlignCenter, QIcon::Normal, QIcon::On);
 
@@ -75,7 +162,8 @@ void VersionComboBoxDelegate::paint(QPainter *painter, const QStyleOptionViewIte
         QRect textRect = opt.rect.adjusted(textLeftOffset, 0, 0, 0);
         textRect.setRight(buttonRect.left() - margin);
 
-        QPalette::ColorRole textRole = opt.state & QStyle::State_Selected ? QPalette::HighlightedText : QPalette::Text;
+        const QPalette::ColorRole textRole =
+                opt.state & QStyle::State_Selected ? QPalette::HighlightedText : QPalette::Text;
 
         style->drawItemText(painter, textRect, Qt::AlignVCenter | Qt::AlignLeft, opt.palette,
                             opt.state.testFlag(QStyle::State_Enabled), opt.text, textRole);
