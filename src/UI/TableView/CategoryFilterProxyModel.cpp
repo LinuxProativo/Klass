@@ -36,7 +36,7 @@ void CategoryFilterProxyModel::setSearchFilter(const QString &term) {
  * @return True if the row satisfies category and search criteria, false otherwise.
  */
 bool CategoryFilterProxyModel::filterAcceptsRow(const int sourceRow, const QModelIndex &sourceParent) const {
-    if (!category.isEmpty() && category != QStringLiteral("Overview")) {
+    if (!category.isEmpty() && category != tr("Overview")) {
         const QModelIndex catIndex = sourceModel()->index(sourceRow, 1, sourceParent);
         if (const QString rowCat = catIndex.data(Qt::UserRole).toString(); rowCat != category)
             return false;

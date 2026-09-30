@@ -485,7 +485,7 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
 
     if (showCategories) {
         catList->clear();
-        root = new QTreeWidgetItem(catList, QStringList{tr("Overview")});
+        root = new QTreeWidgetItem(catList, QStringList(tr("Overview")));
         root->setExpanded(true);
     }
 
