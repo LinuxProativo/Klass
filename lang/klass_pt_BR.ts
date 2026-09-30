@@ -14,8 +14,9 @@
         <translation>Gerenciador de Pacotes Klass</translation>
     </message>
     <message>
-        <source>Klass is a Qt-based Graphical Interface for Slackware package management, organized by package categories. It acts as a frontend for pkgbuild with the slackpkg+ extension, aiming to streamline Slackware maintenance and reduce system instability.</source>
-        <translation type="vanished">Klass é uma Interface Gráfica feita em QT para o Gerenciamento de Pacotes do Slackware Baseado em Categorias de Pacotes que serve como Frontend para o Pkgbuild com a Extensão Slackpkg+, com o Objetivo de Facilitar a Manutenção do Slackware e Reduzir Instabilidades.</translation>
+        <location filename="../src/UI/About.cpp" line="35"/>
+        <source> BETA</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/UI/About.cpp" line="43"/>
@@ -42,6 +43,14 @@
         <location filename="../src/UI/About.cpp" line="62"/>
         <source>Material Icons License</source>
         <translation>Licença do Material Icons do Google</translation>
+    </message>
+</context>
+<context>
+    <name>CategoryFilterProxyModel</name>
+    <message>
+        <location filename="../src/UI/TableView/CategoryFilterProxyModel.cpp" line="39"/>
+        <source>Overview</source>
+        <translation>Visão Geral</translation>
     </message>
 </context>
 <context>
@@ -119,12 +128,12 @@
 <context>
     <name>HelperController</name>
     <message>
-        <location filename="../src/HelperController.cpp" line="104"/>
+        <location filename="../src/HelperController.cpp" line="105"/>
         <source>Authentication Timeout</source>
         <translation>Sessão de Autenticação Expirada</translation>
     </message>
     <message>
-        <location filename="../src/HelperController.cpp" line="105"/>
+        <location filename="../src/HelperController.cpp" line="106"/>
         <source>Authentication timed out after 30 seconds.</source>
         <translation>O Processo de Autenticação de Segurança Expirou após 30 Segundos de Inatividade. Por Favor, Tente Novamente.</translation>
     </message>
@@ -140,104 +149,111 @@
 <context>
     <name>Klass</name>
     <message>
-        <location filename="../src/Klass.cpp" line="20"/>
+        <location filename="../src/Klass.cpp" line="21"/>
+        <location filename="../src/Klass.cpp" line="491"/>
         <source>Klass Package Manager</source>
         <translation>Gerenciador de Pacotes Klass</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="57"/>
+        <location filename="../src/Klass.cpp" line="59"/>
         <source>Search packages</source>
         <translation>Pesquisar Pacotes</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="60"/>
+        <location filename="../src/Klass.cpp" line="62"/>
         <source>Clear Search</source>
         <translation>Limpar Pesquisa</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="68"/>
+        <location filename="../src/Klass.cpp" line="70"/>
         <source>Add/Manage Slackware Mirrors</source>
         <translation>Adicionar/Gerenciar Repositórios do Slackware</translation>
     </message>
     <message>
-        <source>Exception Rules</source>
-        <translation type="vanished">Gerenciar Exceções</translation>
-    </message>
-    <message>
-        <location filename="../src/Klass.cpp" line="71"/>
+        <location filename="../src/Klass.cpp" line="73"/>
         <source>Manage Priorities/Exception Rules</source>
         <translation>Gerenciar Régras de Prioridades/Exceções</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="74"/>
-        <location filename="../src/Klass.cpp" line="505"/>
+        <location filename="../src/Klass.cpp" line="76"/>
+        <location filename="../src/Klass.cpp" line="543"/>
         <source>Update Database</source>
         <translation>Atualizar Base de Dados</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="77"/>
+        <location filename="../src/Klass.cpp" line="79"/>
         <source>Select Updates</source>
         <translation>Selecionar Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="80"/>
+        <location filename="../src/Klass.cpp" line="82"/>
         <source>Apply Updates</source>
         <translation>Aplicar Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="83"/>
+        <location filename="../src/Klass.cpp" line="85"/>
         <source>Settings</source>
         <translation>Configurações</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="86"/>
+        <location filename="../src/Klass.cpp" line="88"/>
         <source>View Changelog</source>
         <translation>Visualizar Changelog do Slackware</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="89"/>
+        <location filename="../src/Klass.cpp" line="91"/>
         <source>About</source>
         <translation>Sobre o Programa</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="382"/>
+        <location filename="../src/Klass.cpp" line="412"/>
         <source>All Packages</source>
         <translation>Todos os Pacotes</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="427"/>
+        <location filename="../src/Klass.cpp" line="455"/>
         <source>Others</source>
         <translation>Outros</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="498"/>
+        <location filename="../src/Klass.cpp" line="536"/>
         <source>Configuration Required</source>
         <translation>Configurações Necessárias</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="498"/>
+        <location filename="../src/Klass.cpp" line="536"/>
         <source>Enable official mirror to update.</source>
         <translation>É Necessário Habilitar um Espelho Oficial Antes de Atualizar.</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="506"/>
+        <location filename="../src/Klass.cpp" line="544"/>
         <source>No update notification was received. Would you like to update the database anyway?</source>
         <translation>Nenhuma Notificação de Atualização foi Recebida. Deseja Atualizar a Base de Dados Mesmo Assim?</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="562"/>
+        <location filename="../src/Klass.cpp" line="600"/>
         <source>Update Slackware Database</source>
         <translation>Atualizar Base de Dados do Slackware</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="614"/>
+        <location filename="../src/Klass.cpp" line="641"/>
+        <source>Processing Packages</source>
+        <translation>Processando Pacotes</translation>
+    </message>
+    <message>
+        <location filename="../src/Klass.cpp" line="673"/>
         <source>Database Update Available</source>
         <translation>Atualizações Disponíveis</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="615"/>
+        <location filename="../src/Klass.cpp" line="674"/>
         <source>A newer Slackware package database is available.</source>
         <translation>Uma Nova Base de Dados de Pacotes do Slackware está Disponível.</translation>
+    </message>
+    <message>
+        <location filename="../src/Klass.cpp" line="678"/>
+        <source>Klass Package Manager - Database Updates are Available</source>
+        <translation>Gerenciador de Pacotes Klass - Atualizações da Base de Dados Disponíveis</translation>
     </message>
 </context>
 <context>
@@ -386,13 +402,14 @@
         <translation>Outros</translation>
     </message>
     <message>
-        <source>Klass Package Manager</source>
-        <translation type="vanished">Gerenciador de Pacotes Klass</translation>
-    </message>
-    <message>
         <location filename="../src/UI/RulesDialog/RuleUtils.hpp" line="13"/>
         <source>Exact name or Regex pattern (e.g., qt6, ^ffmpeg-.*)</source>
         <translation>Nome do Pacote ou Expressão Regular (ex; qt6, ^ffmpeg-.*)</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SummaryDialog.cpp" line="35"/>
+        <source>Unknown</source>
+        <translation>Indisponível</translation>
     </message>
 </context>
 <context>
@@ -426,152 +443,152 @@
 <context>
     <name>RepositoryTab</name>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="28"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="28"/>
         <source>Categories</source>
         <translation>Categorias</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="34"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="34"/>
         <source>Status</source>
         <translation>Estado</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="34"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="34"/>
         <source>Name</source>
-        <translation>Nome</translation>
+        <translation>Nome do Pacote</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="34"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="34"/>
         <source>Version</source>
         <translation>Versão</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="34"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="34"/>
         <source>Description</source>
         <translation>Descrição</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="57"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="103"/>
         <source>File List</source>
         <translation>Lista de Arquivos</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="60"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="106"/>
         <source>Info</source>
         <translation>Informações</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="61"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="107"/>
         <source>Files</source>
         <translation>Arquivos</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="290"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="337"/>
         <source>Package Name</source>
-        <translation>Nome</translation>
+        <translation>Nome do Pacote</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="291"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="338"/>
         <source>Package Version</source>
         <translation>Versão</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="292"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="339"/>
         <source>Package Repository</source>
         <translation>Repositório</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="293"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="340"/>
         <source>Mirror URL</source>
         <translation>Link do Repositório</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="294"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="341"/>
         <source>Package Size</source>
         <translation>Tamanho</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="295"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="342"/>
         <source>Installed Package Size</source>
         <translation>Tamanho Instalado</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="296"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="343"/>
         <source>Package MD5</source>
-        <translation type="unfinished"></translation>
+        <translation>CheckSum MD5</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="297"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="344"/>
         <source>Signature MD5</source>
-        <translation type="unfinished"></translation>
+        <translation>MD5 da Assinatura</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="298"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="345"/>
         <source>Repository Path</source>
-        <translation type="unfinished"></translation>
+        <translation>Local do Repositório</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="299"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="346"/>
         <source>Package Required</source>
-        <translation type="unfinished"></translation>
+        <translation>Pacotes Requeridos</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="300"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="347"/>
         <source>Package Conflicts</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="301"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="348"/>
         <source>Package Suggests</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="340"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="387"/>
         <source>Package Description</source>
         <translation>Descrição</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="862"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="488"/>
+        <source>Overview</source>
+        <translation>Visão Geral</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/RepositoryTab.cpp" line="53"/>
         <source>Install</source>
         <translation>Instalar</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="864"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="59"/>
         <source>Upgrade</source>
-        <translation type="unfinished"></translation>
+        <translation>Atualizar</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="866"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="65"/>
         <source>Reinstall</source>
         <translation>Reinstalar</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="868"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="71"/>
         <source>Rollback</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="870"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="76"/>
         <source>Remove</source>
         <translation>Desinstalar</translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="873"/>
-        <source>Administrative Actions</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="874"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="82"/>
         <source>Lock</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="876"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="87"/>
         <source>Prioritize</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/ReposityTab.cpp" line="879"/>
+        <location filename="../src/UI/RepositoryTab.cpp" line="92"/>
         <source>Unselect</source>
         <translation>Desmarcar</translation>
     </message>
@@ -617,10 +634,6 @@
         <location filename="../src/UI/RulesDialog/RuleEditDialog.cpp" line="54"/>
         <source>Repositories</source>
         <translation>Repositórios</translation>
-    </message>
-    <message>
-        <source>Exact name or Regex pattern (e.g., qt6, ^ffmpeg-.*)</source>
-        <translation type="vanished">Nome do Pacote ou Expressão Regular (ex; qt6, ^ffmpeg-.*)</translation>
     </message>
     <message>
         <location filename="../src/UI/RulesDialog/RuleEditDialog.cpp" line="60"/>
@@ -686,10 +699,6 @@
         <translation>Gerenciador de Régras de Prioridades e Exceções</translation>
     </message>
     <message>
-        <source>Exact name or Regex pattern (e.g., qt6, ^ffmpeg-.*)</source>
-        <translation type="vanished">Nome do Pacote ou Expressão Regular (ex; qt6, ^ffmpeg-.*)</translation>
-    </message>
-    <message>
         <location filename="../src/UI/RulesDialog/RulesManagerDialog.cpp" line="34"/>
         <source>Add Exception</source>
         <translation>Adicionar</translation>
@@ -725,44 +734,36 @@
         <source>Priorities</source>
         <translation>Prioridades</translation>
     </message>
-    <message>
-        <source>Any Repository</source>
-        <translation type="vanished">Todos</translation>
-    </message>
-    <message>
-        <source>Others</source>
-        <translation type="vanished">Outros</translation>
-    </message>
 </context>
 <context>
     <name>SettingsDialog</name>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="13"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="14"/>
         <source>Settings</source>
         <translation>Configurações</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="16"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="17"/>
         <source>Startup Options</source>
         <translation>Opções de Inicialização</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="17"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="18"/>
         <source>Repository Options</source>
         <translation>opções de Repositório</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="20"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="21"/>
         <source>Start application automatically on system boot</source>
-        <translation type="unfinished"></translation>
+        <translation>Abrir Programa Automaticamente na Inicialização do Sistema</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="27"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="28"/>
         <source>Attach &apos;patches&apos; repository to official repository</source>
         <translation>Anexar o Repositório &apos;Patches&apos; ao Repositório Oficial</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="31"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="32"/>
         <source>Attach &apos;testing&apos; repository to official repository</source>
         <translation>Anexar o Repositório &apos;Testing&apos; ao Repositório Oficial</translation>
     </message>
@@ -770,70 +771,70 @@
 <context>
     <name>SummaryDialog</name>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="16"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="54"/>
         <source>Transaction Summary</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="22"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="58"/>
         <source>The following package changes are ready to be processed:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="33"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="70"/>
         <source>Summary: 0 operations pending.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="128"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="152"/>
         <source>dependency</source>
-        <translation type="unfinished"></translation>
+        <translation>dependência</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="133"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="99"/>
         <source>To Install</source>
-        <translation type="unfinished"></translation>
+        <translation>Marcados para Instalação</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="134"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="100"/>
         <source>To Upgrade</source>
-        <translation type="unfinished"></translation>
+        <translation>Marcados para Atualização</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="141"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="107"/>
         <source>Summary: %1 operation(s) pending.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="135"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="101"/>
         <source>To Reinstall</source>
-        <translation type="unfinished"></translation>
+        <translation>Marcados para Reinstalação</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="136"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="102"/>
         <source>To Remove</source>
-        <translation type="unfinished"></translation>
+        <translation>Marcados para Remoção</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="40"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="74"/>
         <source>Cancel</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="41"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="75"/>
         <source>Proceed</source>
-        <translation type="unfinished"></translation>
+        <translation>Continuar</translation>
     </message>
 </context>
 <context>
     <name>SysTray</name>
     <message>
-        <location filename="../src/SysTray.cpp" line="19"/>
+        <location filename="../src/SysTray.cpp" line="23"/>
         <source>Quit</source>
         <translation>Fechar o Programa</translation>
     </message>
     <message>
-        <location filename="../src/SysTray.cpp" line="35"/>
+        <location filename="../src/SysTray.cpp" line="39"/>
         <source>Klass Package Manager</source>
         <translation>Gerenciador de Pacotes Klass</translation>
     </message>
@@ -842,23 +843,23 @@
     <name>Terminal</name>
     <message>
         <location filename="../src/UI/Terminal.cpp" line="32"/>
-        <location filename="../src/UI/Terminal.cpp" line="69"/>
-        <location filename="../src/UI/Terminal.cpp" line="83"/>
+        <location filename="../src/UI/Terminal.cpp" line="60"/>
+        <location filename="../src/UI/Terminal.cpp" line="74"/>
         <source>Cancel</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../src/UI/Terminal.cpp" line="69"/>
+        <location filename="../src/UI/Terminal.cpp" line="60"/>
         <source>Done</source>
         <translation>Concluído</translation>
     </message>
     <message>
-        <location filename="../src/UI/Terminal.cpp" line="96"/>
+        <location filename="../src/UI/Terminal.cpp" line="87"/>
         <source>Cancel running process</source>
         <translation>Cancelar Processo em Execução</translation>
     </message>
     <message>
-        <location filename="../src/UI/Terminal.cpp" line="97"/>
+        <location filename="../src/UI/Terminal.cpp" line="88"/>
         <source>A command is still running. Do you really want to cancel it?</source>
         <translation>Um Processo Ainda Está em Execução. Deseja Cancelar?</translation>
     </message>
