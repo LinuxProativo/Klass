@@ -15,7 +15,7 @@
 
 /**
  * @class SettingsDialog
- * @brief Dialog window for managing application-wide settings and repository attachments.
+ * @brief Dialog window for managing application-wide settings, external commands, and administrative actions.
  */
 class SettingsDialog : public Dialog {
     Q_OBJECT

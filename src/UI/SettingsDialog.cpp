@@ -7,7 +7,7 @@
 #include <Utils.hpp>
 
 /**
- * @brief Main Constructor. Sets up window bounds and groups configuration options.
+ * @brief Main Constructor. Sets up window bounds and groups configuration options across multiple tabs.
  * @param parent Pointer to the parent widget container.
  */
 SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::ApplicationModal) {
