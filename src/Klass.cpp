@@ -45,6 +45,7 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
 
     settingsDialog = new SettingsDialog(this);
     connect(settingsDialog, &SettingsDialog::settingsChanged, this, &Klass::loadRepositoryTabs);
+    connect(settingsDialog, &SettingsDialog::adminConfigSaveRequested, this, &Klass::handleAdminConfigSaveRequested);
 
     summaryDialog = new SummaryDialog(this);
     connect(summaryDialog, &QDialog::accepted, [this] { helper->setupHelper(PendingAction::ProcessTransaction); });
@@ -582,6 +583,15 @@ void Klass::handleEditRuleRequested(const RuleEntry &oldRule, const RuleEntry &n
 }
 
 /**
+ * @brief Handles the request to persist administrative configurations to /etc/klass/klass.conf.
+ * @param payload The serialized configuration string containing administrative settings and flags.
+ */
+void Klass::handleAdminConfigSaveRequested(const QString &payload) {
+    pendingAdminConfigPayload = payload;
+    helper->setupHelper(PendingAction::SaveAdminConfig);
+}
+
+/**
  * @brief Processes a single package by its identifier.
  * @param file The name or path of the package to be processed.
  */
@@ -659,6 +669,9 @@ void Klass::onHelperReady() {
         if (!pendingRemoves.isEmpty()) payload += "REMOVE=" + formatPkgList(pendingRemoves) + ";";
 
         helper->socket()->write(payload.toUtf8() + SEP);
+    } else if (pending == PendingAction::SaveAdminConfig && !pendingAdminConfigPayload.isEmpty()) {
+        helper->socket()->write(QByteArray("SETADMINCONFIG:") + pendingAdminConfigPayload.toUtf8() + SEP);
+        pendingAdminConfigPayload.clear();
     }
     helper->setPendingAct(PendingAction::None);
 }
