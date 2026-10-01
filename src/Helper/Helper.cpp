@@ -9,6 +9,7 @@
 #include <QNetworkReply>
 #include <QTextStream>
 
+#include <AdminConfigManager.hpp>
 #include <Helper.hpp>
 #include <Mirrors.hpp>
 #include <Packages.hpp>
@@ -165,6 +166,10 @@ Helper::Helper(QObject *parent) : QObject(parent) {
 
                     helperUtils->setOperationCancelled(false);
                     helperUtils->processTransaction(clientSocket, task, transactionList);
+                } else if (raw.startsWith("SETADMINCONFIG:")) {
+                    const QString payload = QString::fromUtf8(raw.mid(15)).trimmed();
+                    const bool ok = AdminConfigManager::savePayload(payload);
+                    clientSocket->write(WRITE(ok, "Admin config saved", "Failed to save admin config") + SEP);
                 } else if (raw.startsWith(INPUT_CHAR)) {
                     task->sendInput(raw.mid(INPUT_SIZE));
                 } else {
