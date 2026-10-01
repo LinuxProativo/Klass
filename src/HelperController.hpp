@@ -22,7 +22,8 @@ enum class PendingAction {
     AddRule,
     DeleteRule,
     EditRule,
-    ProcessTransaction
+    ProcessTransaction,
+    SaveAdminConfig
 };
 
 /**
