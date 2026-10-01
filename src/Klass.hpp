@@ -84,6 +84,8 @@ private:
 
     void handleEditRuleRequested(const RuleEntry &oldRule, const RuleEntry &newRule);
 
+    void handleAdminConfigSaveRequested(const QString &payload);
+
     void onUpdate();
 
     void onHelperReady();
@@ -120,7 +122,7 @@ private:
     QList<RuleEntry> pendingRules{};
     QMap<QString, QString> mirrorMap{};
     QStringList pendingRepoDisable{};
-    QString pendingMirrorUrl{};
+    QString pendingMirrorUrl{}, pendingAdminConfigPayload{};
     bool updateNotificationShown{false}, started{false};
 };
 
