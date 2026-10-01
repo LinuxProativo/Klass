@@ -24,8 +24,8 @@ RulesManagerDialog::RulesManagerDialog(QWidget *parent) : Dialog(parent, Qt::App
 
     repoCombo = new QComboBox(exceptionsContainer);
     typeCombo = new QComboBox(exceptionsContainer);
-    typeCombo->addItem(tr("By Package"), QStringLiteral("package"));
-    typeCombo->addItem(tr("By Category"), QStringLiteral("category"));
+    typeCombo->addItem(tr("By Package"), BY_PKG);
+    typeCombo->addItem(tr("By Category"), BY_CAT);
 
     targetEdit = new QLineEdit(exceptionsContainer);
     targetEdit->setPlaceholderText(RuleUtils::RULE_PATTERN_PLACEHOLDER);
@@ -163,12 +163,7 @@ void RulesManagerDialog::onAddExceptionClicked() {
         return;
 
     targetEdit->clear();
-    emit ruleAdded(RuleEntry{
-        QStringLiteral("exception"),
-        repoCombo->currentData().toString(),
-        typeCombo->currentData().toString(),
-        target
-    });
+    emit ruleAdded(RuleEntry{EXCEPT, repoCombo->currentData().toString(), typeCombo->currentData().toString(), target});
 }
 
 /**
@@ -196,12 +191,7 @@ void RulesManagerDialog::onAddPriorityClicked() {
         return;
 
     priorityPackageEdit->clear();
-    emit ruleAdded(RuleEntry{
-        QStringLiteral("priority"),
-        priorityRepoCombo->currentData().toString(),
-        QStringLiteral("package"),
-        pkg
-    });
+    emit ruleAdded(RuleEntry{PRIORITY, priorityRepoCombo->currentData().toString(), BY_PKG, pkg});
 }
 
 /**
@@ -295,9 +285,7 @@ void RulesManagerDialog::editPriorityRow(const int row) {
  */
 RuleEntry RulesManagerDialog::ruleFromExceptionRow(const int row) const {
     return RuleEntry{
-        QStringLiteral("exception"),
-        exceptionsModel->item(row, 0)->data(Qt::UserRole).toString(),
-        exceptionsModel->item(row, 1)->text(),
+        EXCEPT, exceptionsModel->item(row, 0)->data(Qt::UserRole).toString(), exceptionsModel->item(row, 1)->text(),
         exceptionsModel->item(row, 2)->text()
     };
 }
@@ -309,9 +297,7 @@ RuleEntry RulesManagerDialog::ruleFromExceptionRow(const int row) const {
  */
 RuleEntry RulesManagerDialog::ruleFromPriorityRow(const int row) const {
     return RuleEntry{
-        QStringLiteral("priority"),
-        prioritiesModel->item(row, 1)->data(Qt::UserRole).toString(),
-        QStringLiteral("package"),
+        PRIORITY, prioritiesModel->item(row, 1)->data(Qt::UserRole).toString(), BY_PKG,
         prioritiesModel->item(row, 0)->text()
     };
 }
@@ -324,10 +310,10 @@ void RulesManagerDialog::appendRuleToTable(const RuleEntry &rule) const {
     auto *repoItem = new QStandardItem(RuleUtils::displayRepositoryName(rule.repo)); // NOLINT
     repoItem->setData(rule.repo, Qt::UserRole);
 
-    if (rule.type == QLatin1String("exception")) {
+    if (rule.type == EXCEPT) {
         const QList rowItems = {repoItem, new QStandardItem(rule.scope), new QStandardItem(rule.rule)};
         exceptionsModel->appendRow(rowItems);
-    } else if (rule.type == QLatin1String("priority")) {
+    } else if (rule.type == PRIORITY) {
         const QList rowItems = {new QStandardItem(rule.rule), repoItem};
         prioritiesModel->appendRow(rowItems);
     }
@@ -339,7 +325,7 @@ void RulesManagerDialog::appendRuleToTable(const RuleEntry &rule) const {
  */
 void RulesManagerDialog::removeRulesFromTable(const QList<RuleEntry> &rules) const {
     for (const RuleEntry &rule: rules) {
-        QStandardItemModel *model = (rule.type == QLatin1String("exception")) ? exceptionsModel : prioritiesModel;
+        QStandardItemModel *model = (rule.type == EXCEPT) ? exceptionsModel : prioritiesModel;
         if (const int row = RuleUtils::findRuleRow(model, rule); row != -1)
             model->removeRow(row);
     }
@@ -351,7 +337,7 @@ void RulesManagerDialog::removeRulesFromTable(const QList<RuleEntry> &rules) con
  * @param newRule The rule values to write into that row.
  */
 void RulesManagerDialog::replaceRuleInTable(const RuleEntry &oldRule, const RuleEntry &newRule) const {
-    const auto *model = oldRule.type == QLatin1String("exception") ? exceptionsModel : prioritiesModel;
+    const auto *model = oldRule.type == EXCEPT ? exceptionsModel : prioritiesModel;
     const int row = RuleUtils::findRuleRow(model, oldRule);
     if (row == -1)
         return;
@@ -359,7 +345,7 @@ void RulesManagerDialog::replaceRuleInTable(const RuleEntry &oldRule, const Rule
     model->item(row, 0)->setText(RuleUtils::displayRepositoryName(newRule.repo));
     model->item(row, 0)->setData(newRule.repo, Qt::UserRole);
 
-    if (oldRule.type == QLatin1String("exception")) {
+    if (oldRule.type == EXCEPT) {
         model->item(row, 1)->setText(newRule.scope);
         model->item(row, 2)->setText(newRule.rule);
     } else {

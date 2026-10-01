@@ -25,14 +25,10 @@ RuleEditDialog::RuleEditDialog(const RuleMode mode, const RuleEntry &rule, const
 
     mainLayout = new QVBoxLayout(this);
     formLayout = new QFormLayout();
-
     repoCombo = new QComboBox(this);
-    if (mode == RuleMode::Exception)
-        repoCombo->addItem(tr("Any Repository"), QStringLiteral("all"));
 
-    for (const QString &repo: repos)
-        repoCombo->addItem(RuleUtils::displayRepositoryName(repo), repo);
-    repoCombo->addItem(tr("Others"), SLACK_OTHERS);
+    RuleUtils::populateRepoCombo(repoCombo, repos, mode == RuleMode::Exception);
+
     if (const int idx = repoCombo->findData(rule.repo); idx != -1)
         repoCombo->setCurrentIndex(idx);
 
@@ -41,8 +37,8 @@ RuleEditDialog::RuleEditDialog(const RuleMode mode, const RuleEntry &rule, const
 
     if (mode == RuleMode::Exception) {
         typeCombo = new QComboBox(this);
-        typeCombo->addItem(tr("By Package"), QStringLiteral("package"));
-        typeCombo->addItem(tr("By Category"), QStringLiteral("category"));
+        typeCombo->addItem(tr("By Package"), BY_PKG);
+        typeCombo->addItem(tr("By Category"), BY_CAT);
         if (const int idx = typeCombo->findData(rule.scope); idx != -1)
             typeCombo->setCurrentIndex(idx);
 
@@ -83,9 +79,9 @@ void RuleEditDialog::onAccept() {
         return;
     }
 
-    result.type = mode == RuleMode::Exception ? QStringLiteral("exception") : QStringLiteral("priority");
+    result.type = mode == RuleMode::Exception ? EXCEPT : PRIORITY;
     result.repo = repoCombo->currentData().toString();
-    result.scope = mode == RuleMode::Exception ? typeCombo->currentData().toString() : QStringLiteral("package");
+    result.scope = mode == RuleMode::Exception ? typeCombo->currentData().toString() : BY_PKG;
     result.rule = target;
 
     this->accept();
