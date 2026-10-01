@@ -65,7 +65,9 @@ QStringList RepoManager::readConf() {
             QStringLiteral(""),
             QStringLiteral("# Exceptions"),
             QStringLiteral(""),
-            QStringLiteral("# Priorities")
+            QStringLiteral("# Priorities"),
+            QStringLiteral(""),
+            QStringLiteral("# Administrative Actions")
         };
         if (writeConf(defaultTemplate))
             return defaultTemplate;
