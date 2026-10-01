@@ -16,15 +16,13 @@ namespace RuleUtils {
      * @return Localized display name.
      */
     QString displayRepositoryName(const QString &repo) {
-        if (repo == QStringLiteral("all"))
+        if (repo == ALL_REPOSITORIES)
             return QObject::tr("Any Repository");
 
         if (repo == SLACK_OTHERS)
             return QObject::tr("Others");
 
-        QString text = repo;
-        text[0] = text[0].toUpper();
-        return text;
+        return repo;
     }
 
     /**
@@ -38,10 +36,10 @@ namespace RuleUtils {
         combo->clear();
 
         if (includeAllOption)
-            combo->addItem(QObject::tr("Any Repository"), QStringLiteral("all"));
+            combo->addItem(QObject::tr("Any Repository"), ALL_REPOSITORIES);
 
         for (const QString &repo: repos)
-            combo->addItem(displayRepositoryName(repo), repo);
+            combo->addItem(repo, repo);
 
         combo->addItem(QObject::tr("Others"), SLACK_OTHERS);
         combo->blockSignals(false);
@@ -55,12 +53,12 @@ namespace RuleUtils {
      */
     int findRuleRow(const QStandardItemModel *model, const RuleEntry &rule) {
         for (int row = 0; row < model->rowCount(); ++row) {
-            if (rule.type == QLatin1String("exception")) {
+            if (rule.type == EXCEPT) {
                 if (model->item(row, 0)->data(Qt::UserRole).toString() == rule.repo &&
                     model->item(row, 1)->text() == rule.scope &&
                     model->item(row, 2)->text() == rule.rule)
                     return row;
-            } else if (rule.type == QLatin1String("priority")) {
+            } else if (rule.type == PRIORITY) {
                 if (model->item(row, 0)->text() == rule.rule &&
                     model->item(row, 1)->data(Qt::UserRole).toString() == rule.repo)
                     return row;
