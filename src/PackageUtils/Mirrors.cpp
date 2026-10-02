@@ -111,7 +111,7 @@ bool Mirrors::setActive(const QString &url) {
     bool found = false;
 
     for (QString &line: lines) {
-        if (line.trimmed().startsWith(QLatin1String("OFFICIAL_MIRROR="))) {
+        if (line.trimmed().startsWith(u"OFFICIAL_MIRROR=")) {
             line = targetLine;
             found = true;
             break;
@@ -119,7 +119,7 @@ bool Mirrors::setActive(const QString &url) {
     }
 
     if (!found) {
-        if (const int idx = static_cast<int>(lines.indexOf(QStringLiteral("# Official Repo"))); idx != -1) {
+        if (const int idx = static_cast<int>(lines.indexOf(OFFICIAL_HEADER)); idx != -1) {
             lines.insert(idx + 1, targetLine);
         } else {
             lines.prepend(targetLine);
@@ -137,7 +137,7 @@ bool Mirrors::setActive(const QString &url) {
 bool Mirrors::accept(const QString &url) {
     const QString u = url.toLower();
     const bool hasCurrent = u.contains("current/") || u.contains("dev/");
-    const bool is64 = (detectArch() == "x86_64");
+    const bool is64 = detectArch() == "x86_64";
     const bool has64 = (u.contains("x86_64") || u.contains("slackware64") || u.contains("multilib"))
                        && !u.contains("armv7hl");
     const bool has32 = (u.contains("x86/") || u.contains("i486/") || u.contains("i586/") ||
@@ -233,7 +233,7 @@ bool Mirrors::enable(const MirrorPlusEntry &entry) {
     const QString activeLine = targetKey + QLatin1Char('=') + entry.url;
 
     bool updated = false;
-    for (QString &line : lines) {
+    for (QString &line: lines) {
         if (line.trimmed().startsWith(targetKey)) {
             line = activeLine;
             updated = true;
@@ -242,7 +242,7 @@ bool Mirrors::enable(const MirrorPlusEntry &entry) {
     }
 
     if (!updated) {
-        if (const int idx = static_cast<int>(lines.indexOf(QStringLiteral("# Third Mirrors"))); idx != -1) {
+        if (const int idx = static_cast<int>(lines.indexOf(THIRD_HEADER)); idx != -1) {
             lines.insert(idx + 1, activeLine);
         } else {
             lines.append(activeLine);
@@ -264,7 +264,7 @@ bool Mirrors::disable(const QString &name) {
     QStringList updatedLines;
     bool removed = false;
 
-    for (const QString &line : lines) {
+    for (const QString &line: lines) {
         if (line.trimmed().startsWith(targetKey)) {
             removed = true;
             continue;
@@ -311,7 +311,8 @@ Mirrors::Channel Mirrors::detectChannel() {
  */
 bool Mirrors::isUpdateRequired() {
     QList<MirrorPlusEntry> repos;
-    if (const auto [url, country] = Mirrors::activeOne(); !url.isEmpty())
+
+    if (const auto [url, country] = activeOne(); !url.isEmpty())
         repos.append({SLACK_OFICIAL, url});
     repos.append(listActive());
 

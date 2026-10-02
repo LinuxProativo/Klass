@@ -13,6 +13,12 @@
 
 #include <Packages.hpp>
 
+inline const auto EXCEPT = QStringLiteral("exception");
+inline const auto PRIORITY = QStringLiteral("priority");
+inline const auto BY_CAT = QStringLiteral("category");
+inline const auto BY_PKG = QStringLiteral("package");
+inline const QRegularExpression RULE_REGEX(R"(^RULES\['(exception|priority)'\]=\(([^,]*),([^,]*),(.*)\)$)");
+
 /**
  * @struct RuleEntry
  * @brief Represents a single exception or priority rule entry.
@@ -29,6 +35,18 @@ struct RuleEntry {
     [[nodiscard]] QString toConfigLine() const {
         return QString("RULES['%1']=(%2,%3,%4)").arg(type, repo, scope, rule);
     }
+};
+
+/**
+ * @struct CompiledRule
+ * @brief Internal structure for RulesManager to pre-compile Regexes and speed up resolution.
+ */
+struct CompiledRule {
+    RuleEntry entry;
+    QRegularExpression regex;
+    bool isPackageScope{false};
+    bool isAllRepo{false};
+    bool isRegexValid{false};
 };
 
 /**
@@ -56,6 +74,12 @@ struct PkgKey {
     }
 };
 
+/**
+ * @brief Generates a hash value for a PkgKey object.
+ * @param key The PkgKey instance to be hashed, containing name, version, and repo.
+ * @param seed An optional seed value to initialize the hash calculation.
+ * @return A size_t hash value combining the seed and the key's fields.
+ */
 inline size_t qHash(const PkgKey &key, const size_t seed = 0) {
     return qHashMulti(seed, key.name, key.version, key.repo);
 }
@@ -75,6 +99,10 @@ public:
     static bool editRule(const RuleEntry &oldRule, const RuleEntry &newRule);
 
     static QHash<PkgKey, RuleSt> resolveStatuses(const QList<PkgInfo> &allPackages, const QList<RuleEntry> &r);
+
+private:
+    static bool matchesCompiledRule(const CompiledRule &cRule, const QString &pkg, const QString &ver,
+                                    const QString &cat, const QString &repo);
 };
 
 #endif

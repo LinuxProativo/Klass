@@ -32,21 +32,21 @@ class AdminConfigManager {
 public:
     explicit AdminConfigManager();
 
-    [[nodiscard]] bool verifySignature() const;
+    [[nodiscard]] bool verifySignature() const { return checkSignature; }
 
-    void setVerifySignature(bool enabled);
+    void setVerifySignature(const bool enabled) { checkSignature = enabled; }
 
-    [[nodiscard]] bool verifyChecksum() const;
+    [[nodiscard]] bool verifyChecksum() const { return checkChecksum; }
 
-    void setVerifyChecksum(bool enabled);
+    void setVerifyChecksum(const bool enabled) { checkChecksum = enabled; }
 
-    [[nodiscard]] QString preferredChecksum() const;
+    [[nodiscard]] QString preferredChecksum() const { return preferChecksum; }
 
-    void setPreferredChecksum(const QString &algorithm);
+    void setPreferredChecksum(const QString &algorithm) { preferChecksum = algorithm; }
 
-    [[nodiscard]] bool postInstallTask(PostInstallTask task) const;
+    [[nodiscard]] bool postInstallTask(const PostInstallTask task) const { return postInstallTasks.value(task, false); }
 
-    void setPostInstallTask(PostInstallTask task, bool enabled);
+    void setPostInstallTask(const PostInstallTask task, const bool enabled) { postInstallTasks[task] = enabled; }
 
     void load();
 
@@ -57,10 +57,9 @@ public:
 private:
     [[nodiscard]] static QString taskToKey(PostInstallTask task);
 
-    bool m_verifySignature{true};
-    bool m_verifyChecksum{true};
-    QString m_preferredChecksum{QStringLiteral("MD5")};
-    QMap<PostInstallTask, bool> m_postInstallTasks{};
+    bool checkSignature{true}, checkChecksum{true};
+    QString preferChecksum{QStringLiteral("MD5")};
+    QMap<PostInstallTask, bool> postInstallTasks{};
 };
 
 #endif

@@ -18,9 +18,7 @@
  * @brief Dynamic Structured Constructor. Isolates memory profiles according to selected InitMode strategy.
  */
 Packages::Packages(QObject *object) : QObject(object) {
-    updateChecksums();
-    loadInstalledPackages();
-    loadAvailablePackages();
+    reload();
 }
 
 /**
@@ -312,7 +310,7 @@ void Packages::loadInstalledPackages() {
                         loc.chop(1);
 
                     int lastSlash = static_cast<int>(loc.lastIndexOf(u'/'));
-                    QString folder = (lastSlash != -1) ? loc.mid(lastSlash + 1) : loc;
+                    QString folder = (lastSlash != -1) ? loc.mid(lastSlash + 1) : loc; // NOLINT
                     if (!folder.isEmpty() && folder != u"." && folder != u".." && !folder.contains(pkg.name))
                         pkg.category = folder;
                 } else if (line.startsWith(u"COMPRESSED PACKAGE SIZE:")) {

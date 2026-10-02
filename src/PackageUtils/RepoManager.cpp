@@ -20,6 +20,7 @@
  */
 bool RepoManager::writeLines(const QString &path, const QStringList &lines) {
     QSaveFile sf(path);
+
     if (!sf.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
 
@@ -59,16 +60,9 @@ QStringList RepoManager::readConf() {
 
     if (!f.exists()) {
         QStringList defaultTemplate = {
-            QStringLiteral("# Official Repo"),
-            QStringLiteral(""),
-            QStringLiteral("# Third Mirrors"),
-            QStringLiteral(""),
-            QStringLiteral("# Exceptions"),
-            QStringLiteral(""),
-            QStringLiteral("# Priorities"),
-            QStringLiteral(""),
-            QStringLiteral("# Administrative Actions")
+            OFFICIAL_HEADER, EMPTY, THIRD_HEADER, EMPTY, EXCEPTION_HEADER, EMPTY, PRIORITY_HEADER, EMPTY, ADMIN_HEADER,
         };
+
         if (writeConf(defaultTemplate))
             return defaultTemplate;
         return {};
@@ -79,6 +73,7 @@ QStringList RepoManager::readConf() {
 
     QStringList lines;
     QTextStream in(&f);
+
     while (!in.atEnd())
         lines << in.readLine();
     return lines;
@@ -91,6 +86,7 @@ QStringList RepoManager::readConf() {
  */
 bool RepoManager::writeConf(const QStringList &lines) {
     const QFileInfo fileInfo(CONFIG_PATH);
+
     if (const QDir dir = fileInfo.dir(); !dir.exists())
         (void) dir.mkpath(".");
 

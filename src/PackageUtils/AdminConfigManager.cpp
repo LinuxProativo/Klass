@@ -7,88 +7,20 @@
 #include <RepoManager.hpp>
 #include <SlackwareDefines.hpp>
 
-inline const auto SECTION_HEADER = QStringLiteral("# Administrative Actions");
-
 /**
  * @brief Constructs an AdminConfigManager instance and loads existing settings.
  */
 AdminConfigManager::AdminConfigManager() {
-    m_postInstallTasks[PostInstallTask::Ldconfig] = true;
-    m_postInstallTasks[PostInstallTask::UpdateManDb] = true;
-    m_postInstallTasks[PostInstallTask::UpdateGtkIconCache] = false;
-    m_postInstallTasks[PostInstallTask::UpdateDesktopDatabase] = false;
-    m_postInstallTasks[PostInstallTask::UpdateGrub] = false;
-    m_postInstallTasks[PostInstallTask::UpdateLilo] = false;
-    m_postInstallTasks[PostInstallTask::GenerateInitrd] = false;
-    m_postInstallTasks[PostInstallTask::ReinstallVBoxModules] = false;
+    postInstallTasks[PostInstallTask::Ldconfig] = true;
+    postInstallTasks[PostInstallTask::UpdateManDb] = true;
+    postInstallTasks[PostInstallTask::UpdateGtkIconCache] = false;
+    postInstallTasks[PostInstallTask::UpdateDesktopDatabase] = false;
+    postInstallTasks[PostInstallTask::UpdateGrub] = false;
+    postInstallTasks[PostInstallTask::UpdateLilo] = false;
+    postInstallTasks[PostInstallTask::GenerateInitrd] = false;
+    postInstallTasks[PostInstallTask::ReinstallVBoxModules] = false;
 
     load();
-}
-
-/**
- * @brief Checks if package signature verification is active.
- * @return True if verification is enabled, false otherwise.
- */
-bool AdminConfigManager::verifySignature() const {
-    return m_verifySignature;
-}
-
-/**
- * @brief Sets the signature verification state.
- * @param enabled True to enable signature checks, false to disable.
- */
-void AdminConfigManager::setVerifySignature(const bool enabled) {
-    m_verifySignature = enabled;
-}
-
-/**
- * @brief Checks if package checksum verification is active.
- * @return True if checksum checks are enabled, false otherwise.
- */
-bool AdminConfigManager::verifyChecksum() const {
-    return m_verifyChecksum;
-}
-
-/**
- * @brief Sets the checksum verification state.
- * @param enabled True to enable checksum checks, false to disable.
- */
-void AdminConfigManager::setVerifyChecksum(const bool enabled) {
-    m_verifyChecksum = enabled;
-}
-
-/**
- * @brief Returns the preferred checksum algorithm.
- * @return The algorithm identifier string (e.g. "MD5").
- */
-QString AdminConfigManager::preferredChecksum() const {
-    return m_preferredChecksum;
-}
-
-/**
- * @brief Sets the preferred checksum algorithm.
- * @param algorithm The algorithm identifier string.
- */
-void AdminConfigManager::setPreferredChecksum(const QString &algorithm) {
-    m_preferredChecksum = algorithm;
-}
-
-/**
- * @brief Checks if a specific post-installation task is enabled.
- * @param task The identifier of the maintenance task to verify.
- * @return True if the task is scheduled to run, false otherwise.
- */
-bool AdminConfigManager::postInstallTask(const PostInstallTask task) const {
-    return m_postInstallTasks.value(task, false);
-}
-
-/**
- * @brief Updates the execution flag for a post-installation task.
- * @param task The maintenance task to update.
- * @param enabled True to enable execution, false to disable.
- */
-void AdminConfigManager::setPostInstallTask(const PostInstallTask task, const bool enabled) {
-    m_postInstallTasks[task] = enabled;
 }
 
 /**
@@ -125,11 +57,11 @@ void AdminConfigManager::load() {
     const QStringList lines = RepoManager::readConf();
     bool inSection = false;
 
-    for (const QString &line : lines) {
+    for (const QString &line: lines) {
         const QString trimmed = line.trimmed();
 
         if (trimmed.startsWith(u'#')) {
-            inSection = (trimmed.compare(SECTION_HEADER, Qt::CaseInsensitive) == 0);
+            inSection = (trimmed.compare(ADMIN_HEADER, Qt::CaseInsensitive) == 0);
             continue;
         }
 
@@ -144,16 +76,16 @@ void AdminConfigManager::load() {
         const QString val = trimmed.mid(eqIdx + 1).trimmed();
 
         if (key == QStringLiteral("VERIFY_SIGNATURE")) {
-            m_verifySignature = (val.compare(QStringLiteral("true"), Qt::CaseInsensitive) == 0 || val == QStringLiteral("1"));
+            checkSignature = val.compare(QStringLiteral("true")) == 0 || val == QStringLiteral("1");
         } else if (key == QStringLiteral("VERIFY_CHECKSUM")) {
-            m_verifyChecksum = (val.compare(QStringLiteral("true"), Qt::CaseInsensitive) == 0 || val == QStringLiteral("1"));
+            checkChecksum = val.compare(QStringLiteral("true")) == 0 || val == QStringLiteral("1");
         } else if (key == QStringLiteral("PREFERRED_CHECKSUM")) {
             if (!val.isEmpty())
-                m_preferredChecksum = val;
+                preferChecksum = val;
         } else {
-            for (auto it = m_postInstallTasks.begin(); it != m_postInstallTasks.end(); ++it) {
+            for (auto it = postInstallTasks.begin(); it != postInstallTasks.end(); ++it) {
                 if (key == taskToKey(it.key())) {
-                    it.value() = (val.compare(QStringLiteral("true"), Qt::CaseInsensitive) == 0 || val == QStringLiteral("1"));
+                    it.value() = val.compare(QStringLiteral("true")) == 0 || val == QStringLiteral("1");
                     break;
                 }
             }
@@ -168,14 +100,14 @@ void AdminConfigManager::load() {
 QString AdminConfigManager::serializePayload() const {
     QStringList items;
 
-    items << QStringLiteral("VERIFY_SIGNATURE=") + (m_verifySignature ? QStringLiteral("true") : QStringLiteral("false"));
-    items << QStringLiteral("VERIFY_CHECKSUM=") + (m_verifyChecksum ? QStringLiteral("true") : QStringLiteral("false"));
-    items << QStringLiteral("PREFERRED_CHECKSUM=") + m_preferredChecksum;
+    items << QStringLiteral("VERIFY_SIGNATURE=") + (checkSignature ? QStringLiteral("true") : QStringLiteral("false"));
+    items << QStringLiteral("VERIFY_CHECKSUM=") + (checkChecksum ? QStringLiteral("true") : QStringLiteral("false"));
+    items << QStringLiteral("PREFERRED_CHECKSUM=") + preferChecksum;
 
-    for (auto it = m_postInstallTasks.cbegin(); it != m_postInstallTasks.cend(); ++it) {
-        items << taskToKey(it.key()) + QStringLiteral("=") + (it.value() ? QStringLiteral("true") : QStringLiteral("false"));
-    }
-
+    for (auto it = postInstallTasks.cbegin(); it != postInstallTasks.cend(); ++it)
+        items << taskToKey(it.key()) + QStringLiteral("=") + (it.value()
+                                                                  ? QStringLiteral("true")
+                                                                  : QStringLiteral("false"));
     return items.join(u';');
 }
 
@@ -186,15 +118,12 @@ QString AdminConfigManager::serializePayload() const {
  */
 bool AdminConfigManager::savePayload(const QString &payload) {
     QStringList lines = RepoManager::readConf();
-
-    int sectionStart = -1;
-    int sectionEnd = -1;
+    int sectionStart = -1, sectionEnd = 0;
 
     for (int i = 0; i < lines.size(); ++i) {
-        const QString trimmed = lines.at(i).trimmed();
-        if (trimmed.compare(SECTION_HEADER, Qt::CaseInsensitive) == 0) {
+        if (lines.at(i).trimmed().compare(ADMIN_HEADER, Qt::CaseInsensitive) == 0) {
             sectionStart = i;
-            sectionEnd = lines.size();
+            sectionEnd = static_cast<int>(lines.size());
             for (int j = i + 1; j < lines.size(); ++j) {
                 if (lines.at(j).trimmed().startsWith(u'#')) {
                     sectionEnd = j;
@@ -211,9 +140,9 @@ bool AdminConfigManager::savePayload(const QString &payload) {
     }
 
     QStringList adminBlock;
-    adminBlock << SECTION_HEADER;
+    adminBlock << ADMIN_HEADER;
 
-    for (const QString &pair : payload.split(u';', Qt::SkipEmptyParts))
+    for (const QString &pair: payload.split(u';', Qt::SkipEmptyParts))
         adminBlock << pair.trimmed();
 
     adminBlock << QStringLiteral("");

@@ -8,6 +8,13 @@
 
 #include <QStringList>
 
+inline const auto OFFICIAL_HEADER = QStringLiteral("# Official Repo");
+inline const auto THIRD_HEADER = QStringLiteral("# Third Mirrors");
+inline const auto PRIORITY_HEADER = QStringLiteral("# Priorities");
+inline const auto EXCEPTION_HEADER = QStringLiteral("# Exceptions");
+inline const auto ADMIN_HEADER = QStringLiteral("# Administrative Actions");
+inline const auto EMPTY = QStringLiteral("");
+
 /**
  * @class RepoManager
  * @brief Manages the configuration file for software repositories.

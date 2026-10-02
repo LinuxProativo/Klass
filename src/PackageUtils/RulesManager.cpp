@@ -7,28 +7,26 @@
 
 #include <RepoManager.hpp>
 #include <RulesManager.hpp>
+#include <SlackwareDefines.hpp>
 
 /**
- * @brief Internal structure for RulesManager to pre-compile Regexes and speed up resolution.
+ * @brief Checks if a specific package, version, repository, and category match a compiled rule.
+ * @param  cRule The compiled rule containing evaluation flags, the raw rule entry, and the pre-compiled regex.
+ * @param  pkg The name of the package to be evaluated.
+ * @param  ver The version of the package (can be empty).
+ * @param  cat The category or scope of the package.
+ * @param  repo The repository where the package originates.
+ * @return True if the package details satisfy the rule criteria; otherwise false.
  */
-struct CompiledRule {
-    RuleEntry entry;
-    QRegularExpression regex;
-    bool isPackageScope{};
-    bool isAllRepo{};
-    bool isRegexValid{};
-};
-
-static bool matchesCompiledRule(const CompiledRule &cRule, const QString &pkg, const QString &ver,
-                                const QString &cat, const QString &repo) {
+bool RulesManager::matchesCompiledRule(const CompiledRule &cRule, const QString &pkg, const QString &ver,
+                                       const QString &cat, const QString &repo) {
     const RuleEntry &rule = cRule.entry;
 
     if (!cRule.isAllRepo && !rule.repo.isEmpty() && rule.repo != repo)
         return false;
 
-    if (!cRule.isPackageScope) {
+    if (!cRule.isPackageScope)
         return rule.rule.contains(cat) || cat.contains(rule.rule);
-    }
 
     const QString fullPkgVersion = ver.isEmpty() ? pkg : QStringLiteral("%1-%2").arg(pkg, ver);
 
@@ -49,13 +47,11 @@ static bool matchesCompiledRule(const CompiledRule &cRule, const QString &pkg, c
  */
 QList<RuleEntry> RulesManager::loadRules() {
     const QStringList lines = RepoManager::readConf();
-
     QList<RuleEntry> rules{};
-    static const QRegularExpression regex(R"(^RULES\['(exception|priority)'\]=\(([^,]*),([^,]*),(.*)\)$)");
 
     for (const QString &line: lines) {
         const QString trimmed = line.trimmed();
-        if (QRegularExpressionMatch match = regex.match(trimmed); match.hasMatch()) {
+        if (QRegularExpressionMatch match = RULE_REGEX.match(trimmed); match.hasMatch()) {
             RuleEntry entry;
             entry.type = match.captured(1);
             entry.repo = match.captured(2);
@@ -79,9 +75,7 @@ bool RulesManager::addRule(const RuleEntry &rule) {
             return true;
     }
 
-    const QString header = rule.type == QStringLiteral("exception")
-                               ? QStringLiteral("# Exceptions")
-                               : QStringLiteral("# Priorities");
+    const QString header = rule.type == EXCEPT ? EXCEPTION_HEADER : PRIORITY_HEADER;
 
     if (const int index = static_cast<int>(lines.indexOf(header)); index != -1) {
         lines.insert(index + 1, targetLine);
@@ -149,8 +143,8 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPac
     for (const RuleEntry &rule: r) {
         CompiledRule cRule;
         cRule.entry = rule;
-        cRule.isPackageScope = (rule.scope == QLatin1String("package"));
-        cRule.isAllRepo = (rule.repo == QLatin1String("all"));
+        cRule.isPackageScope = rule.scope == BY_PKG;
+        cRule.isAllRepo = rule.repo == ALL_REPOSITORIES;
         if (cRule.isPackageScope) {
             cRule.regex = QRegularExpression(rule.rule);
             cRule.isRegexValid = cRule.regex.isValid();
@@ -165,7 +159,7 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPac
 
     QSet<QString> excludedNames;
     for (const CompiledRule &cRule: compiledRules) {
-        if (cRule.entry.type != QLatin1String("exception") || !cRule.isPackageScope || !cRule.isAllRepo)
+        if (cRule.entry.type != EXCEPT || !cRule.isPackageScope || !cRule.isAllRepo)
             continue;
 
         for (const auto &pkg: allPackages) {
@@ -178,7 +172,7 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPac
         bool isExcludedLocal = false;
         if (!excludedNames.contains(pkg.name)) {
             for (const CompiledRule &cRule: compiledRules) {
-                if (cRule.entry.type == QLatin1String("exception") &&
+                if (cRule.entry.type == EXCEPT &&
                     matchesCompiledRule(cRule, pkg.name, pkg.version, pkg.category, pkg.repoName)) {
                     isExcludedLocal = true;
                     break;
@@ -201,7 +195,7 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPac
         const PkgInfo *winner = nullptr;
         for (const auto *inst: instances) {
             for (const CompiledRule &cRule: compiledRules) {
-                if (cRule.entry.type == QLatin1String("priority") &&
+                if (cRule.entry.type == PRIORITY &&
                     matchesCompiledRule(cRule, inst->name, inst->version, inst->category, inst->repoName)) {
                     winner = inst;
                     break;
