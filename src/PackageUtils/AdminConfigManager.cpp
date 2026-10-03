@@ -12,9 +12,11 @@
  */
 AdminConfigManager::AdminConfigManager() {
     postInstallTasks[PostInstallTask::Ldconfig] = true;
+    postInstallTasks[PostInstallTask::UpdateMimeDatabase] = true;
     postInstallTasks[PostInstallTask::UpdateManDb] = true;
-    postInstallTasks[PostInstallTask::UpdateGtkIconCache] = false;
     postInstallTasks[PostInstallTask::UpdateDesktopDatabase] = false;
+    postInstallTasks[PostInstallTask::UpdateGtkIconCache] = false;
+    postInstallTasks[PostInstallTask::CompileGlibSchemas] = false;
     postInstallTasks[PostInstallTask::UpdateGrub] = false;
     postInstallTasks[PostInstallTask::UpdateLilo] = false;
     postInstallTasks[PostInstallTask::GenerateInitrd] = false;
@@ -32,12 +34,16 @@ QString AdminConfigManager::taskToKey(const PostInstallTask task) {
     switch (task) {
         case PostInstallTask::Ldconfig:
             return QStringLiteral("TASK_LDCONFIG");
+        case PostInstallTask::UpdateMimeDatabase:
+            return QStringLiteral("TASK_UPDATE_MIME_DATABASE");
         case PostInstallTask::UpdateManDb:
             return QStringLiteral("TASK_UPDATE_MANDB");
-        case PostInstallTask::UpdateGtkIconCache:
-            return QStringLiteral("TASK_UPDATE_GTK_ICON_CACHE");
         case PostInstallTask::UpdateDesktopDatabase:
             return QStringLiteral("TASK_UPDATE_DESKTOP_DATABASE");
+        case PostInstallTask::UpdateGtkIconCache:
+            return QStringLiteral("TASK_UPDATE_GTK_ICON_CACHE");
+        case PostInstallTask::CompileGlibSchemas:
+            return QStringLiteral("TASK_COMPILE_GLIB_SCHEMAS");
         case PostInstallTask::UpdateGrub:
             return QStringLiteral("TASK_UPDATE_GRUB");
         case PostInstallTask::UpdateLilo:
@@ -75,13 +81,16 @@ void AdminConfigManager::load() {
         const QString key = trimmed.left(eqIdx).trimmed().toUpper();
         const QString val = trimmed.mid(eqIdx + 1).trimmed();
 
-        if (key == QStringLiteral("VERIFY_SIGNATURE")) {
+        if (key == QStringLiteral("DOWNLOAD_COMMAND")) {
+            downloadCmd = val;
+        } else if (key == QStringLiteral("DOWNLOAD_EXTRA_PARAMS")) {
+            downloadCmdParams = val;
+        } else if (key == QStringLiteral("VERIFY_SIGNATURE")) {
             checkSignature = val.compare(QStringLiteral("true")) == 0 || val == QStringLiteral("1");
         } else if (key == QStringLiteral("VERIFY_CHECKSUM")) {
             checkChecksum = val.compare(QStringLiteral("true")) == 0 || val == QStringLiteral("1");
         } else if (key == QStringLiteral("PREFERRED_CHECKSUM")) {
-            if (!val.isEmpty())
-                preferChecksum = val;
+            preferChecksum = val;
         } else {
             for (auto it = postInstallTasks.begin(); it != postInstallTasks.end(); ++it) {
                 if (key == taskToKey(it.key())) {
@@ -100,6 +109,8 @@ void AdminConfigManager::load() {
 QString AdminConfigManager::serializePayload() const {
     QStringList items;
 
+    items << QStringLiteral("DOWNLOAD_COMMAND=") + downloadCmd;
+    items << QStringLiteral("DOWNLOAD_EXTRA_PARAMS=") + downloadCmdParams;
     items << QStringLiteral("VERIFY_SIGNATURE=") + (checkSignature ? QStringLiteral("true") : QStringLiteral("false"));
     items << QStringLiteral("VERIFY_CHECKSUM=") + (checkChecksum ? QStringLiteral("true") : QStringLiteral("false"));
     items << QStringLiteral("PREFERRED_CHECKSUM=") + preferChecksum;

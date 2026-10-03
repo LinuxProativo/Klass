@@ -15,9 +15,11 @@
  */
 enum class PostInstallTask {
     Ldconfig,
+    UpdateMimeDatabase,
     UpdateManDb,
-    UpdateGtkIconCache,
     UpdateDesktopDatabase,
+    UpdateGtkIconCache,
+    CompileGlibSchemas,
     UpdateGrub,
     UpdateLilo,
     GenerateInitrd,
@@ -31,6 +33,14 @@ enum class PostInstallTask {
 class AdminConfigManager {
 public:
     explicit AdminConfigManager();
+
+    [[nodiscard]] QString downloadCommand() const { return downloadCmd; }
+
+    void setDownloadCommand(const QString &command) { downloadCmd = command; }
+
+    [[nodiscard]] QString downloadExtraParams() const { return downloadCmdParams; }
+
+    void setDownloadExtraParams(const QString &params) { downloadCmdParams = params; }
 
     [[nodiscard]] bool verifySignature() const { return checkSignature; }
 
@@ -58,6 +68,8 @@ private:
     [[nodiscard]] static QString taskToKey(PostInstallTask task);
 
     bool checkSignature{true}, checkChecksum{true};
+    QString downloadCmd{QStringLiteral("Native")};
+    QString downloadCmdParams{};
     QString preferChecksum{QStringLiteral("MD5")};
     QMap<PostInstallTask, bool> postInstallTasks{};
 };
