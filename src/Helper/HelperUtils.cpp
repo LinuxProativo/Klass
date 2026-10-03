@@ -11,6 +11,7 @@
 #include <QNetworkReply>
 #include <QTimer>
 
+#include <AdminConfigManager.hpp>
 #include <HelperUtils.hpp>
 #include <Mirrors.hpp>
 #include <Packages.hpp>
@@ -248,36 +249,74 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         socket->write(OUTPUT + QByteArray("Running System Post-Configuration ...") + SEP);
         socket->write(OUTPUT + QByteArray("==================================================\n") + SEP);
 
-        if (QFile::exists("/sbin/ldconfig")) {
+        AdminConfigManager adminConfig;
+
+        if (adminConfig.postInstallTask(PostInstallTask::Ldconfig) && QFile::exists("/sbin/ldconfig")) {
             socket->write(OUTPUT + QByteArray("Updating shared libraries cache (ldconfig)...") + SEP);
             runTask("/sbin/ldconfig", {});
         }
 
-        if (QFile::exists("/usr/bin/update-mime-database")) {
+        if (adminConfig.postInstallTask(PostInstallTask::UpdateMimeDatabase) &&
+            QFile::exists("/usr/bin/update-mime-database") && QDir("/usr/share/mime").exists()) {
             socket->write(OUTPUT + QByteArray("\nUpdating MIME database...") + SEP);
             runTask("/usr/bin/update-mime-database", {"/usr/share/mime"});
         }
 
-        if (QFile::exists("/usr/bin/mandb")) {
+        if (adminConfig.postInstallTask(PostInstallTask::UpdateManDb) && QFile::exists("/usr/bin/mandb")) {
             socket->write(OUTPUT + QByteArray("\nUpdating man page database (mandb)...") + SEP);
             runTask("/usr/bin/mandb", {"-q"});
         }
 
-        if (QFile::exists("/usr/bin/update-desktop-database")) { //TODO passar para escolha manual
+        if (adminConfig.postInstallTask(PostInstallTask::UpdateDesktopDatabase) &&
+            QFile::exists("/usr/bin/update-desktop-database")) {
             socket->write(OUTPUT + QByteArray("\nUpdating desktop database...") + SEP);
             runTask("/usr/bin/update-desktop-database", {"-q"});
         }
 
-        if (QFile::exists("/usr/share/icons/hicolor/icon-theme.cache") &&
-            QFile::exists("/usr/bin/gtk-update-icon-cache")) {
+        if (adminConfig.postInstallTask(PostInstallTask::UpdateGtkIconCache) &&
+            QFile::exists("/usr/bin/gtk-update-icon-cache") &&
+            QDir("/usr/share/icons/hicolor").exists()) {
             socket->write(OUTPUT + QByteArray("\nUpdating icon cache...") + SEP);
-            runTask("/usr/bin/gtk-update-icon-cache", {"-q", "-f", "/usr/share/icons/hicolor"});
+            runTask("/usr/bin/gtk-update-icon-cache", {"-q", "-t", "-f", "/usr/share/icons/hicolor"});
         }
 
-        if (QFile::exists("/usr/share/glib-2.0/schemas") &&
-            QFile::exists("/usr/bin/glib-compile-schemas")) {
+        if (adminConfig.postInstallTask(PostInstallTask::CompileGlibSchemas) &&
+            QFile::exists("/usr/bin/glib-compile-schemas") &&
+            QDir("/usr/share/glib-2.0/schemas").exists()) {
             socket->write(OUTPUT + QByteArray("\nCompiling GLib schemas...") + SEP);
             runTask("/usr/bin/glib-compile-schemas", {"/usr/share/glib-2.0/schemas"});
+        }
+
+        if (adminConfig.postInstallTask(PostInstallTask::UpdateGrub) &&
+            QFile::exists("/usr/sbin/grub-mkconfig")) {
+            socket->write(OUTPUT + QByteArray("\nUpdating GRUB bootloader configuration...") + SEP);
+            runTask("/usr/sbin/grub-mkconfig", {"-o", "/boot/grub/grub.cfg"});
+        }
+
+        if (adminConfig.postInstallTask(PostInstallTask::UpdateLilo) &&
+            QFile::exists("/sbin/lilo") && QFile::exists("/etc/lilo.conf")) {
+            socket->write(OUTPUT + QByteArray("\nUpdating LILO bootloader...") + SEP);
+            runTask("/sbin/lilo", {});
+        }
+
+        if (adminConfig.postInstallTask(PostInstallTask::GenerateInitrd)) {
+            if (QFile::exists("/usr/share/mkinitrd/mkinitrd_command_generator.sh")) {
+                socket->write(OUTPUT + QByteArray("\nGenerating initrd for generic kernel...") + SEP);
+                runTask("/usr/share/mkinitrd/mkinitrd_command_generator.sh", {"-r"});
+            } else if (QFile::exists("/sbin/mkinitrd")) {
+                socket->write(OUTPUT + QByteArray("\nRunning mkinitrd...") + SEP);
+                runTask("/sbin/mkinitrd", {"-F"});
+            }
+        }
+
+        if (adminConfig.postInstallTask(PostInstallTask::ReinstallVBoxModules)) {
+            const QString vboxScript = QFile::exists("/etc/rc.d/rc.vboxdrv") ? "/etc/rc.d/rc.vboxdrv"
+                                     : QFile::exists("/sbin/rc.vboxdrv")     ? "/sbin/rc.vboxdrv"
+                                     : QString{};
+            if (!vboxScript.isEmpty()) {
+                socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules...") + SEP);
+                runTask(vboxScript, {"setup"});
+            }
         }
     }
 
