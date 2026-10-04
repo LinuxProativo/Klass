@@ -8,7 +8,6 @@
     <img src="https://img.shields.io/badge/Platform-Slackware-004482?style=flat-square&logo=slackware&logoColor=white"/>
     <img src="https://img.shields.io/badge/Build-CMake%203.27-064F8C?style=flat-square&logo=cmake&logoColor=white"/>
     <img src="https://img.shields.io/badge/Language-C%2B%2B_26-00599C?style=flat-square&logo=cplusplus&logoColor=white"/>
-    <img src="https://img.shields.io/github/actions/workflow/status/LinuxProativo/klass/rust.yml?label=Test&style=flat-square&logo=github"/>
     <img src="https://img.shields.io/github/languages/code-size/LinuxProativo/klass?style=flat-square&logo=paperlessngx&label=Code%20Size"/>
     <img src="https://img.shields.io/github/repo-size/LinuxProativo/klass?style=flat-square&logo=paperlessngx&label=Repo%20Size"/>
     <img src="https://img.shields.io/github/license/LinuxProativo/klass?color=673ab7&label=License&style=flat-square&logo=opensourcehardware&logoColor=white"/>
