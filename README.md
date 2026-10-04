@@ -17,33 +17,29 @@
 
 ## 🔍 Visão Geral
 
-> VERSÃO BETA - AVISOS
+> VERSÃO BETA 3 - AVISOS
 >
-> AINDA não há verificações relacionadas ao uso de NVIDIA, VirtualBox e nem opções
-> de como proceder ao atualizar o kernel.
->
-> Ainda precisa de implementações no caso de precisar gerar um novo initrd e
-> demais opções em caso de necessidade.
->
-> Ainda não há uma rotina pós-instalação no programa para capturar os arquivos.new
-> que o doinst.sh deixou para trás.
+> - AINDA não há verificações relacionadas ao uso de NVIDIA.
+> - Pode precisar de ajustes ao gerar um novo initrd.
+> - Ainda não há rotina pós-instalação para mapear arquivos.new.
+> - Atualização do grub e lilo pode precisar de ajustes.
+> - Reinstalação do módulo do VirtualBox Experimental.
 >
 > Ajustes já mapeados para as próximas versões estáveis:
-> - atualização do grub e lilo.
 > - detecção de arquivos .new
-> - lidar com kernel generico.
 > - tentativa de autoreinstalação de modulos dkms.
 > - IMPLEMENTAR barra de status.
 > - opção de usar ou não o repo testing e extra.
-> - escolher algumas opções de pós-configuração nas configurações.
 > - Rollback em caso de necessidade.
 > - download paralelo opcional.
 > - suporte a checksum mais seguros se disponíveis.
-> - Opção para setar se a assinatura é opcional ou obrigatória para repositórios específicos.
+> - Opção para setar assinatura é opcional ou obrigatória para mirrors específicas.
 > - regras avançadas de controle manual.
+> - Menu para atualizar a base de dados sem abrir a interface.
+> - opção de proceder com a atualização do sistema. após o update.
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
-pacotes gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
+pacote gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
 Ele foi desenvolvido com o objetivo de facilitar o gerenciamento de pacotes no
 **Slackware**, reduzir a possibilidade de quebrar o sistema e facilitar a manutenção
 de um sistema minimalista, melhorando o controle do usuário sobre o sistema e pacotes
@@ -122,6 +118,12 @@ geral dos pacotes (instalação, atualização, etc) segue a mesma lógica.
   útil para priorizar um pacote de terceiro acima de um pacote do repositório oficial
   do Slackware, por exemplo, ffmpeg.
 
+- **🚀 Configuração de Pós-Instalação**  
+  O programa conta com algumas opções de pós-instalações que podem ser configurados
+  para ser executado após a instalação dos pacotes ou atualização do sistema. O
+  usuário poderá acessar as configurações do programa e escolher quais opções de
+  pós-instalação faz sentido para ele.
+
 - **📦 Gerenciamento de Pacotes Disponíveis até o Momento**
 
   - **Instalação:** Suporte a instalação com busca de dependências adicionais, usa
@@ -147,16 +149,14 @@ garantir alguns requisitos:
 - **slackpkg:** É sério, por causa do acesso ao `/etc/slackpkg/mirrors`. (Duvido que
 alguém seria doido de mexer nesses pacotes, mas vale o aviso).
 - **libnotify:** Suporte a notificação.
+- **gpgme:** Verificação de chave GPG e assinatura.
 - **polkit:** Pacote do binário pkexec.
 - **qt6:** Interface gráfica.
 
 > **OBSERVAÇÃO:**
 >
-> - O `Slackware 15.0 Stable` usa `Qt5`. Portanto, é necessário a instalação
-> obrigatória do `Qt6`.
->
+> - Para o `Slackware 15.0 Stable` é necessário a instalação do `Qt6`.
 > - Pode haver mais pacotes do `polkit` que pode ser necessário.
->
 > - Pode haver novos requisitos no futuro, a medida que o projeto evoluir.
 
 ## 📥 Compilação e Instalação
@@ -229,6 +229,61 @@ e fazer o download dos pacotes para a instalação:
 - `/etc/klass/klass.conf`  
   Onde ficam as configurações do gerenciador de pacotes. 
 
+
+## 🛠️ Opções de Pós-Instalações Disponíveis
+
+Ferremantas oficiais do Slackware não costumam automatizar operações de
+pós-configurações. Mas o Klass possui configurações de pós-instalação que podem
+ser ativadas nas configurações do programa. Nesse caso, o usuário decide quais
+opções ativar para executar após as opreações de pacotes. Dentre elas:
+
+1. **Atualizar cache de bibliotecas compartilhadas (`ldconfig`)**
+   - **Comando:** `/sbin/ldconfig`  
+     Atualiza as ligações simbólicas e o cache de memória do sistema para bibliotecas
+     dinâmicas (`.so`) recém-instaladas.
+
+2. **Atualizar banco de dados MIME (`update-mime-database`)**
+   - **Comando:** `/usr/bin/update-mime-database /usr/share/mime`  
+     Registra e atualiza os tipos de arquivo e associações do sistema para os
+     aplicativos.
+
+3. **Atualizar banco de páginas de manual (`mandb`)**
+   - **Comando:** `/usr/bin/mandb -q`
+     Reconstrói o índice do banco de dados das páginas de manual (`man`).
+
+4. **Atualizar banco de dados de arquivos Desktop (`update-desktop-database`)**
+   - **Comando:** `/usr/bin/update-desktop-database -q`  
+     Atualiza o cache dos arquivos `.desktop`, garantindo que novos programas
+     apareçam corretamente no menu do ambiente gráfico.
+
+5. **Atualizar cache de ícones do GTK (`gtk-update-icon-cache`)**
+   - **Comando:** `/usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor`  
+     Regenera o cache de temas de ícones para acelerar a renderização visual dos
+     aplicativos.
+
+6. **Compilar esquemas do GLib (`glib-compile-schemas`)**
+   - **Comando:** `/usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas`  
+     Compila os arquivos de esquemas XML do GSettings/GLib para o formato binário
+     usado pelos programas.
+
+7. **Atualizar carregador de inicialização GRUB (`grub-mkconfig`)**
+   - **Comando:** `/usr/sbin/grub-mkconfig -o /boot/grub/grub.cfg`  
+     Regenera o arquivo de menu do GRUB útil após instalações ou atualizações de
+     kernel.
+
+8. **Atualizar carregador de inicialização LILO (`lilo`)**
+   - **Comando:** `/sbin/lilo`  
+     Grava as novas referências de boot na MBR do disco conforme o `/etc/lilo.conf`.
+
+9. **Gerar initrd para kernel genérico (`mkinitrd`)**
+   - **Comando:** `/usr/share/mkinitrd/mkinitrd_command_generator.sh -r` ou `/sbin/mkinitrd -F`  
+     Gera automaticamente o disco inicial em RAM (`initrd`) necessário para dar boot
+     com o kernel `generic`.
+
+10. **Recompilar módulos de kernel do VirtualBox (`rc.vboxdrv setup`)**
+    - **Comando:** `/etc/rc.d/rc.vboxdrv setup` ou `/sbin/rc.vboxdrv setup`  
+      Recompila e reinstala os módulos de driver do VirtualBox contra os cabeçalhos
+      do kernel atual.
 
 ## 🛡️ Segurança do Helper
 
@@ -341,7 +396,7 @@ Segue as implementações para o futuro:
 
 A remoção de pacotes obsoletos vai ignorar por padrão pacotes de terceiros e só
 vai agir em pacotes sem tag e tags tipo _slack*. Para quem criar os próprios pacotes,
-adicionar essas tags resolvem remoções acidentais.
+adicionar suas próprias tags ajudam a evitar remoções acidentais.
 
 > **INTEGRAÇÃO FLATPAK:**  
 > Só SSSSEEEEE eu tiver muita vontade, SSSSEEEEE eu achar que vai ser útil e vai valer
@@ -356,7 +411,7 @@ adicionar essas tags resolvem remoções acidentais.
 
 ## Contrubuição
 
-COMPLETAR
+Contribuições são bem-vindas.
 
 ## 📬 Contato & Suporte
 
