@@ -18,6 +18,8 @@
 #include <SlackwareDefines.hpp>
 #include <Utils.hpp>
 
+#include <gpgme.h>
+
 /**
  * @brief Executes the update process for the database.
  * @param socket A pointer to the QLocalSocket used for bidirectional communication.
@@ -119,6 +121,10 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
     socket->write(OUTPUT + QByteArray("Starting transaction processing...") + SEP);
     QStringList installList, reinstallList, removeList;
 
+    AdminConfigManager adminConfig;
+    const bool checkChecksum = adminConfig.verifyChecksum();
+    const bool checkSignature = adminConfig.verifySignature();
+
     for (const auto &pkg: pkgs) {
         if (socket->readAll().contains("CANCEL_OPERATION")) {
             operationCancelled = true;
@@ -132,44 +138,75 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
 
         if (pkg.url.isEmpty()) continue;
 
-        const QString targetDir = KLASS_PACKAGES + pkg.repo + u'/' + pkg.category + u'/';
-        (void) QDir().mkpath(targetDir);
-
         const QString fileName = pkg.url.mid(pkg.url.lastIndexOf(u'/') + 1);
-        const QString savePath = targetDir + fileName;
         socket->write(OUTPUT + QByteArray("\nProcessing ") + fileName.toUtf8() + "..." + SEP);
 
+        if (checkChecksum && pkg.md5.trimmed().isEmpty()) {
+            socket->write(ERROR + QByteArray("Verification required: Missing checksum for ")
+                          + fileName.toUtf8() + ". Aborting." + SEP);
+            operationCancelled = true;
+            break;
+        }
+
+        if (checkSignature && pkg.ascUrl.trimmed().isEmpty()) {
+            socket->write(ERROR + QByteArray("Verification required: Missing signature (.asc) for ")
+                          + fileName.toUtf8() + ". Aborting." + SEP);
+            operationCancelled = true;
+            break;
+        }
+
+        const QString targetDir = KLASS_PACKAGES + pkg.repo + u'/' + pkg.category + u'/';
+        (void) QDir().mkpath(targetDir);
+        const QString savePath = targetDir + fileName;
+
         bool needDownloadPkg = true;
-        if (QFile::exists(savePath) && !pkg.md5.isEmpty()) {
-            if (calculateLocalMd5(savePath) == pkg.md5) {
-                socket->write(OUTPUT + QByteArray("    --> Package already downloaded and verified. Skipping.") + SEP);
-                needDownloadPkg = false;
+        if (QFile::exists(savePath)) {
+            if (checkChecksum) {
+                if (calculateLocalMd5(savePath) == pkg.md5) {
+                    socket->write(
+                        OUTPUT + QByteArray("    --> Package already downloaded and verified. Skipping.") + SEP);
+                    needDownloadPkg = false;
+                } else {
+                    socket->write(
+                        OUTPUT + QByteArray("    --> Local package checksum mismatch. Re-downloading.") + SEP);
+                }
             } else {
-                socket->write(OUTPUT + QByteArray("    --> Incomplete package. Re-downloading.") + SEP);
+                socket->write(OUTPUT + QByteArray("    --> Package already exists locally.") + SEP);
+                needDownloadPkg = false;
             }
         }
 
         if (needDownloadPkg) {
+            socket->write(OUTPUT + QByteArray("    --> Downloading package from: ") + pkg.url.toUtf8() + SEP);
             const auto res = Utils::download(QUrl(pkg.url), {}, [this, socket] {
                 return checkSocketCancellation(socket, operationCancelled);
             });
 
             if (operationCancelled) break;
 
-            if (res.success) {
-                if (QString(QCryptographicHash::hash(res.data, QCryptographicHash::Md5).toHex()) != pkg.md5) {
-                    socket->write(ERROR + QByteArray("MD5 mismatch for ") + fileName.toUtf8() + ". Aborting." + SEP);
+            if (!res.success) {
+                socket->write(ERROR + QByteArray("Failed to download ") + fileName.toUtf8() + ". Aborting." + SEP);
+                operationCancelled = true;
+                break;
+            }
+
+            if (checkChecksum) {
+                const auto downloadedHash =
+                        QString(QCryptographicHash::hash(res.data, QCryptographicHash::Md5).toHex());
+                if (downloadedHash != pkg.md5) {
+                    socket->write(
+                        ERROR + QByteArray("Failed to verify checksum for ") + fileName.toUtf8() + ". Aborting." + SEP);
                     operationCancelled = true;
                     break;
                 }
+                socket->write(OUTPUT + QByteArray("    --> Checksum successfully validated.") + SEP);
+            }
 
-                if (QFile f(savePath); f.open(QIODevice::WriteOnly)) {
-                    f.write(res.data);
-                    f.close();
-                    socket->write(OUTPUT + QByteArray("    --> Download complete and MD5 validated.") + SEP);
-                }
+            if (QFile f(savePath); f.open(QIODevice::WriteOnly)) {
+                f.write(res.data);
+                f.close();
             } else {
-                socket->write(ERROR + QByteArray("Failed to download ") + fileName.toUtf8() + SEP);
+                socket->write(ERROR + QByteArray("Failed to save package file to disk. Aborting.") + SEP);
                 operationCancelled = true;
                 break;
             }
@@ -177,42 +214,78 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
 
         if (operationCancelled) break;
 
-        if (pkg.action == QLatin1String("INSTALL") || pkg.action == QLatin1String("UPDATE")) {
-            installList.append(savePath);
-        } else if (pkg.action == QLatin1String("REINSTALL")) {
-            reinstallList.append(savePath);
-        }
-
-        if (!pkg.ascUrl.isEmpty()) {
+        if (checkSignature) {
             const QString ascName = pkg.ascUrl.mid(pkg.ascUrl.lastIndexOf(u'/') + 1);
             const QString ascPath = targetDir + ascName;
 
             bool needDownloadAsc = true;
-            if (QFile::exists(ascPath) && !pkg.ascMd5.isEmpty()) {
-                if (calculateLocalMd5(ascPath) == pkg.ascMd5) {
-                    socket->write(OUTPUT + QByteArray("    --> Signature already exists and verified.") + SEP);
+            if (QFile::exists(ascPath)) {
+                if (!pkg.ascMd5.isEmpty()) {
+                    if (calculateLocalMd5(ascPath) == pkg.ascMd5)
+                        needDownloadAsc = false;
+                } else {
                     needDownloadAsc = false;
                 }
             }
 
             if (needDownloadAsc) {
-                const auto ascRes = Utils::download(QUrl(pkg.ascUrl), {}, [this] { return operationCancelled; });
-                if (operationCancelled) break; // NOLINT
-                if (ascRes.success) {
-                    if (QString(QCryptographicHash::hash(ascRes.data, QCryptographicHash::Md5).toHex()) != pkg.ascMd5) {
-                        socket->write(ERROR + QByteArray("MD5 mismatch for signature ") + ascName.toUtf8() + SEP);
-                    } else if (QFile f(ascPath); f.open(QIODevice::WriteOnly)) {
-                        f.write(ascRes.data);
-                        f.close();
-                        socket->write(OUTPUT + QByteArray("    --> Signature downloaded and validated.") + SEP);
+                socket->write(OUTPUT + QByteArray("    --> Downloading signature: ") + ascName.toUtf8() + SEP);
+                const auto ascRes = Utils::download(QUrl(pkg.ascUrl), {}, [this, socket] {
+                    return checkSocketCancellation(socket, operationCancelled);
+                });
+
+                if (operationCancelled) break; //NOLINT
+
+                if (!ascRes.success) {
+                    socket->write(
+                        ERROR + QByteArray("No download signature for ") + fileName.toUtf8() + ". Aborting." + SEP);
+                    operationCancelled = true;
+                    break;
+                }
+
+                if (!pkg.ascMd5.isEmpty()) {
+                    const auto ascHash = QString(
+                        QCryptographicHash::hash(ascRes.data, QCryptographicHash::Md5).toHex());
+                    if (ascHash != pkg.ascMd5) {
+                        socket->write(
+                            ERROR + QByteArray("MD5 mismatch for signature file ") + ascName.toUtf8() + ". Aborting." +
+                            SEP);
+                        operationCancelled = true;
+                        break;
                     }
                 }
+
+                if (QFile f(ascPath); f.open(QIODevice::WriteOnly)) {
+                    f.write(ascRes.data);
+                    f.close();
+                } else {
+                    socket->write(ERROR + QByteArray("Failed to save signature to disk. Aborting.") + SEP);
+                    operationCancelled = true;
+                    break;
+                }
             }
+
+            socket->write(OUTPUT + QByteArray("    --> Verifying GPG signature...") + SEP);
+            if (!verifyGpgSignature(ascPath, savePath, pkg.repo)) {
+                socket->write(
+                    ERROR + QByteArray("GPG signature check FAILED for ") + fileName.toUtf8() + ". Aborting." + SEP);
+                operationCancelled = true;
+                break;
+            }
+            socket->write(OUTPUT + QByteArray("    --> GPG signature valid and verified.") + SEP);
+        }
+
+        if (operationCancelled) break; //NOLINT
+
+        if (pkg.action == QLatin1String("INSTALL") || pkg.action == QLatin1String("UPDATE")) {
+            installList.append(savePath);
+        } else if (pkg.action == QLatin1String("REINSTALL")) {
+            reinstallList.append(savePath);
         }
     }
 
     if (operationCancelled) {
-        socket->write(LOG + QByteArray("Transaction Cancelled.") + SEP);
+        socket->write(LOG + QByteArray("Transaction Cancelled due to verification or network error.") + SEP);
         return;
     }
 
@@ -248,8 +321,6 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         socket->write(OUTPUT + QByteArray("\n==================================================") + SEP);
         socket->write(OUTPUT + QByteArray("Running System Post-Configuration ...") + SEP);
         socket->write(OUTPUT + QByteArray("==================================================\n") + SEP);
-
-        AdminConfigManager adminConfig;
 
         if (adminConfig.postInstallTask(PostInstallTask::Ldconfig) && QFile::exists("/sbin/ldconfig")) {
             socket->write(OUTPUT + QByteArray("Updating shared libraries cache (ldconfig)...") + SEP);
@@ -310,9 +381,11 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         }
 
         if (adminConfig.postInstallTask(PostInstallTask::ReinstallVBoxModules)) {
-            const QString vboxScript = QFile::exists("/etc/rc.d/rc.vboxdrv") ? "/etc/rc.d/rc.vboxdrv"
-                                     : QFile::exists("/sbin/rc.vboxdrv")     ? "/sbin/rc.vboxdrv"
-                                     : QString{};
+            const QString vboxScript = QFile::exists("/etc/rc.d/rc.vboxdrv")
+                                           ? "/etc/rc.d/rc.vboxdrv"
+                                           : QFile::exists("/sbin/rc.vboxdrv")
+                                                 ? "/sbin/rc.vboxdrv"
+                                                 : QString{};
             if (!vboxScript.isEmpty()) {
                 socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules...") + SEP);
                 runTask(vboxScript, {"setup"});
@@ -330,6 +403,89 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
 
     socket->write(OUTPUT + QByteArray("\nAll operations completed successfully!") + SEP);
     socket->write(LOG + QByteArray("Transaction Finished.") + SEP + QByteArray("TRANSACTION_DONE") + SEP);
+}
+
+/**
+ * @brief Executes a detached OpenPGP signature verification using an active GPGME context.
+ * @param ctx Valid GPGME context.
+ * @param ascPath Absolute path to the .asc detached signature file.
+ * @param pkgPath Absolute path to the target package archive.
+ * @return True if the signature is valid, false otherwise.
+ */
+bool HelperUtils::executeGpgVerification(const gpgme_ctx_t *ctx, const QString &ascPath, const QString &pkgPath) {
+    gpgme_data_t sigData = nullptr;
+    gpgme_data_t textData = nullptr;
+
+    if (gpgme_data_new_from_file(&sigData, ascPath.toLocal8Bit().constData(), 1) != GPG_ERR_NO_ERROR)
+        return false;
+
+    if (gpgme_data_new_from_file(&textData, pkgPath.toLocal8Bit().constData(), 1) != GPG_ERR_NO_ERROR) {
+        gpgme_data_release(sigData);
+        return false;
+    }
+
+    const gpgme_error_t err = gpgme_op_verify(*ctx, sigData, textData, nullptr);
+
+    bool isValid = false;
+    if (err == GPG_ERR_NO_ERROR) {
+        if (const _gpgme_op_verify_result *result = gpgme_op_verify_result(*ctx); result && result->signatures) {
+            isValid = result->signatures->status == GPG_ERR_NO_ERROR;
+        }
+    }
+
+    gpgme_data_release(sigData);
+    gpgme_data_release(textData);
+    return isValid;
+}
+
+/**
+ * @brief Imports a public GPG key file into the GPGME keyring.
+ * @param ctx Valid GPGME context.
+ * @param keyPath Absolute path to the public key file (e.g. GPG-KEY).
+ * @return True if import succeeded, false otherwise.
+ */
+bool HelperUtils::importGpgKey(const gpgme_ctx_t *ctx, const QString &keyPath) {
+    gpgme_data_t keyData = nullptr;
+    if (gpgme_data_new_from_file(&keyData, keyPath.toLocal8Bit().constData(), 1) != GPG_ERR_NO_ERROR)
+        return false;
+
+    const gpgme_error_t err = gpgme_op_import(*ctx, keyData);
+    gpgme_data_release(keyData);
+
+    return (err == GPG_ERR_NO_ERROR);
+}
+
+/**
+ * @brief Verifies the OpenPGP detached signature using the native GPGME C library.
+ * @param ascPath Absolute path to the detached signature (.asc).
+ * @param pkgPath Absolute path to the package archive.
+ * @param repoName Name of the repository to look up its public GPG-KEY if needed.
+ * @return True if the signature is valid, false otherwise.
+ */
+bool HelperUtils::verifyGpgSignature(const QString &ascPath, const QString &pkgPath, const QString &repoName) {
+    static bool gpgmeInitialized = false;
+    if (!gpgmeInitialized) {
+        gpgme_check_version(nullptr);
+        gpgmeInitialized = true;
+    }
+
+    gpgme_ctx_t ctx = nullptr;
+    if (gpgme_new(&ctx) != GPG_ERR_NO_ERROR)
+        return false;
+
+    gpgme_set_protocol(ctx, GPGME_PROTOCOL_OpenPGP);
+
+    bool isValid = executeGpgVerification(&ctx, ascPath, pkgPath);
+
+    if (!isValid) {
+        if (const QString repoKeyPath = KLASS_DATABASE + repoName + "/GPG-KEY";
+            QFile::exists(repoKeyPath) && importGpgKey(&ctx, repoKeyPath)) {
+            isValid = executeGpgVerification(&ctx, ascPath, pkgPath);
+        }
+    }
+
+    gpgme_release(ctx);
+    return isValid;
 }
 
 /**
