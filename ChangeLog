@@ -1,3 +1,19 @@
+Sun Oct 04 10:09:17 -03 2026:
+    - Cleaned up code in PackageUtils classes.
+    - Cleaned up code in UI classes.
+    - Added signature and checksum configurations.
+    - Added gpgme dependency.
+    - Added configurations to choose which post-installation options remain active after package operations.
+    - Added configurations for initial support of future external commands.
+    - Identified updates via an icon next to the package version.
+    - Fixed GPG-KEY and signature verification.
+    - Fixed and added post-installation configurations.
+    - Fixed and adjusted Portuguese translations.
+    - Fixed styling issues with prioritized package icons.
+    - Fixed "Overview" translation to correctly display packages when translated.
+    - Fixed positioning of the version selection ComboBox.
+    - Fixed and styled the version selection button.
+    - Fixed behavior where trying to select a version would accidentally open the version ComboBox.
 Sat Sep 26 15:56:07 -03 2026:
     - Moved 'klass.conf' configuration file from /val/lib/klass to /etc/klass.
     - Adjusted and modernized the iteration system when populating tabs and tables.

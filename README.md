@@ -37,6 +37,7 @@
 > - regras avançadas de controle manual.
 > - Menu para atualizar a base de dados sem abrir a interface.
 > - opção de proceder com a atualização do sistema. após o update.
+> - Adicionar dialogo pedindo se vai mesmo marcar todos os updates.
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacote gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
