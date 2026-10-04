@@ -44,6 +44,7 @@ qt6_add_translation(QM_FILES ${TS_FILES})
 find_package(ZLIB REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBNOTIFY REQUIRED libnotify)
+pkg_check_modules(GPGME REQUIRED gpgme)
 
 add_subdirectory("src/SingleApplication")
 include_directories(
@@ -93,10 +94,12 @@ target_link_libraries(${PRG_NAME} PRIVATE
         ZLIB::ZLIB
         util
         ${LIBNOTIFY_LIBRARIES}
+        ${GPGME_LIBRARIES}
 )
 
 target_include_directories(${PRG_NAME} SYSTEM PRIVATE
         ${LIBNOTIFY_INCLUDE_DIRS}
+        ${GPGME_INCLUDE_DIRS}
 )
 
 add_custom_target(lang DEPENDS ${QM_FILES})
