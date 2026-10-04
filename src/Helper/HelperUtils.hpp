@@ -6,6 +6,7 @@
 #ifndef HELPERUTILS_HPP
 #define HELPERUTILS_HPP
 
+#include <gpgme.h>
 #include <QList>
 #include <QLocalSocket>
 
@@ -47,6 +48,12 @@ public:
 
 private:
     static QString calculateLocalMd5(const QString &filePath);
+
+    static bool executeGpgVerification(const gpgme_ctx_t *ctx, const QString &ascPath, const QString &pkgPath);
+
+    static bool importGpgKey(const gpgme_ctx_t *ctx, const QString &keyPath);
+
+    static bool verifyGpgSignature(const QString &ascPath, const QString &pkgPath, const QString &repoName);
 
     bool operationCancelled{false};
 };
