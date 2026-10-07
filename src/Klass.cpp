@@ -274,14 +274,29 @@ void Klass::loadRepositoryTabs() {
     pendingReinstalls.clear();
     pendingRemoves.clear();
 
-    QList<RuleEntry> currentRules = RulesManager::loadRules();
-    QList<PkgInfo> allInstalled = packagesManager->getInstalledPackages();
-    QMap<QString, RepoData> repoMap = packagesManager->getAvailablePackages();
+    const QList<RuleEntry> currentRules = RulesManager::loadRules();
+    const QList<PkgInfo> allInstalled = packagesManager->getInstalledPackages();
+    const QMap<QString, RepoData> repoMap = packagesManager->getAvailablePackages();
 
     QMap<QString, QString> mMap;
     int totalRepoPackages = 0;
     QHash<QString, QSet<QString> > repoTagsCache;
     repoTagsCache.reserve(repoMap.size());
+
+    QHash<QString, QStringList> pkgNameToRepos;
+    pkgNameToRepos.reserve(totalRepoPackages);
+
+    // TODO VE SE VIRA FUNÇÃO
+    auto extractBuildTag = [](const QString &version) -> QString {
+        const int buildPos = static_cast<int>(version.lastIndexOf(u'-'));
+        const QStringView build = (buildPos >= 0) ? QStringView(version).mid(buildPos + 1) : QStringView(version);
+
+        int tagPos = 0;
+        while (tagPos < build.length() && build.at(tagPos).isDigit())
+            ++tagPos;
+
+        return tagPos < build.length() ? build.mid(tagPos).toString() : QString{};
+    };
 
     for (auto [repoName, repoData]: repoMap.asKeyValueRange()) {
         totalRepoPackages += static_cast<int>(repoData.packages.size());
@@ -289,13 +304,8 @@ void Klass::loadRepositoryTabs() {
 
         QSet<QString> &tags = repoTagsCache[repoName];
         for (const auto &pkg: repoData.packages) {
-            const int buildPos = static_cast<int>(pkg.version.lastIndexOf(u'-'));
-            const QString build = buildPos >= 0 ? pkg.version.mid(buildPos + 1) : pkg.version;
-
-            int tagPos = 0;
-            while (tagPos < build.length() && build.at(tagPos).isDigit())
-                ++tagPos;
-            tags.insert(tagPos < build.length() ? build.mid(tagPos) : QString{});
+            pkgNameToRepos[pkg.name].append(repoName);
+            tags.insert(extractBuildTag(pkg.version));
         }
     }
 
@@ -354,33 +364,20 @@ void Klass::loadRepositoryTabs() {
             continue;
 
         QString resolvedRepo;
-        const int instBuildPos = static_cast<int>(inst.version.lastIndexOf(u'-'));
-        const QString instBuild = instBuildPos >= 0 ? inst.version.mid(instBuildPos + 1) : inst.version;
+        const QString installedTag = extractBuildTag(inst.version);
 
-        int installedTagPos = 0;
-        while (installedTagPos < instBuild.length() && instBuild.at(installedTagPos).isDigit())
-            ++installedTagPos;
-        const QString installedTag = installedTagPos < instBuild.length() ? instBuild.mid(installedTagPos) : QString{};
-
-        for (const auto &[rName, repoData]: repoMap.asKeyValueRange()) {
-            const auto &availList = repoData.packages;
-
-            auto match = std::ranges::find_if(availList, [&](const PkgInfo &p) {
-                return p.name == inst.name;
-            });
-
-            if (match != availList.end()) {
-                if (!installedTag.isEmpty()) {
-                    if (repoTagsCache.value(rName).contains(installedTag)) {
-                        resolvedRepo = rName;
-                        break;
-                    }
-                } else {
-                    if (rName == SLACK_OFICIAL || rName == SLACK_PATCHES || rName == SLACK_TESTING || rName ==
-                        SLACK_EXTRA) {
-                        resolvedRepo = rName;
-                        break;
-                    }
+        for (const QStringList &candidateRepos = pkgNameToRepos.value(inst.name);
+             const QString &rName: candidateRepos) {
+            if (!installedTag.isEmpty()) {
+                if (repoTagsCache.value(rName).contains(installedTag)) {
+                    resolvedRepo = rName;
+                    break;
+                }
+            } else {
+                if (rName == SLACK_OFICIAL || rName == SLACK_PATCHES || rName == SLACK_TESTING || rName ==
+                    SLACK_EXTRA) {
+                    resolvedRepo = rName;
+                    break;
                 }
             }
         }
@@ -400,6 +397,11 @@ void Klass::loadRepositoryTabs() {
         allPkgs.append(pkgsList);
     allPkgs.append(orphanPackages);
 
+    globalByName.clear();
+    globalByName.reserve(allPkgs.size());
+    for (const auto &pkg: allPkgs)
+        globalByName[pkg.name].append(pkg);
+
     const QHash<PkgKey, RuleSt> ruleStatuses = RulesManager::resolveStatuses(allPkgs, currentRules);
 
     auto *allTab = new RepositoryTab(tabWidget, false, packagesManager);
@@ -407,7 +409,7 @@ void Klass::loadRepositoryTabs() {
     allTab->setProperty("attachTesting", attachTestingEnabled);
     allTab->setMirrorMap(mMap);
     allTab->setRuleStatuses(ruleStatuses);
-    allTab->setGlobalPackages(allPkgs);
+    allTab->setGlobalPackages(&globalByName);
     allTab->fillTable(allPkgs);
     connectTabSignals(allTab);
     tabWidget->addTab(allTab, tr("All Packages"));
@@ -437,7 +439,7 @@ void Klass::loadRepositoryTabs() {
             repoTab->setProperty("attachTesting", attachTestingEnabled);
             repoTab->setMirrorMap(mMap);
             repoTab->setRuleStatuses(ruleStatuses);
-            repoTab->setGlobalPackages(allPkgs);
+            repoTab->setGlobalPackages(&globalByName);
             repoTab->fillTable(combinedPackages);
             connectTabSignals(repoTab);
 
@@ -450,7 +452,7 @@ void Klass::loadRepositoryTabs() {
     uncategorizedTab->setProperty("attachTesting", attachTestingEnabled);
     uncategorizedTab->setMirrorMap(mMap);
     uncategorizedTab->setRuleStatuses(ruleStatuses);
-    uncategorizedTab->setGlobalPackages(allPkgs);
+    uncategorizedTab->setGlobalPackages(&globalByName);
     uncategorizedTab->fillTable(orphanPackages);
     connectTabSignals(uncategorizedTab);
     tabWidget->addTab(uncategorizedTab, tr("Others"));
@@ -635,7 +637,8 @@ void Klass::onHelperReady() {
         helper->socket()->write(p.toUtf8() + SEP);
         rulesManagerDialog->appendRuleToTable(rule);
     } else if (pending == PendingAction::DeleteRule) {
-        QStringList ruleStrings{};
+        QStringList ruleStrings;
+        ruleStrings.reserve(pendingRules.size());
         for (const auto &r: pendingRules)
             ruleStrings.append(QString("%1,%2,%3,%4").arg(r.type, r.repo, r.scope, r.rule));
         const QString p = QString("DELRULES:%1").arg(ruleStrings.join(";")); // Deletar em massa
@@ -652,21 +655,34 @@ void Klass::onHelperReady() {
         terminalDialog->setOperationRequest(true);
         terminalDialog->show();
 
+        // TODO VE SE VIRA FUNÇÃO
         auto formatPkgList = [](const QList<PendingPkg> &list) {
             QStringList formatted;
-            for (const auto &p: list)
-                // Formato: nome|versão|repo|categoria|url_pacote|url_asc|md5_pacote|md5_asc
-                formatted << QString("%1|%2|%3|%4|%5|%6|%7|%8")
-                        .arg(p.name, p.version, p.repoName, p.category, p.fullDownloadUrl, p.ascUrl, p.md5sum,
-                             p.ascMd5sum);
-            return formatted.join(',');
+            formatted.reserve(list.size());
+            for (const auto &p: list) {
+                QString entry;
+                entry.reserve(
+                    p.name.size() + p.version.size() + p.repoName.size() + p.category.size() + p.fullDownloadUrl.size()
+                    + p.ascUrl.size() + p.md5sum.size() + p.ascMd5sum.size() + 8);
+
+                entry += p.name + u'|' + p.version + u'|' + p.repoName + u'|';
+                entry += p.category + u'|' + p.fullDownloadUrl + u'|' + p.ascUrl + u'|';
+                entry += p.md5sum + u'|' + p.ascMd5sum;
+
+                formatted.append(std::move(entry));
+            }
+            return formatted.join(u',');
         };
 
-        QString payload = "TRANSACTION:";
-        if (!pendingInstalls.isEmpty()) payload += "INSTALL=" + formatPkgList(pendingInstalls) + ";";
-        if (!pendingUpdates.isEmpty()) payload += "UPDATE=" + formatPkgList(pendingUpdates) + ";";
-        if (!pendingReinstalls.isEmpty()) payload += "REINSTALL=" + formatPkgList(pendingReinstalls) + ";";
-        if (!pendingRemoves.isEmpty()) payload += "REMOVE=" + formatPkgList(pendingRemoves) + ";";
+        auto payload = QStringLiteral("TRANSACTION:");
+        if (!pendingInstalls.isEmpty())
+            payload += QStringLiteral("INSTALL=") + formatPkgList(pendingInstalls) + u';';
+        if (!pendingUpdates.isEmpty())
+            payload += QStringLiteral("UPDATE=") + formatPkgList(pendingUpdates) + u';';
+        if (!pendingReinstalls.isEmpty())
+            payload += QStringLiteral("REINSTALL=") + formatPkgList(pendingReinstalls) + u';';
+        if (!pendingRemoves.isEmpty())
+            payload += QStringLiteral("REMOVE=") + formatPkgList(pendingRemoves) + u';';
 
         helper->socket()->write(payload.toUtf8() + SEP);
     } else if (pending == PendingAction::SaveAdminConfig && !pendingAdminConfigPayload.isEmpty()) {

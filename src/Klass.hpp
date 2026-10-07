@@ -116,6 +116,7 @@ private:
     std::string pathIcon{DefaultPath().defaultPath("icons/available.svg").toStdString()};
     RuleEntry rule{}, edit{};
 
+    QHash<QString, QList<PkgInfo>> globalByName;
     QList<PendingPkg> pendingInstalls{}, pendingReinstalls{}, pendingRemoves{}, pendingUpdates{};
     QList<PkgInfo> allPackages{};
     QList<Mirrors::MirrorPlusEntry> pendingRepoEnable{};
