@@ -8,6 +8,7 @@
 
 #include <QAction>
 #include <QHash>
+#include <QMultiHash>
 #include <QSortFilterProxyModel>
 #include <QSplitter>
 #include <QStandardItemModel>
@@ -17,8 +18,6 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWidget>
-
-#include <utility>
 
 #include <CategoryFilterProxyModel.hpp>
 #include <Packages.hpp>
@@ -79,7 +78,7 @@ public:
 
     void refreshTable();
 
-    void setGlobalPackages(const QList<PkgInfo> &all);
+    void setGlobalPackages(const QHash<QString, QList<PkgInfo> > *all) { globalByName = all; }
 
     [[nodiscard]] QList<PendingPkg> collectAvailableUpdates() const;
 
@@ -156,9 +155,10 @@ private:
 
     QList<PkgInfo> packages{};
     QHash<PkgKey, RuleSt> ruleStatuses{};
-    QHash<QString, QList<PkgInfo> > globalByName{};
+    const QHash<QString, QList<PkgInfo> > *globalByName{nullptr};
     QMap<QString, QString> mirrorMap{};
-    QMultiHash<std::pair<QString, QString>, int> packageRowIndex{};
+    QMultiHash<QString, int> packageRowIndex{};
+    QMultiHash<QString, int> nameRowIndex{};
     QTextBlockFormat depMidFormat{}, depLastFormat{}, descFormat{}, fieldFormat{};
     QTextCharFormat boldFormat{}, normalFormat{};
     QStringList pendingFiles{};
