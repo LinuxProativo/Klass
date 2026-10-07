@@ -6,8 +6,9 @@
 #ifndef PACKAGES_HPP
 #define PACKAGES_HPP
 
-#include <QMap>
+#include <QHash>
 #include <QList>
+#include <QMap>
 
 #include <Debug.hpp>
 
@@ -66,8 +67,6 @@ class Packages : QObject {
 public:
     explicit Packages(QObject *object);
 
-    void updateChecksums();
-
     void reload();
 
     [[nodiscard]] ChecksumEntry getChecksumEntry(const QString &repo, const QString &package,
@@ -88,7 +87,11 @@ private:
 
     static void parsePackagesContent(const QString &content, QList<PkgInfo> &packageList);
 
-    QMap<QString, QMap<QString, ChecksumEntry> > checksumCache{};
+    static QHash<QString, ChecksumEntry> parseRepoChecksums(const QString &repoPath);
+
+    static bool splitPackageParts(QStringView rawName, QString &outName, QString &outVersion);
+
+    QHash<QString, QHash<QString, ChecksumEntry> > checksumCache{};
     QList<PkgInfo> installedCache{};
     QMap<QString, RepoData> availableCache{};
 };
