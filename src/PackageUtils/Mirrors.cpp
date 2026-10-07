@@ -3,6 +3,7 @@
  * @brief Class responsible for managing and parsing repository mirror file.
  */
 
+#include <QDir>
 #include <QFile>
 #include <QRegularExpression>
 #include <QSettings>
@@ -272,7 +273,12 @@ bool Mirrors::disable(const QString &name) {
         updatedLines.append(line);
     }
 
-    return removed ? RepoManager::writeConf(updatedLines) : false;
+    if (!removed || !RepoManager::writeConf(updatedLines))
+        return false;
+
+    if (QDir repoDir(KLASS_DATABASE + name); repoDir.exists())
+        return repoDir.removeRecursively();
+    return true;
 }
 
 /**
