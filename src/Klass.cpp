@@ -268,6 +268,13 @@ void Klass::reloadRules() const {
  * @brief Dynamically loads and populates all repository tabs in the tab widget.
  */
 void Klass::loadRepositoryTabs() {
+    // clear() não deleta as abas, tem que remover na mão mesmo.
+     while (tabWidget->count() > 0) {
+        QWidget *tab = tabWidget->widget(0);
+        tabWidget->removeTab(0);
+        delete tab;
+    }
+
     tabWidget->clear();
     pendingInstalls.clear();
     pendingUpdates.clear();

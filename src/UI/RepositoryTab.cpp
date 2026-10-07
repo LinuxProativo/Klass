@@ -480,7 +480,6 @@ void RepositoryTab::appendDependencyField(QTextCursor cursor, const QString &lab
  * @param pkgs List containing the package information to display.
  */
 void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
-    packages = pkgs;
     proxyModel->setSourceModel(nullptr);
     packageTable->block();
     packageModel->removeRows(0, packageModel->rowCount());
@@ -498,43 +497,43 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
         return ruleStatuses.value({p.name, p.version, p.repoName}, RuleSt::Normal);
     };
 
-    QHash<QString, QList<PkgInfo> > groupedPackages;
+    QHash<QString, QList<const PkgInfo *> > groupedPackages;
     groupedPackages.reserve(pkgs.size());
 
     for (const auto &pkg: pkgs) {
         const QString key = isMultiple ? pkg.repoName + u'|' + pkg.name : pkg.name;
-        groupedPackages[key].append(pkg);
+        groupedPackages[key].append(&pkg);
     }
 
     QSet<QString> categories;
     QStandardItem *rootItem = packageModel->invisibleRootItem();
 
-    for (const QList<PkgInfo> &pkgVersions: std::as_const(groupedPackages)) {
+    for (const QList<const PkgInfo *> &pkgVersions: std::as_const(groupedPackages)) {
         if (pkgVersions.isEmpty())
             continue;
 
         const PkgInfo *installedPkg{}, *metaPkg{}, *prioritizedPkg{}, *slackwarePkg{};
 
-        for (const auto &pkg: pkgVersions) {
-            if (!prioritizedPkg && statusOf(pkg) == RuleSt::Prioritized)
-                prioritizedPkg = &pkg;
-            if (pkg.isInstalled && !installedPkg)
-                installedPkg = &pkg;
-            if (!pkg.isInstalled && !metaPkg)
-                metaPkg = &pkg;
-            if (!slackwarePkg && pkg.repoName.compare(SLACK_OFICIAL) == 0)
-                slackwarePkg = &pkg;
+        for (const auto *pkg: pkgVersions) {
+            if (!prioritizedPkg && statusOf(*pkg) == RuleSt::Prioritized)
+                prioritizedPkg = pkg;
+            if (pkg->isInstalled && !installedPkg)
+                installedPkg = pkg;
+            if (!pkg->isInstalled && !metaPkg)
+                metaPkg = pkg;
+            if (!slackwarePkg && pkg->repoName.compare(SLACK_OFICIAL) == 0)
+                slackwarePkg = pkg;
         }
 
         if (!metaPkg)
-            metaPkg = installedPkg ? installedPkg : &pkgVersions.first();
+            metaPkg = installedPkg ? installedPkg : pkgVersions.first();
 
         const PkgInfo &mPkg = *metaPkg;
         const PkgInfo &dPkg = prioritizedPkg
                                   ? *prioritizedPkg
                                   : installedPkg
                                         ? *installedPkg
-                                        : pkgVersions.first();
+                                        : *pkgVersions.first();
         const QString categorySource = slackwarePkg ? slackwarePkg->category : mPkg.category;
 
         const RuleSt dStatus = statusOf(dPkg);
@@ -555,9 +554,9 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
         QString initialRepo = dPkg.repoName;
 
         if (dPkg.isInstalled) {
-            for (const auto &p: pkgVersions) {
-                if (!p.isInstalled && p.version == dPkg.version) {
-                    initialRepo = p.repoName;
+            for (const auto *p: pkgVersions) {
+                if (!p->isInstalled && p->version == dPkg.version) {
+                    initialRepo = p->repoName;
                     break;
                 }
             }
@@ -566,12 +565,17 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
 
         QStringList allVersions;
         allVersions.reserve(pkgVersions.size());
-        for (const auto &v: pkgVersions)
-            allVersions.append(v.version);
+        QList<PkgInfo> storedVersions;
+        storedVersions.reserve(pkgVersions.size());
+
+        for (const auto *v: pkgVersions) {
+            allVersions.append(v->version);
+            storedVersions.append(*v);
+        }
 
         auto *versionItem = new QStandardItem(dPkg.version); // NOLINT
         versionItem->setData(allVersions, Qt::UserRole + 3);
-        versionItem->setData(QVariant::fromValue(pkgVersions), Qt::UserRole + 4);
+        versionItem->setData(QVariant::fromValue(storedVersions), Qt::UserRole + 4);
 
         auto *descItem = new QStandardItem(mPkg.description); // NOLINT
         rootItem->appendRow({statusItem, nameItem, versionItem, descItem});
