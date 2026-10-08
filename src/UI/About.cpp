@@ -32,7 +32,7 @@ About::About(QWidget *parent) : Dialog(parent, Qt::WindowModal) {
     titleLabel->setFont(titleFont);
 
     titleFont.setPointSize(titleFont.pointSize() - 9);
-    versionLabel = new QLabel(VERSION + tr(" BETA"), this); //TODO BETA VERSION
+    versionLabel = new QLabel(VERSION + tr(" RELEASE CANDIDATE"), this); //TODO BETA VERSION
     versionLabel->setAlignment(Qt::AlignCenter);
     versionLabel->setFont(titleFont);
 
