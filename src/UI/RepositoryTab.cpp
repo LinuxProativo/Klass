@@ -30,9 +30,7 @@ RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *pa
     catList->setVisible(isvisible);
     connect(catList, &TreeWidget::itemClicked, this, &RepositoryTab::onCategoryItemClicked);
 
-    packageModel = new QStandardItemModel(0, 4, this);
-    packageModel->setHorizontalHeaderLabels({tr("Status"), tr("Name"), tr("Version"), tr("Description")});
-
+    packageModel = new PackageTableModel(this);
     proxyModel = new CategoryFilterProxyModel(this);
     proxyModel->setSourceModel(packageModel);
 
@@ -153,68 +151,64 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
 
     const QModelIndex index = proxyModel->mapToSource(pIndex);
     const int row = index.row();
+    if (row < 0 || row >= packageModel->rowCount())
+        return;
 
-    if (const QVariant varPkgs = index.data(Qt::UserRole + 4); varPkgs.typeId() == qMetaTypeId<QList<PkgInfo> >()) {
-        if (const auto &pkgList = varPkgs.value<QList<PkgInfo> >(); vIndex >= 0 && vIndex < pkgList.size()) {
-            const PkgInfo &nPkg = pkgList[vIndex];
-            const PkgInfo *metaPkgPtr{};
-            const PkgInfo *slackwarePkgPtr{};
-            bool rowHasPriorityWinner = false;
+    auto &rowData = packageModel->rowAt(row);
 
+    if (const auto &pkgList = rowData.pkgList; vIndex >= 0 && vIndex < pkgList.size()) {
+        const PkgInfo &nPkg = pkgList[vIndex];
+        const PkgInfo *metaPkgPtr{};
+        const PkgInfo *slackwarePkgPtr{};
+        bool rowHasPriorityWinner = false;
+
+        for (const auto &pkg: pkgList) {
+            if (!pkg.isInstalled && !metaPkgPtr)
+                metaPkgPtr = &pkg;
+            if (!slackwarePkgPtr && pkg.repoName.compare(SLACK_OFICIAL) == 0)
+                slackwarePkgPtr = &pkg;
+            if (ruleStatuses.value({pkg.name, pkg.version, pkg.repoName}, RuleSt::Normal) == RuleSt::Prioritized)
+                rowHasPriorityWinner = true;
+        }
+
+        const PkgInfo &metaPkg = metaPkgPtr ? *metaPkgPtr : nPkg;
+        const QString categorySource = slackwarePkgPtr ? slackwarePkgPtr->category : metaPkg.category;
+        const RuleSt status = ruleStatuses.value({nPkg.name, nPkg.version, nPkg.repoName}, RuleSt::Normal);
+
+        PkgStatus packageState;
+        if (status == RuleSt::Excluded) {
+            packageState = PkgStatus::Excluded;
+        } else if (!rowData.actionSymbol.isEmpty() && nPkg.version == rowData.targetVersion) {
+            if (rowData.actionSymbol == QStringLiteral("update"))
+                packageState = PkgStatus::PendingUpdate;
+            else
+                packageState = nPkg.isInstalled ? PkgStatus::PendingReinstall : PkgStatus::PendingInstall;
+        } else if (nPkg.isInstalled) {
+            packageState = PkgStatus::Installed;
+        } else {
+            packageState = PkgStatus::Available;
+        }
+
+        rowData.status = packageState;
+        rowData.isPrioritized = rowHasPriorityWinner;
+        rowData.version = nPkg.version;
+        rowData.description = metaPkg.description;
+        rowData.category = categorySource;
+        rowData.isInstalled = nPkg.isInstalled;
+
+        QString targetRepoName = nPkg.repoName;
+        if (nPkg.isInstalled) {
             for (const auto &pkg: pkgList) {
-                if (!pkg.isInstalled && !metaPkgPtr)
-                    metaPkgPtr = &pkg;
-                if (!slackwarePkgPtr && pkg.repoName.compare(SLACK_OFICIAL) == 0)
-                    slackwarePkgPtr = &pkg;
-                if (ruleStatuses.value({pkg.name, pkg.version, pkg.repoName}, RuleSt::Normal) == RuleSt::Prioritized)
-                    rowHasPriorityWinner = true;
-            }
-
-            const PkgInfo &metaPkg = metaPkgPtr ? *metaPkgPtr : nPkg;
-            const QString categorySource = slackwarePkgPtr ? slackwarePkgPtr->category : metaPkg.category;
-            const RuleSt status = ruleStatuses.value({nPkg.name, nPkg.version, nPkg.repoName}, RuleSt::Normal);
-            auto *statusItem = packageModel->item(row, 0);
-            const QString actionSymbol = statusItem ? statusItem->data(Qt::UserRole + 5).toString() : QString{};
-            const QString targetVersion = statusItem ? statusItem->data(Qt::UserRole + 6).toString() : QString{};
-
-            PkgStatus packageState;
-            if (status == RuleSt::Excluded) {
-                packageState = PkgStatus::Excluded;
-            } else if (!actionSymbol.isEmpty() && nPkg.version == targetVersion) {
-                if (actionSymbol == QStringLiteral("update"))
-                    packageState = PkgStatus::PendingUpdate;
-                else
-                    packageState = nPkg.isInstalled ? PkgStatus::PendingReinstall : PkgStatus::PendingInstall;
-            } else if (nPkg.isInstalled) {
-                packageState = PkgStatus::Installed;
-            } else {
-                packageState = PkgStatus::Available;
-            }
-
-            if (statusItem) {
-                RepositoryTabUtils::setPackageStatus(statusItem, packageState);
-                statusItem->setData(rowHasPriorityWinner, Qt::UserRole + 3);
-            }
-
-            packageModel->item(row, 3)->setText(metaPkg.description);
-
-            QString targetRepoName = nPkg.repoName;
-            if (nPkg.isInstalled) {
-                for (const auto &pkg: pkgList) {
-                    if (!pkg.isInstalled && pkg.version == nPkg.version) {
-                        targetRepoName = pkg.repoName;
-                        break;
-                    }
+                if (!pkg.isInstalled && pkg.version == nPkg.version) {
+                    targetRepoName = pkg.repoName;
+                    break;
                 }
             }
-
-            auto *nameItem = packageModel->item(row, 1);
-            nameItem->setData(categorySource, Qt::UserRole);
-            nameItem->setData(nPkg.isInstalled, Qt::UserRole + 1);
-            nameItem->setData(targetRepoName, Qt::UserRole + 2);
-
-            Debug::msg("Package version changed to", "RepositoryTab", {DColor::Cyan, nPkg.version});
         }
+        rowData.repoName = targetRepoName;
+
+        packageModel->notifyRowChanged(row);
+        Debug::msg("Package version changed to", "RepositoryTab", {DColor::Cyan, nPkg.version});
     }
 
     const QModelIndex proxyTarget0 = proxyModel->mapFromSource(packageModel->index(row, 0));
@@ -297,14 +291,11 @@ void RepositoryTab::onSelectionChanged(const QItemSelection &selected, const QIt
     const QModelIndex proxyIndex = selected.indexes().first();
     const QModelIndex sourceIndex = proxyModel->mapToSource(proxyIndex);
     const int row = sourceIndex.row();
+    if (row < 0 || row >= packageModel->rowCount()) return;
 
-    QStandardItem *statusItem = packageModel->item(row, 0);
-    QStandardItem *nameItem = packageModel->item(row, 1);
-    QStandardItem *versionItem = packageModel->item(row, 2);
+    const auto &rowData = packageModel->rowAt(row);
 
-    if (!nameItem || !versionItem || !statusItem) return;
-
-    QString repoName = nameItem->data(Qt::UserRole + 2).toString();
+    QString repoName = rowData.repoName;
     if (repoName.isEmpty())
         repoName = this->property("repoName").toString();
     Debug::msg("Active repository context", "RepositoryTab", {DColor::Violet, repoName});
@@ -312,9 +303,9 @@ void RepositoryTab::onSelectionChanged(const QItemSelection &selected, const QIt
     if (repoName == SLACK_OTHERS)
         repoName.clear();
 
-    const QString name = nameItem->text();
-    const QString version = versionItem->text();
-    const bool isInstalled = nameItem->data(Qt::UserRole + 1).toBool();
+    const QString name = rowData.name;
+    const QString version = rowData.version;
+    const bool isInstalled = rowData.isInstalled;
     auto info = packagesManager->getPackageInfo(repoName, name, version);
     Debug::msg("Selected package target", "RepositoryTab", {DColor::Cyan, QString("%1-%2").arg(name, version)});
 
@@ -482,7 +473,6 @@ void RepositoryTab::appendDependencyField(QTextCursor cursor, const QString &lab
 void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
     proxyModel->setSourceModel(nullptr);
     packageTable->block();
-    packageModel->removeRows(0, packageModel->rowCount());
 
     if (showCategories) {
         catList->clear();
@@ -506,7 +496,8 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
     }
 
     QSet<QString> categories;
-    QStandardItem *rootItem = packageModel->invisibleRootItem();
+    QList<PackageRowData> rows;
+    rows.reserve(groupedPackages.size());
 
     for (const QList<const PkgInfo *> &pkgVersions: std::as_const(groupedPackages)) {
         if (pkgVersions.isEmpty())
@@ -540,19 +531,20 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
         const bool isExcluded = dStatus == RuleSt::Excluded;
         const bool rowHasPriorityWinner = prioritizedPkg != nullptr;
 
-        auto *statusItem = new QStandardItem(); // NOLINT
-        RepositoryTabUtils::setPackageStatus(statusItem, isExcluded
-                                                             ? PkgStatus::Excluded
-                                                             : dPkg.isInstalled
-                                                                   ? PkgStatus::Installed
-                                                                   : PkgStatus::Available);
-        statusItem->setData(rowHasPriorityWinner, Qt::UserRole + 3);
+        PackageRowData row;
+        row.status = isExcluded
+                         ? PkgStatus::Excluded
+                         : dPkg.isInstalled
+                               ? PkgStatus::Installed
+                               : PkgStatus::Available;
+        row.isPrioritized = rowHasPriorityWinner;
+        row.name = dPkg.name;
+        row.version = dPkg.version;
+        row.description = mPkg.description;
+        row.category = categorySource;
+        row.isInstalled = dPkg.isInstalled;
 
-        auto *nameItem = new QStandardItem(dPkg.name); // NOLINT
-        nameItem->setData(categorySource, Qt::UserRole);
-        nameItem->setData(dPkg.isInstalled, Qt::UserRole + 1);
         QString initialRepo = dPkg.repoName;
-
         if (dPkg.isInstalled) {
             for (const auto *p: pkgVersions) {
                 if (!p->isInstalled && p->version == dPkg.version) {
@@ -561,24 +553,17 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
                 }
             }
         }
-        nameItem->setData(initialRepo, Qt::UserRole + 2);
+        row.repoName = initialRepo;
 
-        QStringList allVersions;
-        allVersions.reserve(pkgVersions.size());
-        QList<PkgInfo> storedVersions;
-        storedVersions.reserve(pkgVersions.size());
+        row.allVersions.reserve(pkgVersions.size());
+        row.pkgList.reserve(pkgVersions.size());
 
         for (const auto *v: pkgVersions) {
-            allVersions.append(v->version);
-            storedVersions.append(*v);
+            row.allVersions.append(v->version);
+            row.pkgList.append(*v);
         }
 
-        auto *versionItem = new QStandardItem(dPkg.version); // NOLINT
-        versionItem->setData(allVersions, Qt::UserRole + 3);
-        versionItem->setData(QVariant::fromValue(storedVersions), Qt::UserRole + 4);
-
-        auto *descItem = new QStandardItem(mPkg.description); // NOLINT
-        rootItem->appendRow({statusItem, nameItem, versionItem, descItem});
+        rows.append(std::move(row));
 
         if (showCategories)
             categories.insert(categorySource);
@@ -591,6 +576,7 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
             new QTreeWidgetItem(root, QStringList{cat});
     }
 
+    packageModel->setRows(std::move(rows));
     proxyModel->setSourceModel(packageModel);
     packageTable->ublock();
     packageTable->sortByColumn(1, Qt::AscendingOrder);
@@ -608,18 +594,14 @@ void RepositoryTab::rebuildPackageRowIndex() {
     packageRowIndex.clear();
     nameRowIndex.clear();
 
-    const int rowCount = packageModel->rowCount();
-    packageRowIndex.reserve(rowCount);
-    nameRowIndex.reserve(rowCount);
+    const int count = packageModel->rowCount();
+    packageRowIndex.reserve(count);
+    nameRowIndex.reserve(count);
 
-    for (int row = 0; row < rowCount; ++row) {
-        const QStandardItem *nameItem = packageModel->item(row, 1);
-        const QStandardItem *versionItem = packageModel->item(row, 2);
-        if (!nameItem || !versionItem) continue;
-
-        const QString &name = nameItem->text();
-        nameRowIndex.insert(name, row);
-        packageRowIndex.insert(name + u'|' + versionItem->text(), row);
+    for (int row = 0; row < count; ++row) {
+        const auto &rowData = packageModel->rowAt(row);
+        nameRowIndex.insert(rowData.name, row);
+        packageRowIndex.insert(rowData.name + u'|' + rowData.version, row);
     }
 }
 
@@ -755,7 +737,7 @@ PendingPkg RepositoryTab::resolveBestUpdate(const QString &pkg, const QList<PkgI
                     if (!p.isInstalled || RepositoryTabUtils::isHierarchyRepo(p.repoName))
                         continue;
 
-                    const RuleSt status = ruleStatuses.value({p.name, p.version, p.repoName}, RuleSt::Normal); //NOLINT
+                    const RuleSt status = ruleStatuses.value({p.name, p.version, p.repoName}, RuleSt::Normal);
                     if (status == RuleSt::Excluded || status == RuleSt::Prioritized)
                         continue;
 
@@ -809,20 +791,11 @@ QList<PendingPkg> RepositoryTab::collectAvailableUpdates() const {
     updates.reserve(100);
 
     for (int row = 0; row < count; ++row) {
-        const QStandardItem *nameItem = packageModel->item(row, 1);
-        const QStandardItem *versionItem = packageModel->item(row, 2);
-        if (!nameItem || !versionItem)
+        const auto &rowData = packageModel->rowAt(row);
+        if (rowData.pkgList.isEmpty())
             continue;
 
-        const QVariant varPkgs = versionItem->data(Qt::UserRole + 4);
-        if (!varPkgs.canConvert<QList<PkgInfo> >())
-            continue;
-
-        const auto &pkgList = varPkgs.value<QList<PkgInfo> >();
-        if (pkgList.isEmpty())
-            continue;
-
-        if (PendingPkg update = resolveBestUpdate(nameItem->text(), pkgList, false); !update.name.isEmpty())
+        if (PendingPkg update = resolveBestUpdate(rowData.name, rowData.pkgList, false); !update.name.isEmpty())
             updates.append(std::move(update));
     }
 
@@ -916,24 +889,21 @@ void RepositoryTab::executeCommand(const ActionType cmd) {
     QSet<QString> addedToInstall;
 
     for (const int row: selectedSourceRows) {
-        QStandardItem *statusItem = packageModel->item(row, 0);
-        QStandardItem *nameItem = packageModel->item(row, 1);
-        QStandardItem *versionItem = packageModel->item(row, 2);
-        if (!statusItem || !nameItem || !versionItem || RepositoryTabUtils::isExcluded(statusItem))
+        if (row < 0 || row >= packageModel->rowCount())
             continue;
 
-        const QString pkg = nameItem->text();
-        const QString ver = versionItem->text();
-        QString repo = nameItem->data(Qt::UserRole + 2).toString();
+        const auto &rowData = packageModel->rowAt(row);
+        if (rowData.status == PkgStatus::Excluded)
+            continue;
 
+        const QString pkg = rowData.name;
+        const QString ver = rowData.version;
+        QString repo = rowData.repoName;
         if (repo.isEmpty())
             repo = currentRepoContext;
 
-        const bool isInstalled = nameItem->data(Qt::UserRole + 1).toBool();
-
-        QList<PkgInfo> pkgList;
-        if (const QVariant varPkgs = versionItem->data(Qt::UserRole + 4); varPkgs.canConvert<QList<PkgInfo> >())
-            pkgList = varPkgs.value<QList<PkgInfo> >();
+        const bool isInstalled = rowData.isInstalled;
+        const auto &pkgList = rowData.pkgList;
 
         bool rowIsTestingOnly = !pkgList.isEmpty();
         for (const auto &p: pkgList) {
@@ -944,16 +914,13 @@ void RepositoryTab::executeCommand(const ActionType cmd) {
         }
 
         if (cmd == ActionType::Unselect) {
-            if (statusItem->data(Qt::UserRole + 5).toString().isEmpty())
+            if (rowData.actionSymbol.isEmpty())
                 continue;
-
-            const QString pendingTargetVersion = statusItem->data(Qt::UserRole + 6).toString();
-            const QString pendingTargetRepo = statusItem->data(Qt::UserRole + 7).toString();
 
             PendingPkg pending;
             pending.name = pkg;
-            pending.version = !pendingTargetVersion.isEmpty() ? pendingTargetVersion : ver;
-            pending.repoName = !pendingTargetRepo.isEmpty() ? pendingTargetRepo : repo;
+            pending.version = !rowData.targetVersion.isEmpty() ? rowData.targetVersion : ver;
+            pending.repoName = !rowData.targetRepo.isEmpty() ? rowData.targetRepo : repo;
             unselectBatch.append(std::move(pending));
             continue;
         }
@@ -1051,12 +1018,14 @@ void RepositoryTab::updatePackageStatusBatch(const QList<PendingPkg> &pkgs, cons
             candidateRows = nameRowIndex.values(pkg.name);
 
         for (const int row: candidateRows) {
-            const QStandardItem *nameItem = packageModel->item(row, 1);
-            const QStandardItem *versionItem = packageModel->item(row, 2);
-            if (!nameItem || !versionItem || nameItem->text() != pkg.name)
+            if (row < 0 || row >= packageModel->rowCount())
                 continue;
 
-            const auto &pkgsInfo = versionItem->data(Qt::UserRole + 4).value<QList<PkgInfo> >();
+            auto &rowData = packageModel->rowAt(row);
+            if (rowData.name != pkg.name)
+                continue;
+
+            const auto &pkgsInfo = rowData.pkgList;
             bool belongsToThisRow = pkgsInfo.isEmpty();
             for (const auto &p: pkgsInfo) {
                 if (p.repoName == pkg.repoName) {
@@ -1091,23 +1060,19 @@ void RepositoryTab::updatePackageStatusBatch(const QList<PendingPkg> &pkgs, cons
             if (!belongsToThisRow)
                 continue;
 
-            QStandardItem *statusItem = packageModel->item(row, 0);
-            if (!statusItem) continue;
-
             if (st == PkgStatus::Reset) {
-                statusItem->setData(QString{}, Qt::UserRole + 5);
-                statusItem->setData(QString{}, Qt::UserRole + 6);
-                statusItem->setData(QString{}, Qt::UserRole + 7);
-
-                const bool isInstalled = nameItem->data(Qt::UserRole + 1).toBool();
-                RepositoryTabUtils::setPackageStatus(
-                    statusItem, isInstalled ? PkgStatus::Installed : PkgStatus::Available);
+                rowData.actionSymbol.clear();
+                rowData.targetVersion.clear();
+                rowData.targetRepo.clear();
+                rowData.status = rowData.isInstalled ? PkgStatus::Installed : PkgStatus::Available;
             } else {
-                statusItem->setData(static_cast<int>(st), Qt::UserRole + 5);
-                statusItem->setData(pkg.version, Qt::UserRole + 6);
-                statusItem->setData(pkg.repoName, Qt::UserRole + 7);
-                RepositoryTabUtils::setPackageStatus(statusItem, st);
+                rowData.actionSymbol = QString::number(static_cast<int>(st));
+                rowData.targetVersion = pkg.version;
+                rowData.targetRepo = pkg.repoName;
+                rowData.status = st;
             }
+
+            packageModel->notifyRowChanged(row);
         }
     }
 
@@ -1117,9 +1082,37 @@ void RepositoryTab::updatePackageStatusBatch(const QList<PendingPkg> &pkgs, cons
 /**
  * @brief Re-renders the table using the current package list.
  */
-void RepositoryTab::refreshTable() {
-    if (!packages.isEmpty())
-        fillTable(packages);
+void RepositoryTab::refreshTable() const {
+    auto statusOf = [&](const QString &name, const QString &ver, const QString &repo) -> RuleSt {
+        return ruleStatuses.value({name, ver, repo}, RuleSt::Normal);
+    };
+
+    const int count = packageModel->rowCount();
+    for (int row = 0; row < count; ++row) {
+        auto &r = packageModel->rowAt(row);
+        bool rowHasPriorityWinner = false;
+
+        for (const auto &pkg : r.pkgList) {
+            if (statusOf(pkg.name, pkg.version, pkg.repoName) == RuleSt::Prioritized) {
+                rowHasPriorityWinner = true;
+                break;
+            }
+        }
+
+        const RuleSt dStatus = statusOf(r.name, r.version, r.repoName);
+        const bool isExcluded = (dStatus == RuleSt::Excluded);
+
+        if (r.actionSymbol.isEmpty()) {
+            r.status = isExcluded ? PkgStatus::Excluded
+                     : r.isInstalled ? PkgStatus::Installed
+                     : PkgStatus::Available;
+        } else if (isExcluded) {
+            r.status = PkgStatus::Excluded;
+        }
+
+        r.isPrioritized = rowHasPriorityWinner;
+        packageModel->notifyRowChanged(row);
+    }
 }
 
 /**

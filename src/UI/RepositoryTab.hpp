@@ -9,9 +9,7 @@
 #include <QAction>
 #include <QHash>
 #include <QMultiHash>
-#include <QSortFilterProxyModel>
 #include <QSplitter>
-#include <QStandardItemModel>
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QTimer>
@@ -20,6 +18,7 @@
 #include <QWidget>
 
 #include <CategoryFilterProxyModel.hpp>
+#include <PackageTableModel.hpp>
 #include <Packages.hpp>
 #include <RulesManager.hpp>
 #include <SlackwareDefines.hpp>
@@ -76,7 +75,7 @@ public:
 
     void updatePackageStatusBatch(const QList<PendingPkg> &pkgs, PkgStatus st) const;
 
-    void refreshTable();
+    void refreshTable() const;
 
     void setGlobalPackages(const QHash<QString, QList<PkgInfo> > *all) { globalByName = all; }
 
@@ -139,7 +138,7 @@ private:
     QAction *installAction{}, *upgradeAction{}, *reinstallAction{}, *rollbackAction{};
     QAction *removeAction{}, *lockAction{}, *priorityAct{}, *unselectAct{};
     QSplitter *splitter{};
-    QStandardItemModel *packageModel{};
+    PackageTableModel *packageModel{};
     CategoryFilterProxyModel *proxyModel{};
     QTabWidget *detailsTab{};
     QTextEdit *infoText{};
@@ -153,7 +152,6 @@ private:
     TreeWidget *catList{};
     VersionComboBoxDelegate *versionDelegate{};
 
-    QList<PkgInfo> packages{};
     QHash<PkgKey, RuleSt> ruleStatuses{};
     const QHash<QString, QList<PkgInfo> > *globalByName{nullptr};
     QMap<QString, QString> mirrorMap{};
