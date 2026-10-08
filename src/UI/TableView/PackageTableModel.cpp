@@ -14,6 +14,8 @@ PackageTableModel::PackageTableModel(QObject *parent) : QAbstractTableModel(pare
 
 /**
  * @brief Returns the total number of package rows in the model.
+ * @param parent The parent model index (unused for flat table models).
+ * @return The total number of rows, or 0 if parent is valid.
  */
 int PackageTableModel::rowCount(const QModelIndex &parent) const {
     return parent.isValid() ? 0 : static_cast<int>(m_rows.size());
@@ -21,6 +23,8 @@ int PackageTableModel::rowCount(const QModelIndex &parent) const {
 
 /**
  * @brief Returns the 4 fixed columns: Status, Name, Version, Description.
+ * @param parent The parent model index (unused for flat table models).
+ * @return The total number of columns, or 0 if parent is valid.
  */
 int PackageTableModel::columnCount(const QModelIndex &parent) const {
     return parent.isValid() ? 0 : 4;
@@ -28,6 +32,10 @@ int PackageTableModel::columnCount(const QModelIndex &parent) const {
 
 /**
  * @brief Supplies horizontal column headers.
+ * @param section The column index (0 to 3) requesting data.
+ * @param orientation The orientation of the header (strictly Qt::Horizontal here).
+ * @param role The display role requested by the view (strictly Qt::DisplayRole here).
+ * @return The header text wrapped in a QVariant, or an empty QVariant if invalid.
  */
 QVariant PackageTableModel::headerData(const int section, const Qt::Orientation orientation, const int role) const {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
@@ -44,8 +52,11 @@ QVariant PackageTableModel::headerData(const int section, const Qt::Orientation 
 
 /**
  * @brief Resolves role data dynamically on demand without storing duplicate QVariants in memory.
+ * @param index The specific model index (row and column) being queried.
+ * @param role The purpose of the data requested (Display, Decoration, or Custom UserRoles).
+ * @return The underlying data appropriate for the requested role wrapped in a QVariant.
  */
-QVariant PackageTableModel::data(const QModelIndex &index, int role) const {
+QVariant PackageTableModel::data(const QModelIndex &index, const int role) const {
     if (!index.isValid() || index.row() >= m_rows.size())
         return {};
 
@@ -92,6 +103,7 @@ QVariant PackageTableModel::data(const QModelIndex &index, int role) const {
 
 /**
  * @brief Replaces all rows at once using model reset semantics.
+ * @param rows The new list of package data items to populate the model.
  */
 void PackageTableModel::setRows(QList<PackageRowData> rows) {
     beginResetModel();
@@ -101,6 +113,7 @@ void PackageTableModel::setRows(QList<PackageRowData> rows) {
 
 /**
  * @brief Notifies the view that data across a row has changed.
+ * @param row The zero-based index of the updated data row.
  */
 void PackageTableModel::notifyRowChanged(const int row) {
     if (row >= 0 && row < m_rows.size()) {
