@@ -16,16 +16,16 @@
 
 ## 🔍 Visão Geral
 
-> VERSÃO BETA 3 - AVISOS
+> VERSÃO RELEASE CANDIDATE 1 - AVISOS
 >
-> - AINDA não há verificações relacionadas ao uso de NVIDIA.
-> - Pode precisar de ajustes ao gerar um novo initrd.
-> - Ainda não há rotina pós-instalação para mapear arquivos.new.
-> - Atualização do grub e lilo pode precisar de ajustes.
-> - Reinstalação do módulo do VirtualBox Experimental.
+> - RC2 ainda será focado em correção e economia de RAM.
+> - AINDA não há verificações relacionadas ao uso de NVIDIA. -> Sem previsão.
+> - Pode precisar de ajustes ao gerar um novo initrd. -> Ajuste RC2.
+> - Ainda não há rotina pós-instalação para mapear arquivos.new. -> Implementação RC3.
+> - Atualização do grub e lilo pode precisar de ajustes. -> Ajuste RC2.
+> - Reinstalação do módulo do VirtualBox Experimental. -> Ajuste RC2.
 >
 > Ajustes já mapeados para as próximas versões estáveis:
-> - detecção de arquivos .new
 > - tentativa de autoreinstalação de modulos dkms.
 > - IMPLEMENTAR barra de status.
 > - opção de usar ou não o repo testing e extra.
@@ -33,10 +33,11 @@
 > - download paralelo opcional.
 > - suporte a checksum mais seguros se disponíveis.
 > - Opção para setar assinatura é opcional ou obrigatória para mirrors específicas.
+> - Verificação da assinatura da lista de checksum e opção pra ignora porque nem todos os repos tem.
 > - regras avançadas de controle manual.
 > - Menu para atualizar a base de dados sem abrir a interface.
 > - opção de proceder com a atualização do sistema. após o update.
-> - Adicionar dialogo pedindo se vai mesmo marcar todos os updates.
+> - Adicionar dialogo pedindo se vai mesmo marcar todos os updates. -> Implementação RC2.
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacote gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.

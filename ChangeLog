@@ -1,3 +1,35 @@
+Thu Oct 08 07:43:45 -03 2026:
+
+--- MEMORY OPTIMIZATION RESULTS ---
+Official repo: 4 tabs + Extra mirrors configured: 8 tabs + All and Others tab: 2 tabs = 14 tabs.
+Packages: + 15k :: With the 'All' tab: + 30k :: 4 items per table: + 120k items.
+
+1. Peak Update Usage
+Before: 950 MB
+After: 315 MB
+Reduction: 66.8% less RAM.
+
+2. Continuous / Initial Usage
+Before: 450 MB
+After: 300 MB
+Reduction: 33.3% less RAM.
+
+3. System Stability (Peak Fluctuation)
+Before: Spiked from 450 MB to 950 MB (+111% memory surge and leak).
+After: Rises from 300 MB to 315 MB (only +5% transient fluctuation).
+------------------------------------------
+
+- Fixed bug that loaded the repository database even when excluded from settings.
+- Fixed excessive memory consumption after package operations.
+- Fixed tabs not being cleared from memory after package operations.
+- Refactored code to map checksum information in Packages.
+- Optimized performance when populating tabs and tables at program startup.
+- Drastically optimized memory when configuring multiple repositories in the program.
+- Implemented a PackageTableModel for memory efficiency.
+- Minor adjustments and general performance fixes.
+- Minor fixes in comments.
+- Removed repository database when deleted from settings.
+
 Sun Oct 04 10:09:17 -03 2026:
     - Cleaned up code in PackageUtils classes.
     - Cleaned up code in UI classes.
