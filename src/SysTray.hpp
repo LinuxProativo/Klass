@@ -11,6 +11,7 @@
 #include <QObject>
 #include <QSystemTrayIcon>
 
+#include <DefaultPath.hpp>
 #include <SettingsManager.hpp>
 
 #undef signals
@@ -46,7 +47,7 @@ public:
 
     void resetIcon() const { trayIcon->setIcon(trayicon); }
 private:
-    QIcon trayicon = QIcon(DefaultPath().defaultPath("icons/tray.svg"));
+    QIcon trayicon = QIcon(DefaultPath::defaultPath("icons/tray.svg"));
 
     QSystemTrayIcon *trayIcon{};
     QMenu *trayMenu{};
