@@ -11,7 +11,6 @@
 #include <QTimer>
 
 #include <Buttons.hpp>
-#include <DefaultPath.hpp>
 #include <HelperController.hpp>
 #include <MirrorManager.hpp>
 #include <Mirrors.hpp>
@@ -19,6 +18,7 @@
 #include <RepositoryTab.hpp>
 #include <RulesManagerDialog.hpp>
 #include <SettingsManager.hpp>
+#include <StatusBar.hpp>
 #include <SysTray.hpp>
 #include <Terminal.hpp>
 
@@ -35,6 +35,8 @@ public:
     void handlePackage(const QString &file) const;
 
     void onUpdateAvailable();
+
+    void setCheckingStatus(bool checking) const;
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -92,6 +94,8 @@ private:
 
     void onHelperReady();
 
+    void updateStatusIndicator() const;
+
     QHBoxLayout *searchLayout{}, *toolBarLayout{};
     QLineEdit *searchBar{};
     QTabWidget *tabWidget{};
@@ -106,6 +110,7 @@ private:
     Packages *packagesManager{};
     RulesManagerDialog *rulesManagerDialog{};
     SettingsManager *settingsManager{};
+    StatusBar *statusBar{};
     SysTray *tray{};
     Terminal *terminalDialog{};
 

@@ -14,6 +14,7 @@
 #include <Klass.hpp>
 #include <Packages.hpp>
 #include <RepositoryTab.hpp>
+#include <RepositoryTabUtils.hpp>
 #include <SettingsDialog.hpp>
 #include <SlackwareDefines.hpp>
 #include <SummaryDialog.hpp>
@@ -110,11 +111,13 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     toolBarLayout->addWidget(btnAbout);
 
     tabWidget = new QTabWidget(this);
+    statusBar = new StatusBar(this);
 
     mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(toolBarWidget);
     mainLayout->addSpacing(5);
     mainLayout->addWidget(tabWidget);
+    mainLayout->addWidget(statusBar);
 }
 
 /**
@@ -166,21 +169,44 @@ void Klass::handlePackageAction(const QList<PendingPkg> &pkgs, const ActionType 
 }
 
 /**
- * @brief Resolves and queues every available update across all open tabs, deduplicated by package name.
+ * @brief Resolves and queues every available update across all open tabs with optional confirmation and filters.
  */
 void Klass::onSelectUpdates() {
+    if (settingsManager->confirmSelectAllUpdates()) {
+        const auto res = QMessageBox::question(
+            this,
+            tr("Select All Updates"),
+            tr("Are you sure you want to select all available package updates?"),
+            QMessageBox::Yes | QMessageBox::No
+        );
+        if (res != QMessageBox::Yes)
+            return;
+    }
+
+    const bool officialOnly = settingsManager->officialUpdatesOnly();
+
     QList<PendingPkg> allUpdates{}, allNewInstalls{};
     QSet<QString> seenUpdates{}, seenInstalls{};
 
     for (int i = 0; i < tabWidget->count(); ++i) {
         if (const auto *tab = qobject_cast<RepositoryTab *>(tabWidget->widget(i))) {
+            const QString repoName = tab->property("repoName").toString();
+            if (officialOnly && repoName != ALL_REPOSITORIES && !RepositoryTabUtils::isHierarchyRepo(repoName))
+                continue;
+
             for (const auto &update: tab->collectAvailableUpdates()) {
+                if (officialOnly && !RepositoryTabUtils::isHierarchyRepo(update.repoName))
+                    continue;
+
                 if (!seenUpdates.contains(update.name)) {
                     seenUpdates.insert(update.name);
                     allUpdates.append(update);
                 }
             }
             for (const auto &install: tab->collectNewInstalls()) {
+                if (officialOnly && !RepositoryTabUtils::isHierarchyRepo(install.repoName))
+                    continue;
+
                 if (!seenInstalls.contains(install.name)) {
                     seenInstalls.insert(install.name);
                     allNewInstalls.append(install);
@@ -262,10 +288,49 @@ void Klass::reloadRules() const {
 }
 
 /**
+ * @brief Evaluates available updates across tabs and updates the status bar indicator.
+ */
+void Klass::updateStatusIndicator() const {
+    if (updateNotificationShown) {
+        statusBar->setStatus(StatusState::DatabaseAvailable);
+        return;
+    }
+
+    int updateCount = 0;
+    QSet<QString> counted;
+
+    for (int i = 0; i < tabWidget->count(); ++i) {
+        if (const auto *tab = qobject_cast<RepositoryTab *>(tabWidget->widget(i))) {
+            for (const auto &pkg: tab->collectAvailableUpdates()) {
+                if (!counted.contains(pkg.name)) {
+                    counted.insert(pkg.name);
+                    ++updateCount;
+                }
+            }
+        }
+    }
+
+    if (updateCount > 0)
+        statusBar->setStatus(StatusState::PackagesAvailable, updateCount);
+    else
+        statusBar->setStatus(StatusState::UpToDate);
+}
+
+/**
+ * @brief Sets the status bar checking state.
+ * @param checking True when update checking is in progress.
+ */
+void Klass::setCheckingStatus(const bool checking) const {
+    if (checking)
+        statusBar->setStatus(StatusState::Checking);
+    else
+        updateStatusIndicator();
+}
+
+/**
  * @brief Dynamically loads and populates all repository tabs in the tab widget.
  */
 void Klass::loadRepositoryTabs() {
-    // clear() não deleta as abas, tem que remover na mão mesmo.
     while (tabWidget->count() > 0) {
         QWidget *tab = tabWidget->widget(0);
         tabWidget->removeTab(0);
@@ -460,6 +525,8 @@ void Klass::loadRepositoryTabs() {
                 tab->setSearchFilter(query);
         }
     }
+
+    updateStatusIndicator();
 }
 
 /**
@@ -712,6 +779,7 @@ void Klass::onUpdateAvailable() {
     getTray->setIcon(QIcon(DefaultPath::defaultPath("icons/available.svg")));
     getTray->setToolTip(tr("Klass Package Manager - Database Updates are Available") + "!");
 
+    statusBar->setStatus(StatusState::DatabaseAvailable);
     notify_send(title.c_str(), text.c_str(), pathIcon.c_str());
 }
 
