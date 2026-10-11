@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 
     if (app.isSecondary()) {
         Debug::msg("New instance, passing the arguments", "Main");
-        if (parser.isSet(packageOption)) {
+        if (parser.value(packageOption).isEmpty() == false) {
             QString pkg = parser.value(packageOption);
             Debug::msg("Processing package from secondary instance", "Main", {pkg});
             app.sendMessage(pkg.toUtf8());
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     QTranslator translator;
     const auto lang = QLocale::system().name();
 
-    if (auto trFile = DefaultPath().defaultPath(QString("lang/klass_%1.qm").arg(lang));
+    if (auto trFile = DefaultPath::defaultPath(QString("lang/klass_%1.qm").arg(lang));
         translator.load(trFile)) {
         Debug::msg("Loading translation", "Translator", {trFile, DColor::LightGreen});
         SingleApplication::installTranslator(&translator);
@@ -121,13 +121,13 @@ int main(int argc, char *argv[]) {
     QObject::connect(checker, &UpdateWorker::updateAvailable, &klass, &Klass::onUpdateAvailable);
     thread.start();
 
-    if (!autostart && !parser.isSet(autoStartOption)) {
-        if (SettingsManager().windowMaximize())
+    if (const SettingsManager sm; autostart || parser.isSet(autoStartOption) || sm.startMinimized()) {
+        klass.hide();
+    } else {
+        if (sm.startMaximized() || sm.windowMaximize())
             klass.showMaximized();
         else
             klass.show();
-    } else {
-        klass.hide();
     }
 
     const int ret = SingleApplication::exec();
