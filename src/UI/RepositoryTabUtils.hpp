@@ -9,6 +9,7 @@
 #include <QStandardItem>
 #include <QString>
 
+#include <Packages.hpp>
 #include <SlackwareDefines.hpp>
 #include <StatusIcons.hpp>
 
@@ -28,6 +29,10 @@ namespace RepositoryTabUtils {
     inline bool isHierarchyRepo(const QString &r) {
         return r.compare(SLACK_OFICIAL) == 0 || r.contains(SLACK_PATCHES) || r.contains(SLACK_TESTING);
     }
+
+    int repoPriority(const QString &repo, bool attachTesting, bool rowIsTestingOnly);
+
+    bool computeHasUpdate(const QList<PkgInfo> &pkgList, bool attachTesting);
 }
 
 #endif

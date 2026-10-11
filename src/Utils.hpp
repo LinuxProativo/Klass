@@ -7,10 +7,15 @@
 #define UTILS_HPP
 
 #include <QByteArray>
+#include <QList>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QStringView>
 #include <QUrl>
 #include <functional>
+
+// Declaração de Estrutura
+struct PendingPkg;
 
 /**
  * @struct DownloadResult
@@ -37,6 +42,12 @@ public:
     static QString readGzipFile(const QString &filePath);
 
     static void setAutostart(bool enable);
+
+    static QString extractBuildTag(QStringView version);
+
+    static bool isVersionNewer(const QString &v1, const QString &v2);
+
+    static QString serializePendingList(const QList<PendingPkg> &list);
 };
 
 #endif

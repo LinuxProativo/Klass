@@ -8,11 +8,12 @@
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QTimer>
+#include <QVersionNumber>
 
+#include <RepositoryTab.hpp>
+#include <SlackwareDefines.hpp>
 #include <Utils.hpp>
 #include <zlib.h>
-
-#include "SlackwareDefines.hpp"
 
 /**
  * @brief Synchronously downloads data from a specified URL with Wget-like behavior.
@@ -154,4 +155,57 @@ void Utils::setAutostart(const bool enable) {
 
     if (QFile::exists(desktopFilePath))
         QFile::remove(desktopFilePath);
+}
+
+/**
+ * @brief Extracts the Slackware build tag from a package version string.
+ * @param version The version string view to inspect.
+ * @return The extracted build tag or an empty string if none is found.
+ */
+QString Utils::extractBuildTag(const QStringView version) {
+    const int buildPos = static_cast<int>(version.lastIndexOf(u'-'));
+    const QStringView build = (buildPos >= 0) ? version.mid(buildPos + 1) : version;
+
+    int tagPos = 0;
+    while (tagPos < build.length() && build.at(tagPos).isDigit())
+        ++tagPos;
+
+    return tagPos < build.length() ? build.mid(tagPos).toString() : QString{};
+}
+
+/**
+ * @brief Compares two version strings to determine whether the first is newer than the second.
+ * @param v1 The candidate version string.
+ * @param v2 The baseline version string.
+ * @return True if v1 is newer than v2, false otherwise.
+ */
+bool Utils::isVersionNewer(const QString &v1, const QString &v2) {
+    const QVersionNumber ver1 = QVersionNumber::fromString(v1);
+    const QVersionNumber ver2 = QVersionNumber::fromString(v2); //NOLINT
+    if (!ver1.isNull() && !ver2.isNull())
+        return QVersionNumber::compare(ver1, ver2) > 0;
+    return v1 > v2;
+}
+
+/**
+ * @brief Serializes a list of pending packages into a comma-delimited string payload for helper execution.
+ * @param list The list of pending packages to serialize.
+ * @return The formatted payload string.
+ */
+QString Utils::serializePendingList(const QList<PendingPkg> &list) {
+    QStringList formatted;
+    formatted.reserve(list.size());
+    for (const auto &p: list) {
+        QString entry;
+        entry.reserve(
+            p.name.size() + p.version.size() + p.repoName.size() + p.category.size() + p.fullDownloadUrl.size()
+            + p.ascUrl.size() + p.md5sum.size() + p.ascMd5sum.size() + 8);
+
+        entry += p.name + u'|' + p.version + u'|' + p.repoName + u'|';
+        entry += p.category + u'|' + p.fullDownloadUrl + u'|' + p.ascUrl + u'|';
+        entry += p.md5sum + u'|' + p.ascMd5sum;
+
+        formatted.append(std::move(entry));
+    }
+    return formatted.join(u',');
 }
