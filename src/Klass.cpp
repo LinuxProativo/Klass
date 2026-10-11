@@ -12,6 +12,7 @@
 #include <Packages.hpp>
 #include <RepositoryTab.hpp>
 #include <SlackwareDefines.hpp>
+#include <Utils.hpp>
 
 /**
  * @brief Constructs the main application window and initializes its components.
@@ -19,7 +20,7 @@
  */
 Klass::Klass(QWidget *parent) : QWidget(parent) {
     this->setWindowTitle(tr("Klass Package Manager"));
-    this->setWindowIcon(QIcon(DefaultPath().defaultPath("klass.png")));
+    this->setWindowIcon(QIcon(DefaultPath::defaultPath("klass.png")));
     this->setAttribute(Qt::WA_StaticContents);
 
     terminalDialog = new Terminal(this);
@@ -269,7 +270,7 @@ void Klass::reloadRules() const {
  */
 void Klass::loadRepositoryTabs() {
     // clear() não deleta as abas, tem que remover na mão mesmo.
-     while (tabWidget->count() > 0) {
+    while (tabWidget->count() > 0) {
         QWidget *tab = tabWidget->widget(0);
         tabWidget->removeTab(0);
         delete tab;
@@ -293,18 +294,6 @@ void Klass::loadRepositoryTabs() {
     QHash<QString, QStringList> pkgNameToRepos;
     pkgNameToRepos.reserve(totalRepoPackages);
 
-    // TODO VE SE VIRA FUNÇÃO
-    auto extractBuildTag = [](const QString &version) -> QString {
-        const int buildPos = static_cast<int>(version.lastIndexOf(u'-'));
-        const QStringView build = (buildPos >= 0) ? QStringView(version).mid(buildPos + 1) : QStringView(version);
-
-        int tagPos = 0;
-        while (tagPos < build.length() && build.at(tagPos).isDigit())
-            ++tagPos;
-
-        return tagPos < build.length() ? build.mid(tagPos).toString() : QString{};
-    };
-
     for (auto [repoName, repoData]: repoMap.asKeyValueRange()) {
         totalRepoPackages += static_cast<int>(repoData.packages.size());
         mMap.insert(repoName, repoData.mirrorUrl);
@@ -312,7 +301,7 @@ void Klass::loadRepositoryTabs() {
         QSet<QString> &tags = repoTagsCache[repoName];
         for (const auto &pkg: repoData.packages) {
             pkgNameToRepos[pkg.name].append(repoName);
-            tags.insert(extractBuildTag(pkg.version));
+            tags.insert(Utils::extractBuildTag(pkg.version));
         }
     }
 
@@ -371,7 +360,7 @@ void Klass::loadRepositoryTabs() {
             continue;
 
         QString resolvedRepo;
-        const QString installedTag = extractBuildTag(inst.version);
+        const QString installedTag = Utils::extractBuildTag(inst.version);
 
         for (const QStringList &candidateRepos = pkgNameToRepos.value(inst.name);
              const QString &rName: candidateRepos) {
@@ -662,34 +651,15 @@ void Klass::onHelperReady() {
         terminalDialog->setOperationRequest(true);
         terminalDialog->show();
 
-        // TODO VE SE VIRA FUNÇÃO
-        auto formatPkgList = [](const QList<PendingPkg> &list) {
-            QStringList formatted;
-            formatted.reserve(list.size());
-            for (const auto &p: list) {
-                QString entry;
-                entry.reserve(
-                    p.name.size() + p.version.size() + p.repoName.size() + p.category.size() + p.fullDownloadUrl.size()
-                    + p.ascUrl.size() + p.md5sum.size() + p.ascMd5sum.size() + 8);
-
-                entry += p.name + u'|' + p.version + u'|' + p.repoName + u'|';
-                entry += p.category + u'|' + p.fullDownloadUrl + u'|' + p.ascUrl + u'|';
-                entry += p.md5sum + u'|' + p.ascMd5sum;
-
-                formatted.append(std::move(entry));
-            }
-            return formatted.join(u',');
-        };
-
         auto payload = QStringLiteral("TRANSACTION:");
         if (!pendingInstalls.isEmpty())
-            payload += QStringLiteral("INSTALL=") + formatPkgList(pendingInstalls) + u';';
+            payload += QStringLiteral("INSTALL=") + Utils::serializePendingList(pendingInstalls) + u';';
         if (!pendingUpdates.isEmpty())
-            payload += QStringLiteral("UPDATE=") + formatPkgList(pendingUpdates) + u';';
+            payload += QStringLiteral("UPDATE=") + Utils::serializePendingList(pendingUpdates) + u';';
         if (!pendingReinstalls.isEmpty())
-            payload += QStringLiteral("REINSTALL=") + formatPkgList(pendingReinstalls) + u';';
+            payload += QStringLiteral("REINSTALL=") + Utils::serializePendingList(pendingReinstalls) + u';';
         if (!pendingRemoves.isEmpty())
-            payload += QStringLiteral("REMOVE=") + formatPkgList(pendingRemoves) + u';';
+            payload += QStringLiteral("REMOVE=") + Utils::serializePendingList(pendingRemoves) + u';';
 
         helper->socket()->write(payload.toUtf8() + SEP);
     } else if (pending == PendingAction::SaveAdminConfig && !pendingAdminConfigPayload.isEmpty()) {
@@ -710,7 +680,7 @@ void Klass::onUpdateAvailable() {
     const auto text = tr("A newer Slackware package database is available.").toStdString();
 
     const auto getTray = tray->getTray();
-    getTray->setIcon(QIcon(DefaultPath().defaultPath("icons/available.svg")));
+    getTray->setIcon(QIcon(DefaultPath::defaultPath("icons/available.svg")));
     getTray->setToolTip(tr("Klass Package Manager - Database Updates are Available") + "!");
 
     notify_send(title.c_str(), text.c_str(), pathIcon.c_str());
