@@ -195,6 +195,7 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
         rowData.description = metaPkg.description;
         rowData.category = categorySource;
         rowData.isInstalled = nPkg.isInstalled;
+        rowData.hasUpdate = RepositoryTabUtils::computeHasUpdate(rowData.pkgList, this->property("attachTesting").toBool());
 
         QString targetRepoName = nPkg.repoName;
         if (nPkg.isInstalled) {
@@ -498,6 +499,7 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
     QSet<QString> categories;
     QList<PackageRowData> rows;
     rows.reserve(groupedPackages.size());
+    const bool attachTestingEnabled = this->property("attachTesting").toBool();
 
     for (const QList<const PkgInfo *> &pkgVersions: std::as_const(groupedPackages)) {
         if (pkgVersions.isEmpty())
@@ -555,13 +557,11 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
         }
         row.repoName = initialRepo;
 
-        row.allVersions.reserve(pkgVersions.size());
         row.pkgList.reserve(pkgVersions.size());
-
-        for (const auto *v: pkgVersions) {
-            row.allVersions.append(v->version);
+        for (const auto *v: pkgVersions)
             row.pkgList.append(*v);
-        }
+
+        row.hasUpdate = RepositoryTabUtils::computeHasUpdate(row.pkgList, attachTestingEnabled);
 
         rows.append(std::move(row));
 
@@ -612,13 +612,7 @@ void RepositoryTab::rebuildPackageRowIndex() {
  * @return Integer score (0–3) representing repository precedence (higher score indicates higher priority).
  */
 int RepositoryTab::getRepoPriority(const QString &repo, const bool rowIsTestingOnly) const {
-    if ((this->property("attachTesting").toBool() || rowIsTestingOnly) && repo.contains(SLACK_TESTING))
-        return 3;
-    if (repo.contains(SLACK_PATCHES))
-        return 2;
-    if (repo.compare(SLACK_OFICIAL) == 0)
-        return 1;
-    return 0;
+    return RepositoryTabUtils::repoPriority(repo, this->property("attachTesting").toBool(), rowIsTestingOnly);
 }
 
 /**
@@ -1072,7 +1066,7 @@ void RepositoryTab::updatePackageStatusBatch(const QList<PendingPkg> &pkgs, cons
                 rowData.status = st;
             }
 
-            packageModel->notifyRowChanged(row);
+            packageModel->notifyStatusChanged(row);
         }
     }
 
