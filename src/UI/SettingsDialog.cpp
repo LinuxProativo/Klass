@@ -23,8 +23,36 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     autostartCheckBox->setChecked(settingsManager->autostart());
     connect(autostartCheckBox, &QCheckBox::toggled, this, &SettingsDialog::onAutostartToggled);
 
+    auto *hLine = new QFrame(startupGroup);
+    hLine->setFrameShape(QFrame::HLine);
+    hLine->setFrameShadow(QFrame::Sunken);
+
+    startMaximizedCB = new QCheckBox(tr("Start program maximized"), startupGroup);
+    startMaximizedCB->setChecked(settingsManager->startMaximized());
+    connect(startMaximizedCB, &QCheckBox::toggled, this, &SettingsDialog::onStartMaximizedToggled);
+
+    startMinimizedCB = new QCheckBox(tr("Start program minimized to tray"), startupGroup);
+    startMinimizedCB->setChecked(settingsManager->startMinimized());
+    connect(startMinimizedCB, &QCheckBox::toggled, this, &SettingsDialog::onStartMinimizedToggled);
+
     startupLayout = new QVBoxLayout(startupGroup);
     startupLayout->addWidget(autostartCheckBox);
+    startupLayout->addWidget(hLine);
+    startupLayout->addWidget(startMaximizedCB);
+    startupLayout->addWidget(startMinimizedCB);
+
+    updateOptionsGroup = new QGroupBox(tr("Update Options"), interfaceTab);
+    confirmSelectUpdatesCB = new QCheckBox(tr("Show confirmation dialog when selecting all updates"), updateOptionsGroup);
+    confirmSelectUpdatesCB->setChecked(settingsManager->confirmSelectAllUpdates());
+    connect(confirmSelectUpdatesCB, &QCheckBox::toggled, this, &SettingsDialog::onConfirmSelectUpdatesToggled);
+
+    officialUpdatesOnlyCB = new QCheckBox(tr("Select updates only from official repository"), updateOptionsGroup);
+    officialUpdatesOnlyCB->setChecked(settingsManager->officialUpdatesOnly());
+    connect(officialUpdatesOnlyCB, &QCheckBox::toggled, this, &SettingsDialog::onOfficialUpdatesOnlyToggled);
+
+    updateOptionsLayout = new QVBoxLayout(updateOptionsGroup);
+    updateOptionsLayout->addWidget(confirmSelectUpdatesCB);
+    updateOptionsLayout->addWidget(officialUpdatesOnlyCB);
 
     repoGroup = new QGroupBox(tr("Repository Options"), interfaceTab);
     attachPatchesCB = new QCheckBox(tr("Attach 'patches' repository to official repository"), repoGroup);
@@ -41,6 +69,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
 
     interfaceLayout = new QVBoxLayout(interfaceTab);
     interfaceLayout->addWidget(startupGroup);
+    interfaceLayout->addWidget(updateOptionsGroup);
     interfaceLayout->addWidget(repoGroup);
     interfaceLayout->addStretch();
 
@@ -168,6 +197,42 @@ void SettingsDialog::onAutostartToggled(const bool checked) const {
 }
 
 /**
+ * @brief Slot triggered when start maximized option is toggled.
+ * @param checked True if enabled, false otherwise.
+ */
+void SettingsDialog::onStartMaximizedToggled(const bool checked) const {
+    settingsManager->startMaximized(checked);
+    if (checked && startMinimizedCB->isChecked())
+        startMinimizedCB->setChecked(false);
+}
+
+/**
+ * @brief Slot triggered when start minimized option is toggled.
+ * @param checked True if enabled, false otherwise.
+ */
+void SettingsDialog::onStartMinimizedToggled(const bool checked) const {
+    settingsManager->startMinimized(checked);
+    if (checked && startMaximizedCB->isChecked())
+        startMaximizedCB->setChecked(false);
+}
+
+/**
+ * @brief Slot triggered when confirmation dialog before selecting all updates is toggled.
+ * @param checked True if enabled, false otherwise.
+ */
+void SettingsDialog::onConfirmSelectUpdatesToggled(const bool checked) const {
+    settingsManager->confirmSelectAllUpdates(checked);
+}
+
+/**
+ * @brief Slot triggered when official updates only option is toggled.
+ * @param checked True if enabled, false otherwise.
+ */
+void SettingsDialog::onOfficialUpdatesOnlyToggled(const bool checked) const {
+    settingsManager->officialUpdatesOnly(checked);
+}
+
+/**
  * @brief Slot triggered immediately when attaching the patches repository is toggled.
  * @param checked True if enabled, false otherwise.
  */
@@ -187,7 +252,7 @@ void SettingsDialog::onAttachTestingToggled(const bool checked) {
 
 /**
  * @brief Slot triggered when the download backend command changes.
- * @param index Index of the selected command (0: Native, 1: wget, 2: aria2).
+ * @param index Index of the selected command.
  */
 void SettingsDialog::onDownloadMethodChanged(const int index) {
     const bool isExternal = index != 0;
@@ -231,7 +296,7 @@ void SettingsDialog::onVerifyChecksumToggled(const bool checked) {
 
 /**
  * @brief Slot triggered when preferred checksum algorithm is changed.
- * @param checksum The selected checksum algorithm name (e.g. "MD5").
+ * @param checksum The selected checksum algorithm name.
  */
 void SettingsDialog::onPreferredChecksumChanged(const QString &checksum) {
     adminConfigManager->setPreferredChecksum(checksum);

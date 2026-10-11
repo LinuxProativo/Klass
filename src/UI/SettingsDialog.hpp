@@ -8,6 +8,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -39,6 +40,14 @@ signals:
 private:
     void onAutostartToggled(bool checked) const;
 
+    void onStartMaximizedToggled(bool checked) const;
+
+    void onStartMinimizedToggled(bool checked) const;
+
+    void onConfirmSelectUpdatesToggled(bool checked) const;
+
+    void onOfficialUpdatesOnlyToggled(bool checked) const;
+
     void onAttachPatchesToggled(bool checked);
 
     void onAttachTestingToggled(bool checked);
@@ -57,17 +66,20 @@ private:
 
     void addPostInstallTask(const QString &label, PostInstallTask task) const;
 
-    QCheckBox *autostartCheckBox{}, *attachPatchesCB{}, *attachTestingCB{};
-    QCheckBox *verifySignatureCB{}, *verifyChecksumCB{};
+    QCheckBox *autostartCheckBox{}, *startMaximizedCB{}, *startMinimizedCB{};
+    QCheckBox *confirmSelectUpdatesCB{}, *officialUpdatesOnlyCB{};
+    QCheckBox *attachPatchesCB{}, *attachTestingCB{}, *verifySignatureCB{}, *verifyChecksumCB{};
     QComboBox *downloadMethodCombo{}, *checksumComboBox{};
-    QGroupBox *verificationGroup{}, *postInstallGroup{}, *startupGroup{}, *repoGroup{}, *downloadCommandsGroup{};
+    QGroupBox *verificationGroup{}, *postInstallGroup{}, *startupGroup{};
+    QGroupBox *updateOptionsGroup{}, *repoGroup{}, *downloadCommandsGroup{};
     QHBoxLayout *checksumSelectLayout{};
     QLabel *downloadMethodLabel{}, *extraParamsLabel{}, *preferredChecksumLabel{};
     QLineEdit *extraParamsEdit{};
     QListWidget *postInstallList{};
     QTabWidget *tabWidget{};
     QVBoxLayout *adminLayout{}, *verificationLayout{}, *postInstallLayout{}, *mainLayout{};
-    QVBoxLayout *commandsLayout{}, *downloadCommandsLayout{}, *interfaceLayout{}, *startupLayout{}, *repoLayout{};
+    QVBoxLayout *commandsLayout{}, *downloadCommandsLayout{}, *interfaceLayout{};
+    QVBoxLayout *startupLayout{}, *updateOptionsLayout{}, *repoLayout{};
     QWidget *interfaceTab{}, *commandsTab{}, *adminTab{};
 
     SettingsManager *settingsManager{};
