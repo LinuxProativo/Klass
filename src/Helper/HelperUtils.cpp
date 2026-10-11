@@ -120,6 +120,7 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
 void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, const QList<TransactionPkg> &pkgs) {
     socket->write(OUTPUT + QByteArray("Starting transaction processing...") + SEP);
     QStringList installList, reinstallList, removeList;
+    bool kernelOperated = false;
 
     AdminConfigManager adminConfig;
     const bool checkChecksum = adminConfig.verifyChecksum();
@@ -130,6 +131,9 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             operationCancelled = true;
             break;
         }
+
+        if (pkg.name.startsWith(QLatin1String("kernel-"), Qt::CaseInsensitive))
+            kernelOperated = true;
 
         if (pkg.action == QLatin1String("REMOVE")) {
             removeList.append(pkg.name);
@@ -248,8 +252,8 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
                         QCryptographicHash::hash(ascRes.data, QCryptographicHash::Md5).toHex());
                     if (ascHash != pkg.ascMd5) {
                         socket->write(
-                            ERROR + QByteArray("MD5 mismatch for signature file ") + ascName.toUtf8() + ". Aborting." +
-                            SEP);
+                            ERROR + QByteArray("MD5 mismatch for signature file ") + ascName.toUtf8() +
+                            ". Aborting." + SEP);
                         operationCancelled = true;
                         break;
                     }
@@ -358,37 +362,39 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             runTask("/usr/bin/glib-compile-schemas", {"/usr/share/glib-2.0/schemas"});
         }
 
-        if (adminConfig.postInstallTask(PostInstallTask::UpdateGrub) &&
-            QFile::exists("/usr/sbin/grub-mkconfig")) {
-            socket->write(OUTPUT + QByteArray("\nUpdating GRUB bootloader configuration...") + SEP);
-            runTask("/usr/sbin/grub-mkconfig", {"-o", "/boot/grub/grub.cfg"});
-        }
-
-        if (adminConfig.postInstallTask(PostInstallTask::UpdateLilo) &&
-            QFile::exists("/sbin/lilo") && QFile::exists("/etc/lilo.conf")) {
-            socket->write(OUTPUT + QByteArray("\nUpdating LILO bootloader...") + SEP);
-            runTask("/sbin/lilo", {});
-        }
-
-        if (adminConfig.postInstallTask(PostInstallTask::GenerateInitrd)) {
-            if (QFile::exists("/usr/share/mkinitrd/mkinitrd_command_generator.sh")) {
-                socket->write(OUTPUT + QByteArray("\nGenerating initrd for generic kernel...") + SEP);
-                runTask("/usr/share/mkinitrd/mkinitrd_command_generator.sh", {"-r"});
-            } else if (QFile::exists("/sbin/mkinitrd")) {
-                socket->write(OUTPUT + QByteArray("\nRunning mkinitrd...") + SEP);
-                runTask("/sbin/mkinitrd", {"-F"});
+        if (kernelOperated) {
+            if (adminConfig.postInstallTask(PostInstallTask::UpdateGrub) &&
+                QFile::exists("/usr/sbin/grub-mkconfig")) {
+                socket->write(OUTPUT + QByteArray("\nUpdating GRUB bootloader configuration...") + SEP);
+                runTask("/usr/sbin/grub-mkconfig", {"-o", "/boot/grub/grub.cfg"});
             }
-        }
 
-        if (adminConfig.postInstallTask(PostInstallTask::ReinstallVBoxModules)) {
-            const QString vboxScript = QFile::exists("/etc/rc.d/rc.vboxdrv")
-                                           ? "/etc/rc.d/rc.vboxdrv"
-                                           : QFile::exists("/sbin/rc.vboxdrv")
-                                                 ? "/sbin/rc.vboxdrv"
-                                                 : QString{};
-            if (!vboxScript.isEmpty()) {
-                socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules...") + SEP);
-                runTask(vboxScript, {"setup"});
+            if (adminConfig.postInstallTask(PostInstallTask::UpdateLilo) &&
+                QFile::exists("/sbin/lilo") && QFile::exists("/etc/lilo.conf")) {
+                socket->write(OUTPUT + QByteArray("\nUpdating LILO bootloader...") + SEP);
+                runTask("/sbin/lilo", {});
+            }
+
+            if (adminConfig.postInstallTask(PostInstallTask::GenerateInitrd)) {
+                if (QFile::exists("/usr/share/mkinitrd/mkinitrd_command_generator.sh")) {
+                    socket->write(OUTPUT + QByteArray("\nGenerating initrd for generic kernel...") + SEP);
+                    runTask("/usr/share/mkinitrd/mkinitrd_command_generator.sh", {"-r"});
+                } else if (QFile::exists("/sbin/mkinitrd")) {
+                    socket->write(OUTPUT + QByteArray("\nRunning mkinitrd...") + SEP);
+                    runTask("/sbin/mkinitrd", {"-F"});
+                }
+            }
+
+            if (adminConfig.postInstallTask(PostInstallTask::ReinstallVBoxModules)) {
+                const QString vboxScript = QFile::exists("/etc/rc.d/rc.vboxdrv")
+                                               ? "/etc/rc.d/rc.vboxdrv"
+                                               : QFile::exists("/sbin/rc.vboxdrv")
+                                                     ? "/sbin/rc.vboxdrv"
+                                                     : QString{};
+                if (!vboxScript.isEmpty()) {
+                    socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules...") + SEP);
+                    runTask(vboxScript, {"setup"});
+                }
             }
         }
     }
