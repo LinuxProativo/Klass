@@ -8,7 +8,6 @@
 
 #include <QAbstractTableModel>
 #include <QList>
-#include <QStringList>
 
 #include <Packages.hpp>
 #include <SlackwareDefines.hpp>
@@ -21,6 +20,7 @@
 struct PackageRowData {
     PkgStatus status{PkgStatus::Available};
     bool isPrioritized{false};
+    bool hasUpdate{false};
     QString name{};
     QString version{};
     QString description{};
@@ -30,7 +30,6 @@ struct PackageRowData {
     QString actionSymbol{};
     QString targetVersion{};
     QString targetRepo{};
-    QStringList allVersions{};
     QList<PkgInfo> pkgList{};
 };
 
@@ -59,6 +58,8 @@ public:
     [[nodiscard]] const PackageRowData &rowAt(const int row) const { return m_rows.at(row); }
 
     void notifyRowChanged(int row);
+
+    void notifyStatusChanged(int row);
 
     void clear();
 

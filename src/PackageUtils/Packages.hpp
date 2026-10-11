@@ -72,9 +72,9 @@ public:
     [[nodiscard]] ChecksumEntry getChecksumEntry(const QString &repo, const QString &package,
                                                  const QString &version, FileFormat format = FileFormat::Package) const;
 
-    [[nodiscard]] QMap<QString, RepoData> getAvailablePackages() const { return availableCache; }
+    [[nodiscard]] const QMap<QString, RepoData> &getAvailablePackages() const { return availableCache; }
 
-    [[nodiscard]] QList<PkgInfo> getInstalledPackages() const { return installedCache; }
+    [[nodiscard]] const QList<PkgInfo> &getInstalledPackages() const { return installedCache; }
 
     [[nodiscard]] PkgInfo getPackageInfo(const QString &repo, const QString &package, const QString &version) const;
 

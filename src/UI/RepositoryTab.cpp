@@ -639,13 +639,16 @@ QList<PkgInfo> RepositoryTab::resolveCand(const QString &pkg, const QList<PkgInf
         return fallback;
 
     const auto it = globalByName->find(pkg);
-    const QList<PkgInfo> &global = (it != globalByName->end()) ? it.value() : fallback;
+    if (it == globalByName->end())
+        return fallback;
+
+    const QList<const PkgInfo *> &global = it.value();
 
     QList<PkgInfo> hierarchyOnly;
     hierarchyOnly.reserve(global.size());
-    for (const auto &pkgName: global) {
-        if (RepositoryTabUtils::isHierarchyRepo(pkgName.repoName))
-            hierarchyOnly.append(pkgName);
+    for (const auto *pkgPtr: global) {
+        if (RepositoryTabUtils::isHierarchyRepo(pkgPtr->repoName))
+            hierarchyOnly.append(*pkgPtr);
     }
 
     if (this->property("attachTesting").toBool() || testing)
@@ -727,15 +730,15 @@ PendingPkg RepositoryTab::resolveBestUpdate(const QString &pkg, const QList<PkgI
     if (!installedCandidate && this->property("repoName").toString().compare(SLACK_OFICIAL) == 0) {
         if (globalByName) {
             if (const auto it = globalByName->find(pkg); it != globalByName->end()) {
-                for (const auto &p: it.value()) {
-                    if (!p.isInstalled || RepositoryTabUtils::isHierarchyRepo(p.repoName))
+                for (const auto *p: it.value()) {
+                    if (!p->isInstalled || RepositoryTabUtils::isHierarchyRepo(p->repoName))
                         continue;
 
-                    const RuleSt status = ruleStatuses.value({p.name, p.version, p.repoName}, RuleSt::Normal);
+                    const RuleSt status = ruleStatuses.value({p->name, p->version, p->repoName}, RuleSt::Normal);
                     if (status == RuleSt::Excluded || status == RuleSt::Prioritized)
                         continue;
 
-                    installedCandidate = &p;
+                    installedCandidate = p;
                     break;
                 }
             }
@@ -805,7 +808,7 @@ QList<PendingPkg> RepositoryTab::collectNewInstalls() const {
         return installs;
 
     QSet<QString> installedNames;
-    const auto installed = packagesManager->getInstalledPackages();
+    const auto &installed = packagesManager->getInstalledPackages();
     installedNames.reserve(installed.size());
     for (const auto &pkg: installed)
         installedNames.insert(pkg.name);
@@ -819,16 +822,16 @@ QList<PendingPkg> RepositoryTab::collectNewInstalls() const {
         const PkgInfo *bestCand = nullptr;
         int maxPriority = -1;
 
-        for (const auto &pkg: pkgList) {
-            if (pkg.isInstalled || !RepositoryTabUtils::isHierarchyRepo(pkg.repoName) ||
-                (!attachTestingEnabled && pkg.repoName.contains(SLACK_TESTING)) ||
-                ruleStatuses.value({pkg.name, pkg.version, pkg.repoName},
+        for (const auto *pkg: pkgList) {
+            if (pkg->isInstalled || !RepositoryTabUtils::isHierarchyRepo(pkg->repoName) ||
+                (!attachTestingEnabled && pkg->repoName.contains(SLACK_TESTING)) ||
+                ruleStatuses.value({pkg->name, pkg->version, pkg->repoName},
                                    RuleSt::Normal) == RuleSt::Excluded)
                 continue;
 
-            if (const int priority = getRepoPriority(pkg.repoName, false); priority > maxPriority) {
+            if (const int priority = getRepoPriority(pkg->repoName, false); priority > maxPriority) {
                 maxPriority = priority;
-                bestCand = &pkg;
+                bestCand = pkg;
             }
         }
 
@@ -1086,7 +1089,7 @@ void RepositoryTab::refreshTable() const {
         auto &r = packageModel->rowAt(row);
         bool rowHasPriorityWinner = false;
 
-        for (const auto &pkg : r.pkgList) {
+        for (const auto &pkg: r.pkgList) {
             if (statusOf(pkg.name, pkg.version, pkg.repoName) == RuleSt::Prioritized) {
                 rowHasPriorityWinner = true;
                 break;
@@ -1097,9 +1100,7 @@ void RepositoryTab::refreshTable() const {
         const bool isExcluded = (dStatus == RuleSt::Excluded);
 
         if (r.actionSymbol.isEmpty()) {
-            r.status = isExcluded ? PkgStatus::Excluded
-                     : r.isInstalled ? PkgStatus::Installed
-                     : PkgStatus::Available;
+            r.status = isExcluded ? PkgStatus::Excluded : r.isInstalled ? PkgStatus::Installed : PkgStatus::Available;
         } else if (isExcluded) {
             r.status = PkgStatus::Excluded;
         }
@@ -1121,7 +1122,7 @@ PkgInfo RepositoryTab::findDependencyCandidate(const QString &depName, const QSt
             return pkg;
     }
 
-    const auto available = packagesManager->getAvailablePackages();
+    const auto &available = packagesManager->getAvailablePackages();
     if (const auto it = available.find(parentRepoName); it != available.end()) {
         for (const auto &pkg: it.value().packages) {
             if (pkg.name == depName)

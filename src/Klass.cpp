@@ -7,11 +7,16 @@
 #include <QMessageBox>
 #include <QStandardPaths>
 
+#include <About.hpp>
+#include <ChangeLog.hpp>
 #include <Debug.hpp>
+#include <InstallPackage.hpp>
 #include <Klass.hpp>
 #include <Packages.hpp>
 #include <RepositoryTab.hpp>
+#include <SettingsDialog.hpp>
 #include <SlackwareDefines.hpp>
+#include <SummaryDialog.hpp>
 #include <Utils.hpp>
 
 /**
@@ -34,22 +39,11 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     tray = new SysTray(this, helper->socket(), settingsManager);
     packagesManager = new Packages(this);
 
-    about = new About(this);
-    logView = new ChangeLog(this);
-    installDialog = new InstallPackage::Install(this);
-
     rulesManagerDialog = new RulesManagerDialog(this);
     rulesManagerDialog->loadRules(RulesManager::loadRules());
     connect(rulesManagerDialog, &RulesManagerDialog::ruleAdded, this, &Klass::handleAddRuleRequested);
     connect(rulesManagerDialog, &RulesManagerDialog::ruleRemoved, this, &Klass::handleDeleteRulesRequested);
     connect(rulesManagerDialog, &RulesManagerDialog::ruleEdited, this, &Klass::handleEditRuleRequested);
-
-    settingsDialog = new SettingsDialog(this);
-    connect(settingsDialog, &SettingsDialog::settingsChanged, this, &Klass::loadRepositoryTabs);
-    connect(settingsDialog, &SettingsDialog::adminConfigSaveRequested, this, &Klass::handleAdminConfigSaveRequested);
-
-    summaryDialog = new SummaryDialog(this);
-    connect(summaryDialog, &QDialog::accepted, [this] { helper->setupHelper(PendingAction::ProcessTransaction); });
 
     mirrorManager = new MirrorManager(this);
     connect(mirrorManager, &MirrorManager::mirrorChangeRequested, this, &Klass::handleMirrorChangeRequested);
@@ -85,13 +79,13 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     connect(btnApply, &Buttons::clicked, this, &Klass::onApplyTransaction);
 
     btnSettings = new Buttons(Icon::Id::Settings, tr("Settings"));
-    connect(btnSettings, &Buttons::clicked, settingsDialog, &SettingsDialog::show);
+    connect(btnSettings, &Buttons::clicked, this, &Klass::onOpenSettings);
 
     btnChangelog = new Buttons(Icon::Id::Changelog, tr("View Changelog"));
-    connect(btnChangelog, &Buttons::clicked, logView, &ChangeLog::show);
+    connect(btnChangelog, &Buttons::clicked, this, &Klass::onShowChangelog);
 
     btnAbout = new Buttons(Icon::Id::About, tr("About"));
-    connect(btnAbout, &Buttons::clicked, about, &About::show);
+    connect(btnAbout, &Buttons::clicked, this, &Klass::onShowAbout);
 
     searchLayout = new QHBoxLayout(searchBar);
     searchLayout->addWidget(resetButton, 0, Qt::AlignRight | Qt::AlignVCenter);
@@ -203,9 +197,11 @@ void Klass::onSelectUpdates() {
 /**
  * @brief Populates the transaction summary from the current pending queues.
  */
-void Klass::onApplyTransaction() const {
-    summaryDialog->loadTransaction(pendingInstalls, pendingUpdates, pendingReinstalls, pendingRemoves);
-    summaryDialog->show();
+void Klass::onApplyTransaction() {
+    SummaryDialog summaryDialog(this);
+    summaryDialog.loadTransaction(pendingInstalls, pendingUpdates, pendingReinstalls, pendingRemoves);
+    if (summaryDialog.exec() == QDialog::Accepted)
+        helper->setupHelper(PendingAction::ProcessTransaction);
 }
 
 /**
@@ -281,10 +277,12 @@ void Klass::loadRepositoryTabs() {
     pendingUpdates.clear();
     pendingReinstalls.clear();
     pendingRemoves.clear();
+    globalByName.clear();
+    allPackages.clear();
 
     const QList<RuleEntry> currentRules = RulesManager::loadRules();
-    const QList<PkgInfo> allInstalled = packagesManager->getInstalledPackages();
-    const QMap<QString, RepoData> repoMap = packagesManager->getAvailablePackages();
+    const auto &allInstalled = packagesManager->getInstalledPackages();
+    const auto &repoMap = packagesManager->getAvailablePackages();
 
     QMap<QString, QString> mMap;
     int totalRepoPackages = 0;
@@ -393,12 +391,13 @@ void Klass::loadRepositoryTabs() {
         allPkgs.append(pkgsList);
     allPkgs.append(orphanPackages);
 
-    globalByName.clear();
-    globalByName.reserve(allPkgs.size());
-    for (const auto &pkg: allPkgs)
-        globalByName[pkg.name].append(pkg);
+    allPackages = std::move(allPkgs);
 
-    const QHash<PkgKey, RuleSt> ruleStatuses = RulesManager::resolveStatuses(allPkgs, currentRules);
+    globalByName.reserve(allPackages.size());
+    for (const auto &pkg: allPackages)
+        globalByName[pkg.name].append(&pkg);
+
+    const QHash<PkgKey, RuleSt> ruleStatuses = RulesManager::resolveStatuses(allPackages, currentRules);
 
     auto *allTab = new RepositoryTab(tabWidget, false, packagesManager);
     allTab->setProperty("repoName", ALL_REPOSITORIES);
@@ -406,7 +405,7 @@ void Klass::loadRepositoryTabs() {
     allTab->setMirrorMap(mMap);
     allTab->setRuleStatuses(ruleStatuses);
     allTab->setGlobalPackages(&globalByName);
-    allTab->fillTable(allPkgs);
+    allTab->fillTable(allPackages);
     connectTabSignals(allTab);
     tabWidget->addTab(allTab, tr("All Packages"));
 
@@ -453,7 +452,6 @@ void Klass::loadRepositoryTabs() {
     connectTabSignals(uncategorizedTab);
     tabWidget->addTab(uncategorizedTab, tr("Others"));
 
-    allPackages = allPkgs;
     mirrorMap = mMap;
 
     if (const QString query = searchBar->text().trimmed(); !query.isEmpty()) {
@@ -478,6 +476,35 @@ void Klass::onSearchTextChanged(const QString &text) const {
     } else {
         searchDebounceTimer->start();
     }
+}
+
+/**
+ * @brief Constructs and shows the Settings dialog on demand.
+ */
+void Klass::onOpenSettings() {
+    auto *settingsDialog = new SettingsDialog(this);
+    settingsDialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(settingsDialog, &SettingsDialog::settingsChanged, this, &Klass::loadRepositoryTabs);
+    connect(settingsDialog, &SettingsDialog::adminConfigSaveRequested, this, &Klass::handleAdminConfigSaveRequested);
+    settingsDialog->show();
+}
+
+/**
+ * @brief Constructs and shows the About dialog on demand.
+ */
+void Klass::onShowAbout() {
+    auto *about = new About(this);
+    about->setAttribute(Qt::WA_DeleteOnClose);
+    about->show();
+}
+
+/**
+ * @brief Constructs and shows the ChangeLog viewer dialog on demand.
+ */
+void Klass::onShowChangelog() {
+    auto *logView = new ChangeLog(this);
+    logView->setAttribute(Qt::WA_DeleteOnClose);
+    logView->show();
 }
 
 /**
@@ -594,6 +621,8 @@ void Klass::handleAdminConfigSaveRequested(const QString &payload) {
  * @param file The name or path of the package to be processed.
  */
 void Klass::handlePackage(const QString &file) const {
+    auto *installDialog = new InstallPackage::Install(const_cast<Klass *>(this));
+    installDialog->setAttribute(Qt::WA_DeleteOnClose);
     installDialog->setPackage(file);
     installDialog->show();
 }

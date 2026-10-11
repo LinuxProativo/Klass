@@ -8,11 +8,9 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QVersionNumber>
 
 #include <DefaultPath.hpp>
 #include <Packages.hpp>
-#include <SlackwareDefines.hpp>
 #include <VersionComboBoxDelegate.hpp>
 
 inline constexpr int margin = 5;
@@ -23,7 +21,9 @@ inline constexpr int iconSize = 16;
  * @brief Constructs a VersionComboBoxDelegate object.
  * @param parent The parent object in the Qt object hierarchy for memory management.
  */
-VersionComboBoxDelegate::VersionComboBoxDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
+VersionComboBoxDelegate::VersionComboBoxDelegate(QObject *parent) : QStyledItemDelegate(parent) {
+    updateIcon = QIcon(DefaultPath::defaultPath("icons/available.svg"));
+}
 
 /**
  * @brief Renders the visual appearance of the view item.
@@ -36,8 +36,8 @@ void VersionComboBoxDelegate::paint(QPainter *painter, const QStyleOptionViewIte
     QStyleOptionViewItem opt = option;
     initStyleOption(&opt, index);
 
-    if (const QStringList versions = index.data(Qt::UserRole + 3).toStringList();
-        versions.size() > 1) {
+    const auto varPkgs = index.data(Qt::UserRole + 4);
+    if (const auto pkgList = varPkgs.value<QList<PkgInfo>>(); pkgList.size() > 1) {
         painter->save();
 
         QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
@@ -61,101 +61,14 @@ void VersionComboBoxDelegate::paint(QPainter *painter, const QStyleOptionViewIte
         boxOption.state = opt.state | QStyle::State_Enabled;
         style->drawPrimitive(QStyle::PE_IndicatorArrowDown, &boxOption, painter, opt.widget);
 
-        bool hasUpdate = false;
-        if (const QVariant varPkgs = index.data(Qt::UserRole + 4); varPkgs.canConvert<QList<PkgInfo> >()) {
-            const auto pkgList = varPkgs.value<QList<PkgInfo> >();
-            if (!pkgList.isEmpty()) {
-                bool attachTesting = false;
-                for (const QWidget *w = opt.widget; w; w = w->parentWidget()) {
-                    const QVariant val = w->property("attachTesting");
-                    if (val.isValid()) {
-                        attachTesting = val.toBool();
-                        break;
-                    }
-                }
-
-                bool rowIsTestingOnly = true;
-                for (const auto &p: pkgList) {
-                    if (!p.repoName.contains(SLACK_TESTING)) {
-                        rowIsTestingOnly = false;
-                        break;
-                    }
-                }
-
-                auto getRepoPriority = [attachTesting](const QString &repo, bool testingOnly) -> int {
-                    if ((attachTesting || testingOnly) && repo.contains(SLACK_TESTING))
-                        return 3;
-                    if (repo.contains(SLACK_PATCHES))
-                        return 2;
-                    if (repo.compare(SLACK_OFICIAL) == 0)
-                        return 1;
-                    return 0;
-                };
-
-                auto isVersionNewer = [](const QString &v1, const QString &v2) -> bool {
-                    const QVersionNumber ver1 = QVersionNumber::fromString(v1);
-                    const QVersionNumber ver2 = QVersionNumber::fromString(v2);
-                    if (!ver1.isNull() && !ver2.isNull())
-                        return QVersionNumber::compare(ver1, ver2) > 0;
-                    return v1 > v2;
-                };
-
-                const PkgInfo *installedCandidate = nullptr;
-                for (const auto &p: pkgList) {
-                    if (p.isInstalled) {
-                        installedCandidate = &p;
-                        break;
-                    }
-                }
-
-                const PkgInfo *bestAvailable = nullptr;
-                int maxPriority = -1;
-
-                for (const auto &p: pkgList) {
-                    if (p.isInstalled)
-                        continue;
-
-                    if (p.repoName.contains(SLACK_TESTING) && !attachTesting && !rowIsTestingOnly)
-                        continue;
-
-                    const int priority = getRepoPriority(p.repoName, rowIsTestingOnly);
-                    if (priority > maxPriority) {
-                        maxPriority = priority;
-                        bestAvailable = &p;
-                    } else if (priority == maxPriority && bestAvailable) {
-                        // Se estiverem na mesma prioridade, escolhe a versão mais nova
-                        if (isVersionNewer(p.version, bestAvailable->version)) {
-                            bestAvailable = &p;
-                        }
-                    }
-                }
-
-                if (installedCandidate && bestAvailable) {
-                    const int installedPriority = getRepoPriority(installedCandidate->repoName, rowIsTestingOnly);
-
-                    if (maxPriority > installedPriority)
-                        hasUpdate = true;
-
-                    else if (maxPriority == installedPriority) {
-                        if (bestAvailable->version != installedCandidate->version &&
-                            isVersionNewer(bestAvailable->version, installedCandidate->version)) {
-                            hasUpdate = true;
-                        }
-                    }
-                }
-            }
-        }
-
+        const bool hasUpdate = index.data(Qt::UserRole + 2).toBool();
         int textLeftOffset = 0;
 
         if (hasUpdate) {
-            QIcon updateIcon(DefaultPath().defaultPath("icons/available.svg"));
-
             const QRect iconRect(opt.rect.x() + margin, opt.rect.y() + (opt.rect.height() - iconSize) / 2,
                                  iconSize, iconSize);
 
             updateIcon.paint(painter, iconRect, Qt::AlignCenter, QIcon::Normal, QIcon::On);
-
             textLeftOffset = margin + iconSize + (margin / 2);
         }
 
@@ -186,7 +99,9 @@ bool VersionComboBoxDelegate::editorEvent(QEvent *event, QAbstractItemModel *mod
                                           const QModelIndex &index) {
     if (event->type() == QEvent::MouseButtonPress) {
         if (const auto *mouseEvent = dynamic_cast<QMouseEvent *>(event); mouseEvent->button() == Qt::LeftButton) {
-            if (const QStringList versions = index.data(Qt::UserRole + 3).toStringList(); versions.size() > 1) {
+            const auto varPkgs = index.data(Qt::UserRole + 4);
+
+            if (const auto pkgList = varPkgs.value<QList<PkgInfo>>(); pkgList.size() > 1) {
                 const int buttonSize = qMax(height, option.rect.height() - margin * 2);
 
                 const QRect buttonRect(
@@ -204,11 +119,11 @@ bool VersionComboBoxDelegate::editorEvent(QEvent *event, QAbstractItemModel *mod
                     const QString currentVersion = index.data(Qt::DisplayRole).toString();
 
                     QMenu menu(pw);
-                    for (int i = 0; i < versions.size(); ++i) {
-                        QAction *action = menu.addAction(versions.at(i));
+                    for (int i = 0; i < pkgList.size(); ++i) {
+                        QAction *action = menu.addAction(pkgList.at(i).version);
                         action->setData(i);
 
-                        if (versions.at(i) == currentVersion) {
+                        if (pkgList.at(i).version == currentVersion) {
                             action->setCheckable(true);
                             action->setChecked(true);
                         }

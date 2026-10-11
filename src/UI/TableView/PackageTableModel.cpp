@@ -89,8 +89,15 @@ QVariant PackageTableModel::data(const QModelIndex &index, const int role) const
     } else if (col == 2) {
         if (role == Qt::DisplayRole)
             return row.version;
-        if (role == Qt::UserRole + 3)
-            return row.allVersions;
+        if (role == Qt::UserRole + 2)
+            return row.hasUpdate;
+        if (role == Qt::UserRole + 3) {
+            QStringList versions;
+            versions.reserve(row.pkgList.size());
+            for (const auto &p: row.pkgList)
+                versions.append(p.version);
+            return versions;
+        }
         if (role == Qt::UserRole + 4)
             return QVariant::fromValue(row.pkgList);
     } else if (col == 3) {
@@ -120,6 +127,23 @@ void PackageTableModel::notifyRowChanged(const int row) {
         const QModelIndex left = index(row, 0);
         const QModelIndex right = index(row, 3);
         emit dataChanged(left, right);
+    }
+}
+
+/**
+ * @brief Notifies the view that only the status column across a row has changed.
+ * @param row The zero-based index of the updated data row.
+ */
+void PackageTableModel::notifyStatusChanged(const int row) {
+    if (row >= 0 && row < m_rows.size()) {
+        const QModelIndex idx = index(row, 0);
+        emit dataChanged(idx, idx, {
+            Qt::DecorationRole,
+            RepositoryTabUtils::PackageStatusRole,
+            Qt::UserRole + 5,
+            Qt::UserRole + 6,
+            Qt::UserRole + 7
+        });
     }
 }
 

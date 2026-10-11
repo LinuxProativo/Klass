@@ -10,19 +10,15 @@
 #include <QTabWidget>
 #include <QTimer>
 
-#include <About.hpp>
 #include <Buttons.hpp>
-#include <ChangeLog.hpp>
+#include <DefaultPath.hpp>
 #include <HelperController.hpp>
-#include <InstallPackage.hpp>
 #include <MirrorManager.hpp>
 #include <Mirrors.hpp>
 #include <Packages.hpp>
 #include <RepositoryTab.hpp>
 #include <RulesManagerDialog.hpp>
-#include <SettingsDialog.hpp>
 #include <SettingsManager.hpp>
-#include <SummaryDialog.hpp>
 #include <SysTray.hpp>
 #include <Terminal.hpp>
 
@@ -68,9 +64,15 @@ private:
 
     void onTransactionFinished();
 
-    void onApplyTransaction() const;
+    void onApplyTransaction();
 
     void onSearchTextChanged(const QString &text) const;
+
+    void onOpenSettings();
+
+    void onShowAbout();
+
+    void onShowChangelog();
 
     void handleMirrorChangeRequested(const QString &url);
 
@@ -97,26 +99,20 @@ private:
     QWidget *toolBarWidget{};
     QTimer *searchDebounceTimer{};
 
-    About *about{};
-    Buttons *btnAdd{}, *btnException{};
-    Buttons *btnUpdate{}, *btnUp{}, *btnApply{};
+    Buttons *btnAdd{}, *btnException{}, *btnUpdate{}, *btnUp{}, *btnApply{};
     Buttons *btnSettings{}, *btnChangelog{}, *btnAbout{};
-    ChangeLog *logView{};
-    InstallPackage::Install *installDialog{};
     HelperController *helper{};
     MirrorManager *mirrorManager{};
     Packages *packagesManager{};
     RulesManagerDialog *rulesManagerDialog{};
-    SettingsDialog *settingsDialog{};
     SettingsManager *settingsManager{};
-    SummaryDialog *summaryDialog{};
     SysTray *tray{};
     Terminal *terminalDialog{};
 
-    std::string pathIcon{DefaultPath().defaultPath("icons/available.svg").toStdString()};
+    std::string pathIcon{DefaultPath::defaultPath("icons/available.svg").toStdString()};
     RuleEntry rule{}, edit{};
 
-    QHash<QString, QList<PkgInfo>> globalByName;
+    QHash<QString, QList<const PkgInfo *> > globalByName;
     QList<PendingPkg> pendingInstalls{}, pendingReinstalls{}, pendingRemoves{}, pendingUpdates{};
     QList<PkgInfo> allPackages{};
     QList<Mirrors::MirrorPlusEntry> pendingRepoEnable{};

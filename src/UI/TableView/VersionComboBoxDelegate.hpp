@@ -6,6 +6,7 @@
 #ifndef VERSIONCOMBOBOXDELEGATE_HPP
 #define VERSIONCOMBOBOXDELEGATE_HPP
 
+#include <QIcon>
 #include <QStyledItemDelegate>
 
 /**
@@ -26,6 +27,9 @@ protected:
 
 signals:
     void versionChanged(const QModelIndex &index, int selectedVersionIndex) const;
+
+private:
+    QIcon updateIcon{};
 };
 
 #endif

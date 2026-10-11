@@ -77,7 +77,7 @@ public:
 
     void refreshTable() const;
 
-    void setGlobalPackages(const QHash<QString, QList<PkgInfo> > *all) { globalByName = all; }
+    void setGlobalPackages(const QHash<QString, QList<const PkgInfo *> > *all) { globalByName = all; }
 
     [[nodiscard]] QList<PendingPkg> collectAvailableUpdates() const;
 
@@ -153,7 +153,7 @@ private:
     VersionComboBoxDelegate *versionDelegate{};
 
     QHash<PkgKey, RuleSt> ruleStatuses{};
-    const QHash<QString, QList<PkgInfo> > *globalByName{nullptr};
+    const QHash<QString, QList<const PkgInfo *> > *globalByName{nullptr};
     QMap<QString, QString> mirrorMap{};
     QMultiHash<QString, int> packageRowIndex{};
     QMultiHash<QString, int> nameRowIndex{};

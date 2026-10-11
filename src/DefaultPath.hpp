@@ -6,26 +6,20 @@
 #ifndef DEFAULTPATH_HPP
 #define DEFAULTPATH_HPP
 
-#include <QCoreApplication>
-#include <QObject>
+#include <QString>
 
 /**
  * @class DefaultPath
  * @brief Manages file and directory path discovery, supporting fallbacks between local dirs and system paths.
  */
-class DefaultPath final : public QObject {
-    Q_OBJECT
-
+class DefaultPath final {
 public:
-    explicit DefaultPath();
+    explicit DefaultPath() = default;
 
-    QString defaultPath(const QString &str);
+    static QString defaultPath(const QString &str);
 
 private:
-    QString findPath(const QString &str);
-
-    QString dir{QCoreApplication::applicationDirPath()}, oldDir{};
-    QString px{"/usr/local/share/klass"}, newPx{"/usr/share/klass"};
+    static QString findPath(const QString &str);
 };
 
 #endif
