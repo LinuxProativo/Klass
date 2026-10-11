@@ -70,6 +70,70 @@ bool SettingsManager::autostart() const {
 }
 
 /**
+ * @brief Sets the preference to start the application maximized.
+ * @param b True to start maximized.
+ */
+void SettingsManager::startMaximized(const bool b) {
+    this->setValue("StartMaximized", b);
+}
+
+/**
+ * @brief Retrieves the preference to start the application maximized.
+ * @return True if start maximized is enabled, false by default.
+ */
+bool SettingsManager::startMaximized() const {
+    return this->value("StartMaximized", false).toBool();
+}
+
+/**
+ * @brief Sets the preference to start the application minimized to the system tray.
+ * @param b True to start minimized.
+ */
+void SettingsManager::startMinimized(const bool b) {
+    this->setValue("StartMinimized", b);
+}
+
+/**
+ * @brief Retrieves the preference to start the application minimized.
+ * @return True if start minimized is enabled, false by default.
+ */
+bool SettingsManager::startMinimized() const {
+    return this->value("StartMinimized", false).toBool();
+}
+
+/**
+ * @brief Sets the preference to show a confirmation dialog before selecting all updates.
+ * @param b True to show dialog.
+ */
+void SettingsManager::confirmSelectAllUpdates(const bool b) {
+    this->setValue("ConfirmSelectAllUpdates", b);
+}
+
+/**
+ * @brief Retrieves whether to confirm before selecting all updates.
+ * @return True by default.
+ */
+bool SettingsManager::confirmSelectAllUpdates() const {
+    return this->value("ConfirmSelectAllUpdates", true).toBool();
+}
+
+/**
+ * @brief Sets whether update selection is limited to official repositories only.
+ * @param b True to limit to official mirrors.
+ */
+void SettingsManager::officialUpdatesOnly(const bool b) {
+    this->setValue("OfficialUpdatesOnly", b);
+}
+
+/**
+ * @brief Retrieves whether update selection is limited to official repositories only.
+ * @return False by default.
+ */
+bool SettingsManager::officialUpdatesOnly() const {
+    return this->value("OfficialUpdatesOnly", false).toBool();
+}
+
+/**
  * @brief Sets the preference for attaching the patches repository to the official repository.
  * @param b True to attach patches repository, false otherwise.
  */

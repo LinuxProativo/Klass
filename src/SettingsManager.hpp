@@ -37,6 +37,22 @@ public:
 
     [[nodiscard]] bool autostart() const;
 
+    void startMaximized(bool b);
+
+    [[nodiscard]] bool startMaximized() const;
+
+    void startMinimized(bool b);
+
+    [[nodiscard]] bool startMinimized() const;
+
+    void confirmSelectAllUpdates(bool b);
+
+    [[nodiscard]] bool confirmSelectAllUpdates() const;
+
+    void officialUpdatesOnly(bool b);
+
+    [[nodiscard]] bool officialUpdatesOnly() const;
+
     void attachPatches(bool b);
 
     [[nodiscard]] bool attachPatches() const;

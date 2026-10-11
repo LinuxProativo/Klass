@@ -56,6 +56,7 @@ include_directories(
         src/UI/MirrorManager
         src/UI/RulesDialog
         src/UI/TableView
+        src/UI/Terminal
 )
 
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
@@ -67,6 +68,7 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
         src/UI/MirrorManager/*
         src/UI/RulesDialog/*
         src/UI/TableView/*
+        src/UI/Terminal/*
 )
 
 add_executable(${PRG_NAME} ${SRC_FILES})
