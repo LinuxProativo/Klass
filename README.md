@@ -13,31 +13,26 @@
     <img src="https://img.shields.io/github/license/LinuxProativo/klass?color=673ab7&label=License&style=flat-square&logo=opensourcehardware&logoColor=white"/>
 </p> 
 
-
 ## 🔍 Visão Geral
 
-> VERSÃO RELEASE CANDIDATE 1 - AVISOS
+> VERSÃO RELEASE CANDIDATE 2 - AVISOS
 >
-> - RC2 ainda será focado em correção e economia de RAM.
+> - RC3 será focado em correções finais, economia de RAM e novos recursos.
+> - AINDA não há qualquer tentativa de autoreinstalação de modulos dkms. -> Sem previsão.
 > - AINDA não há verificações relacionadas ao uso de NVIDIA. -> Sem previsão.
-> - Pode precisar de ajustes ao gerar um novo initrd. -> Ajuste RC2.
-> - Ainda não há rotina pós-instalação para mapear arquivos.new. -> Implementação RC3.
-> - Atualização do grub e lilo pode precisar de ajustes. -> Ajuste RC2.
-> - Reinstalação do módulo do VirtualBox Experimental. -> Ajuste RC2.
+> - AINDA não há uma configuração de pós instalação para o VMWare. -> Sem previsão.
+> - EM BREVE: Rotina pós-instalação para mapear arquivos.new. -> Implementação RC3/4.
 >
 > Ajustes já mapeados para as próximas versões estáveis:
-> - tentativa de autoreinstalação de modulos dkms.
-> - IMPLEMENTAR barra de status.
-> - opção de usar ou não o repo testing e extra.
+> - Opção de limpeza de cache após a instalação. -> RC3/4.
+> - Opção de usar ou não o repo testing e extra. -> Antes do Latest Release.
 > - Rollback em caso de necessidade.
-> - download paralelo opcional.
-> - suporte a checksum mais seguros se disponíveis.
-> - Opção para setar assinatura é opcional ou obrigatória para mirrors específicas.
-> - Verificação da assinatura da lista de checksum e opção pra ignora porque nem todos os repos tem.
-> - regras avançadas de controle manual.
+> - Download paralelo opcional. -> RC3/4 via comandos externos.
+> - Opção para setar assinatura é opcional ou obrigatória para mirrors específicas. -> Antes do Latest Release.
+> - Verificação da assinatura da lista de checksum e opção para ignorar porque nem todos os repos tem.
+> - Regras avançadas de controle manual.
 > - Menu para atualizar a base de dados sem abrir a interface.
-> - opção de proceder com a atualização do sistema. após o update.
-> - Adicionar dialogo pedindo se vai mesmo marcar todos os updates. -> Implementação RC2.
+> - Opção de proceder com a atualização do sistema logo após o update.
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacote gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
@@ -393,6 +388,7 @@ Segue as implementações para o futuro:
   - Verificação de dependencias estimadas.
   - Integrador AppImage.
   - Plugin de configuração e instalação de drivers nvidia.
+  - Suporte a checksum mais seguros se disponíveis.
   - Remoção de pacotes obsoletos oficiais. 
 
 A remoção de pacotes obsoletos vai ignorar por padrão pacotes de terceiros e só
