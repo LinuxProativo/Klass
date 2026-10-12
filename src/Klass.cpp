@@ -291,6 +291,8 @@ void Klass::reloadRules() const {
             tab->refreshTable();
         }
     }
+
+    updateStatusIndicator();
 }
 
 /**

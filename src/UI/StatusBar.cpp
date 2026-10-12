@@ -87,7 +87,7 @@ void StatusBar::setStatus(const StatusState state, const int count) const {
                 iconPixmap = QIcon(icoPath).pixmap(18, 18);
             else
                 iconPixmap = QApplication::style()->standardIcon(QStyle::SP_ArrowUp).pixmap(18, 18);
-            message = "%1 " + tr("package(s) available for update.").arg(count);
+            message = QStringLiteral("%1 ").arg(count) + tr("package(s) available for update.");
             break;
         }
         case StatusState::UpToDate:
