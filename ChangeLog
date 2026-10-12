@@ -1,3 +1,23 @@
+Mon Oct 12 08:02:24 -03 2026:
+    - Corrigido processTransaction para monitorar operações em pacotes do kernel para condicionar a execução de
+      GenerateInitrd, UpdateGrub, UpdateLilo e ReinstallVBoxModules.
+    - Adicionado novas opções de configurações em Settings.
+    - Adicionado barra de status para controle de atualizaçoes e processos em segundo plano.
+    - Adicionado opções de inicialização do programa.
+    - Removidos membros de diálogos não-persistentes com adicão de métodos dedicados para abertura sob demanda.
+    - Retorno por referência constante em Packages, para evitar a duplicação em massa da lista e do mapa de pacotes.
+    - RepositoryTab atualizado para preencher `hasUpdate` no carregamento e ao trocar a versão selecionada,
+      e para despachar atualizações de status via `notifyStatusChanged`.
+    - Otimizações em VersionComboBoxDelegate:
+      - Método `paint()` agora executa em tempo constante O(1), lendo diretamente `hasUpdate` do modelo.
+      - Utiliza ícone pré-carregado no construtor.
+    - Otimização em PackageTableModel:
+      - Removida a `QStringList allVersions` redundante, economizando alocações de lista para cada pacote do sistema.
+      - Adicionado o campo `hasUpdate` pré-calculado.
+      - Adicionado `notifyStatusChanged` para atualizações de status em lote sem invalidar colunas desnecessárias.
+    - Adicionado `repoPriority` e `computeHasUpdate` em RepositoryTabUtils.
+    - Adicionado em Utils funções para extrair build tag, comparar versão e serializar transações.
+    - DefaultPath virou resolvedor estático com cache em memória sem I/O repetitivo de disco e chamadas frequentes a regex.
 Thu Oct 08 07:43:45 -03 2026:
 
 --- MEMORY OPTIMIZATION RESULTS ---
