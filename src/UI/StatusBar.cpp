@@ -16,21 +16,42 @@
  * @param parent Parent widget.
  */
 StatusBar::StatusBar(QWidget *parent) : QWidget(parent) {
-    this->setFixedHeight(28);
+    this->setAutoFillBackground(true);
 
-    mainLayout = new QHBoxLayout(this);
-    mainLayout->setContentsMargins(10, 2, 10, 2);
+    QPalette pal = this->palette();
+    pal.setColor(QPalette::Window, pal.color(QPalette::Base));
+    setPalette(pal);
+
+    const auto topLine = new QFrame(this);
+    topLine->setFrameShape(QFrame::HLine);
+    topLine->setFrameShadow(QFrame::Plain);
+
+    QPalette linePal = topLine->palette();
+    linePal.setColor(QPalette::WindowText, this->palette().color(QPalette::Mid));
+    topLine->setPalette(linePal);
+
+    const auto container = new QWidget(this);
+    container->setAutoFillBackground(false);
+
+    mainLayout = new QHBoxLayout(container);
+    mainLayout->setContentsMargins(5, 5, 5, 6);
     mainLayout->setSpacing(8);
 
-    iconLabel = new QLabel(this);
+    iconLabel = new QLabel(container);
     iconLabel->setFixedSize(18, 18);
     iconLabel->setScaledContents(true);
 
-    textLabel = new QLabel(this);
+    textLabel = new QLabel(container);
 
     mainLayout->addWidget(iconLabel);
     mainLayout->addWidget(textLabel);
     mainLayout->addStretch();
+
+    const auto rootLayout = new QVBoxLayout(this);
+    rootLayout->setContentsMargins(0, 0, 0, 0);
+    rootLayout->setSpacing(0);
+    rootLayout->addWidget(topLine);
+    rootLayout->addWidget(container);
 
     setStatus(StatusState::UpToDate);
 }
@@ -46,8 +67,7 @@ void StatusBar::setStatus(const StatusState state, const int count) const {
 
     switch (state) {
         case StatusState::Checking: {
-            const QString icoPath = DefaultPath::defaultPath("icons/update.svg");
-            if (QFileInfo::exists(icoPath))
+            if (const QString icoPath = DefaultPath::defaultPath("icons/update.svg"); QFileInfo::exists(icoPath))
                 iconPixmap = QIcon(icoPath).pixmap(18, 18);
             else
                 iconPixmap = QApplication::style()->standardIcon(QStyle::SP_BrowserReload).pixmap(18, 18);
@@ -55,8 +75,7 @@ void StatusBar::setStatus(const StatusState state, const int count) const {
             break;
         }
         case StatusState::DatabaseAvailable: {
-            const QString icoPath = DefaultPath::defaultPath("icons/available.svg");
-            if (QFileInfo::exists(icoPath))
+            if (const QString icoPath = DefaultPath::defaultPath("icons/available.svg"); QFileInfo::exists(icoPath))
                 iconPixmap = QIcon(icoPath).pixmap(18, 18);
             else
                 iconPixmap = QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation).pixmap(18, 18);
@@ -64,18 +83,16 @@ void StatusBar::setStatus(const StatusState state, const int count) const {
             break;
         }
         case StatusState::PackagesAvailable: {
-            const QString icoPath = DefaultPath::defaultPath("icons/up.svg");
-            if (QFileInfo::exists(icoPath))
+            if (const QString icoPath = DefaultPath::defaultPath("icons/up.svg"); QFileInfo::exists(icoPath))
                 iconPixmap = QIcon(icoPath).pixmap(18, 18);
             else
                 iconPixmap = QApplication::style()->standardIcon(QStyle::SP_ArrowUp).pixmap(18, 18);
-            message = tr("%1 package(s) available for update.").arg(count);
+            message = "%1 " + tr("package(s) available for update.").arg(count);
             break;
         }
         case StatusState::UpToDate:
         default: {
-            const QString okPath = DefaultPath::defaultPath("icons/ok.svg");
-            if (QFileInfo::exists(okPath)) {
+            if (const QString okPath = DefaultPath::defaultPath("icons/ok.svg"); QFileInfo::exists(okPath)) {
                 iconPixmap = QIcon(okPath).pixmap(18, 18);
             } else {
                 iconPixmap = QApplication::style()->standardIcon(QStyle::SP_DialogApplyButton).pixmap(18, 18);

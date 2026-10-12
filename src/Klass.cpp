@@ -95,7 +95,7 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
 
     toolBarWidget = new QWidget(this);
     toolBarLayout = new QHBoxLayout(toolBarWidget);
-    toolBarLayout->setContentsMargins(0, 0, 0, 0);
+    toolBarLayout->setContentsMargins(10, 0, 10, 0);
     toolBarLayout->setSpacing(0);
     toolBarLayout->addWidget(btnAdd);
     toolBarLayout->addWidget(btnException);
@@ -111,12 +111,18 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     toolBarLayout->addWidget(btnAbout);
 
     tabWidget = new QTabWidget(this);
+    auto *tabLayout = new QVBoxLayout();
+    tabLayout->setContentsMargins(10, 0, 10, 0);
+    tabLayout->addWidget(tabWidget);
+
     statusBar = new StatusBar(this);
 
     mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 10, 0, 0);
     mainLayout->addWidget(toolBarWidget);
     mainLayout->addSpacing(5);
-    mainLayout->addWidget(tabWidget);
+    mainLayout->addLayout(tabLayout);
+    mainLayout->addSpacing(5);
     mainLayout->addWidget(statusBar);
 }
 
