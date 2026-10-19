@@ -17,6 +17,8 @@ enum class PendingAction {
     None,
     Update,
     SetMirror,
+    SetOfficialBranches,
+    SetRepoVerification,
     EnableRepo,
     DisableRepo,
     AddRule,
