@@ -15,6 +15,7 @@
 #include <MirrorManager.hpp>
 #include <Mirrors.hpp>
 #include <Packages.hpp>
+#include <RepoVerificationManager.hpp>
 #include <RepositoryTab.hpp>
 #include <RulesManagerDialog.hpp>
 #include <SettingsManager.hpp>
@@ -82,6 +83,10 @@ private:
 
     void handleReposRemoved(const QStringList &names);
 
+    void handleOfficialBranchesChanged(const Mirrors::OfficialBranches &branches);
+
+    void handleRepoVerificationChanged(const RepoVerificationEntry &entry);
+
     void handleAddRuleRequested(const RuleEntry &addRule);
 
     void handleDeleteRulesRequested(const QList<RuleEntry> &rules);
@@ -125,6 +130,8 @@ private:
     QMap<QString, QString> mirrorMap{};
     QStringList pendingRepoDisable{};
     QString pendingMirrorUrl{}, pendingAdminConfigPayload{};
+    Mirrors::OfficialBranches pendingOfficialBranches{};
+    RepoVerificationEntry pendingRepoVerification{};
     bool updateNotificationShown{false}, started{false};
 };
 
