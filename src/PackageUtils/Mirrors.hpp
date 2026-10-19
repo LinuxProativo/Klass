@@ -15,8 +15,18 @@
 class Mirrors {
 public:
     /**
+     * @struct OfficialBranches
+     * @brief Represents the activation status of secondary official Slackware branches.
+     */
+    struct OfficialBranches {
+        bool pasture{false};
+        bool testing{false};
+        bool extra{false};
+    };
+
+    /**
      * @enum Channel
-     * @brief Represents the release channel or branch of the distribution.
+     * @brief Represents the release channel of the distribution.
      */
     enum class Channel {
         Stable,
@@ -57,6 +67,10 @@ public:
     static bool disable(const QString &name);
 
     static bool isUpdateRequired();
+
+    static OfficialBranches loadOfficialBranches();
+
+    static bool setOfficialBranches(const OfficialBranches &branches);
 
 private:
     static QString detectArch();

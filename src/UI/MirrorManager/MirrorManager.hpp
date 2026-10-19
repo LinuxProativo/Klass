@@ -6,6 +6,7 @@
 #ifndef MIRRORMANAGER_HPP
 #define MIRRORMANAGER_HPP
 
+#include <QCheckBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -14,6 +15,7 @@
 
 #include <Dialog.hpp>
 #include <Mirrors.hpp>
+#include <RepoVerificationManager.hpp>
 #include <TableView.hpp>
 
 /**
@@ -45,6 +47,10 @@ signals:
 
     void reposRemoved(const QStringList &names);
 
+    void officialBranchesChanged(const Mirrors::OfficialBranches &branches);
+
+    void repoVerificationChanged(const RepoVerificationEntry &entry);
+
 protected:
     void showEvent(QShowEvent *event) override;
 
@@ -59,9 +65,15 @@ private:
 
     void onRemoveClicked();
 
-    QHBoxLayout *officialLayout{}, *repositoryLayout{};
+    void onVerificationClicked();
+
+    void updateSelectionButtons() const;
+
+    QHBoxLayout *officialLayout{}, *officialBranchesLayout{}, *repositoryLayout{};
     QLineEdit *officialMirror{};
-    QPushButton *btnChange{}, *btnAddCustomOfficial{}, *btnAdd{}, *btnAddCustomThird{}, *btnRemove{};
+    QCheckBox *checkPasture{}, *checkTesting{}, *checkExtra{};
+    QPushButton *btnChange{}, *btnAddCustomOfficial{};
+    QPushButton *btnAdd{}, *btnAddCustomThird{}, *btnRemove{}, *btnVerification{};
     QStandardItemModel *model{};
     QVBoxLayout *buttonLayout{}, *mainLayout{};
 

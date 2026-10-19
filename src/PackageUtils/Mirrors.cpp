@@ -179,7 +179,7 @@ bool Mirrors::accept(const QString &url) {
  */
 QList<Mirrors::MirrorPlusEntry> Mirrors::catalogue() {
     QList<MirrorPlusEntry> result;
-    QFile file(DefaultPath().defaultPath("mirrors/valid_mirrors.txt"));
+    QFile file(DefaultPath::defaultPath("mirrors/valid_mirrors.txt"));
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
         return result;
 
@@ -348,4 +348,51 @@ bool Mirrors::isUpdateRequired() {
         Debug::msg("Update Available in " + name, "RepoManager", {"false"});
     }
     return false;
+}
+
+/**
+ * @brief Loads the active state for official sub-branches (Pasture, Testing, Extra) from klass.conf.
+ */
+Mirrors::OfficialBranches Mirrors::loadOfficialBranches() {
+    OfficialBranches branches;
+    for (const QString &line: RepoManager::readConf()) {
+        if (const QString trimmed = line.trimmed(); trimmed.startsWith(u"OFFICIAL_PASTURE="))
+            branches.pasture = trimmed.mid(17).trimmed().compare(u"true", Qt::CaseInsensitive) == 0;
+        else if (trimmed.startsWith(u"OFFICIAL_TESTING="))
+            branches.testing = trimmed.mid(17).trimmed().compare(u"true", Qt::CaseInsensitive) == 0;
+        else if (trimmed.startsWith(u"OFFICIAL_EXTRA="))
+            branches.extra = trimmed.mid(15).trimmed().compare(u"true", Qt::CaseInsensitive) == 0;
+    }
+    return branches;
+}
+
+/**
+ * @brief Writes the official branches state under '# Official Repo' in klass.conf.
+ */
+bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
+    QStringList lines = RepoManager::readConf();
+
+    auto updateOrInsert = [&](const QString &key, const bool val) {
+        const QString targetLine = key + u'=' + (val ? QStringLiteral("true") : QStringLiteral("false"));
+        bool updated = false;
+        for (QString &line: lines) {
+            if (line.trimmed().startsWith(key + u'=')) {
+                line = targetLine;
+                updated = true;
+                break;
+            }
+        }
+        if (!updated) {
+            if (const int idx = static_cast<int>(lines.indexOf(OFFICIAL_HEADER)); idx != -1)
+                lines.insert(idx + 1, targetLine);
+            else
+                lines.prepend(targetLine);
+        }
+    };
+
+    updateOrInsert(QStringLiteral("OFFICIAL_PASTURE"), branches.pasture);
+    updateOrInsert(QStringLiteral("OFFICIAL_TESTING"), branches.testing);
+    updateOrInsert(QStringLiteral("OFFICIAL_EXTRA"), branches.extra);
+
+    return RepoManager::writeConf(lines);
 }
