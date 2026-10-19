@@ -60,7 +60,12 @@ QStringList RepoManager::readConf() {
 
     if (!f.exists()) {
         QStringList defaultTemplate = {
-            OFFICIAL_HEADER, EMPTY, THIRD_HEADER, EMPTY, EXCEPTION_HEADER, EMPTY, PRIORITY_HEADER, EMPTY, ADMIN_HEADER,
+            OFFICIAL_HEADER, EMPTY,
+            THIRD_HEADER, EMPTY,
+            VERIFICATION_HEADER, EMPTY,
+            EXCEPTION_HEADER, EMPTY,
+            PRIORITY_HEADER, EMPTY,
+            ADMIN_HEADER,
         };
 
         if (writeConf(defaultTemplate))
