@@ -7,6 +7,7 @@
 #define MIRRORMANAGER_HPP
 
 #include <QCheckBox>
+#include <QHideEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -51,8 +52,12 @@ signals:
 
     void repoVerificationChanged(const RepoVerificationEntry &entry);
 
+    void dialogClosed();
+
 protected:
     void showEvent(QShowEvent *event) override;
+
+    void hideEvent(QHideEvent *event) override;
 
 private:
     void onChangeClicked();
