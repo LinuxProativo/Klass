@@ -13,6 +13,7 @@
 #include <Helper.hpp>
 #include <Mirrors.hpp>
 #include <Packages.hpp>
+#include <RepoVerificationManager.hpp>
 #include <RulesManager.hpp>
 #include <SlackwareDefines.hpp>
 #include <TaskManager.hpp>
@@ -102,9 +103,35 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                         const bool ok = Mirrors::enable(entry);
                         clientSocket->write(WRITE(ok, "Repo enabled", "Failed to enable repo"));
                     }
+                } else if (raw.startsWith("SETOFFICIALBRANCHES:")) {
+                    const QString payload = QString::fromUtf8(raw.mid(20)).trimmed();
+                    Mirrors::OfficialBranches branches;
+                    for (const auto &part: payload.split(';', Qt::SkipEmptyParts)) {
+                        const QStringList kv = part.split('=');
+                        if (kv.size() != 2) continue;
+                        const bool v = (kv[1].trimmed().compare(QLatin1String("true"), Qt::CaseInsensitive) == 0 || kv[1].trimmed() == QLatin1String("1"));
+                        if (kv[0] == QLatin1String("pasture")) branches.pasture = v;
+                        else if (kv[0] == QLatin1String("testing")) branches.testing = v;
+                        else if (kv[0] == QLatin1String("extra")) branches.extra = v;
+                    }
+                    const bool ok = Mirrors::setOfficialBranches(branches);
+                    clientSocket->write(WRITE(ok, "Official branches updated", "Failed to update official branches"));
+                } else if (raw.startsWith("SETREPOVERIFICATION:")) {
+                    const QString payload = QString::fromUtf8(raw.mid(20)).trimmed();
+                    if (const QStringList parts = payload.split(','); parts.size() == 5) {
+                        RepoVerificationEntry entry;
+                        entry.repo = parts[0];
+                        entry.verifySig = parts[1] == QLatin1String("true") || parts[1] == QLatin1String("1");
+                        entry.verifyChecksumSig = parts[2] == QLatin1String("true") || parts[2] == QLatin1String("1");
+                        entry.verifyChecksum = parts[3] == QLatin1String("true") || parts[3] == QLatin1String("1");
+                        entry.preferredChecksum = parts[4];
+                        const bool ok = RepoVerificationManager::saveVerification(entry);
+                        clientSocket->write(WRITE(ok, "Repo verification updated", "Failed to update repo verification"));
+                    }
                 } else if (raw.startsWith("DISABLEREPOS:")) {
                     for (const auto names = QString::fromUtf8(raw.mid(13)).trimmed().split(';', Qt::SkipEmptyParts);
                          const QString &name: names) {
+                        RepoVerificationManager::removeVerification(name);
                         const bool ok = Mirrors::disable(name);
                         clientSocket->write(WRITE(ok, "Repo disabled", "Failed to disable repo"));
                     }
