@@ -192,12 +192,18 @@ void Packages::loadAvailablePackages() {
     for (const auto &entry: thirdPartyList)
         thirdPartyMap.insert(entry.name, entry.url);
 
+    const auto branches = Mirrors::loadOfficialBranches();
+
     QSet<QString> activeRepos;
     if (!official.url.isEmpty()) {
         activeRepos.insert(SLACK_OFICIAL);
         activeRepos.insert(SLACK_PATCHES);
-        activeRepos.insert(SLACK_EXTRA);
-        activeRepos.insert(SLACK_TESTING);
+        if (branches.extra)
+            activeRepos.insert(SLACK_EXTRA);
+        if (branches.testing)
+            activeRepos.insert(SLACK_TESTING);
+        if (branches.pasture)
+            activeRepos.insert(SLACK_PASTURE);
     }
     for (const auto &entry: thirdPartyList)
         activeRepos.insert(entry.name);
@@ -262,6 +268,8 @@ void Packages::loadAvailablePackages() {
             resolvedUrl = official.url + QStringLiteral("extra/");
         else if (repoName == SLACK_TESTING)
             resolvedUrl = official.url + QStringLiteral("testing/");
+        else if (repoName == SLACK_PASTURE)
+            resolvedUrl = official.url + QStringLiteral("pasture/");
         else
             resolvedUrl = thirdPartyMap.value(repoName, QString{});
 
