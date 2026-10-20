@@ -112,6 +112,7 @@ install(TARGETS ${PRG_NAME} RUNTIME DESTINATION bin)
 install(FILES ${QM_FILES} DESTINATION "${SHARE_DIR}/lang")
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/mirrors" DESTINATION "${SHARE_DIR}")
 install(FILES "${CMAKE_SOURCE_DIR}/klass.png" DESTINATION "${SHARE_DIR}")
+install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION "${SHARE_DIR}")
 install(FILES "${CMAKE_SOURCE_DIR}/klass.desktop" DESTINATION "share/applications")
 install(FILES "${CMAKE_SOURCE_DIR}/klass.png" DESTINATION "share/pixmaps")
 
@@ -119,3 +120,5 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/icons"
         DESTINATION "${SHARE_DIR}"
         FILES_MATCHING PATTERN "*.svg" PATTERN "*.png"
 )
+
+install(FILES "${CMAKE_SOURCE_DIR}/icons/LICENSE" DESTINATION "${SHARE_DIR}/icons")

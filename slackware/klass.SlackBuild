@@ -53,6 +53,7 @@ cp -a \
   $SRC_DIR/mirrors \
   $SRC_DIR/lang \
   $SRC_DIR/CMakeLists.txt \
+  $SRC_DIR/LICENSE \
   $SRC_DIR/klass.{desktop,png} $TMP/$PRGNAM-$VERSION
 cd $TMP/$PRGNAM-$VERSION
 
