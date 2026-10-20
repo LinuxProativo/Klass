@@ -50,6 +50,8 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     connect(mirrorManager, &MirrorManager::mirrorChangeRequested, this, &Klass::handleMirrorChangeRequested);
     connect(mirrorManager, &MirrorManager::reposEnable, this, &Klass::handleReposEnable);
     connect(mirrorManager, &MirrorManager::reposRemoved, this, &Klass::handleReposRemoved);
+    connect(mirrorManager, &MirrorManager::officialBranchesChanged, this, &Klass::handleOfficialBranchesChanged);
+    connect(mirrorManager, &MirrorManager::repoVerificationChanged, this, &Klass::handleRepoVerificationChanged);
 
     searchBar = new QLineEdit(this);
     searchBar->setMinimumHeight(30);
@@ -391,9 +393,11 @@ void Klass::loadRepositoryTabs() {
     sortedRepos.removeOne(SLACK_OFICIAL);
     sortedRepos.removeOne(SLACK_PATCHES);
     sortedRepos.removeOne(SLACK_TESTING);
+    sortedRepos.removeOne(SLACK_PASTURE);
     sortedRepos.removeOne(SLACK_EXTRA);
     sortedRepos.sort();
     sortedRepos.prepend(SLACK_EXTRA);
+    sortedRepos.prepend(SLACK_PASTURE);
     sortedRepos.prepend(SLACK_TESTING);
     sortedRepos.prepend(SLACK_PATCHES);
     sortedRepos.prepend(SLACK_OFICIAL);
@@ -629,6 +633,16 @@ void Klass::handleReposRemoved(const QStringList &names) {
     helper->setupHelper(PendingAction::DisableRepo);
 }
 
+void Klass::handleOfficialBranchesChanged(const Mirrors::OfficialBranches &branches) {
+    pendingOfficialBranches = branches;
+    helper->setupHelper(PendingAction::SetOfficialBranches);
+}
+
+void Klass::handleRepoVerificationChanged(const RepoVerificationEntry &entry) {
+    pendingRepoVerification = entry;
+    helper->setupHelper(PendingAction::SetRepoVerification);
+}
+
 /**
  * @brief Slot triggered when the update action is requested.
  */
@@ -765,6 +779,20 @@ void Klass::onHelperReady() {
         if (!pendingRemoves.isEmpty())
             payload += QStringLiteral("REMOVE=") + Utils::serializePendingList(pendingRemoves) + u';';
 
+        helper->socket()->write(payload.toUtf8() + SEP);
+    } else if (pending == PendingAction::SetOfficialBranches) {
+        const QString payload = QStringLiteral("SETOFFICIALBRANCHES:pasture=%1;testing=%2;extra=%3")
+            .arg(pendingOfficialBranches.pasture ? QStringLiteral("true") : QStringLiteral("false"),
+                 pendingOfficialBranches.testing ? QStringLiteral("true") : QStringLiteral("false"),
+                 pendingOfficialBranches.extra ? QStringLiteral("true") : QStringLiteral("false"));
+        helper->socket()->write(payload.toUtf8() + SEP);
+    } else if (pending == PendingAction::SetRepoVerification) {
+        const QString payload = QStringLiteral("SETREPOVERIFICATION:%1,%2,%3,%4,%5")
+            .arg(pendingRepoVerification.repo,
+                 pendingRepoVerification.verifySig ? QStringLiteral("true") : QStringLiteral("false"),
+                 pendingRepoVerification.verifyChecksumSig ? QStringLiteral("true") : QStringLiteral("false"),
+                 pendingRepoVerification.verifyChecksum ? QStringLiteral("true") : QStringLiteral("false"),
+                 pendingRepoVerification.preferredChecksum);
         helper->socket()->write(payload.toUtf8() + SEP);
     } else if (pending == PendingAction::SaveAdminConfig && !pendingAdminConfigPayload.isEmpty()) {
         helper->socket()->write(QByteArray("SETADMINCONFIG:") + pendingAdminConfigPayload.toUtf8() + SEP);
