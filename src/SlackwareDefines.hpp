@@ -40,6 +40,7 @@ inline const auto DESKTOP_FILE_PATH = AUTOSTART_CONFIG + QStringLiteral("/") + D
 // Repositories
 inline const auto SLACK_OFICIAL = QStringLiteral("Slackware");
 inline const auto SLACK_PATCHES = QStringLiteral("Slackware-Patches");
+inline const auto SLACK_PASTURE = QStringLiteral("Slackware-Pasture");
 inline const auto SLACK_TESTING = QStringLiteral("Slackware-Testing");
 inline const auto SLACK_EXTRA = QStringLiteral("Slackware-Extra");
 inline const auto SLACK_OTHERS = QStringLiteral("Uncategorized");
