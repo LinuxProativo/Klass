@@ -3,6 +3,7 @@
  * @brief This file serves as the main application interface, managing the window layout and components.
  */
 
+#include <QDir>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QStandardPaths>
@@ -52,6 +53,7 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     connect(mirrorManager, &MirrorManager::reposRemoved, this, &Klass::handleReposRemoved);
     connect(mirrorManager, &MirrorManager::officialBranchesChanged, this, &Klass::handleOfficialBranchesChanged);
     connect(mirrorManager, &MirrorManager::repoVerificationChanged, this, &Klass::handleRepoVerificationChanged);
+    connect(mirrorManager, &MirrorManager::dialogClosed, this, &Klass::onMirrorManagerClosed);
 
     searchBar = new QLineEdit(this);
     searchBar->setMinimumHeight(30);
@@ -113,7 +115,7 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     toolBarLayout->addWidget(btnAbout);
 
     tabWidget = new QTabWidget(this);
-    auto *tabLayout = new QVBoxLayout();
+    tabLayout = new QVBoxLayout();
     tabLayout->setContentsMargins(10, 0, 10, 0);
     tabLayout->addWidget(tabWidget);
 
@@ -199,11 +201,11 @@ void Klass::onSelectUpdates() {
     for (int i = 0; i < tabWidget->count(); ++i) {
         if (const auto *tab = qobject_cast<RepositoryTab *>(tabWidget->widget(i))) {
             const QString repoName = tab->property("repoName").toString();
-            if (officialOnly && repoName != ALL_REPOSITORIES && !RepositoryTabUtils::isHierarchyRepo(repoName))
+            if (officialOnly && repoName != ALL_REPOSITORIES && !RepositoryTabUtils::isOfficialRepo(repoName))
                 continue;
 
             for (const auto &update: tab->collectAvailableUpdates()) {
-                if (officialOnly && !RepositoryTabUtils::isHierarchyRepo(update.repoName))
+                if (officialOnly && !RepositoryTabUtils::isOfficialRepo(update.repoName))
                     continue;
 
                 if (!seenUpdates.contains(update.name)) {
@@ -212,7 +214,7 @@ void Klass::onSelectUpdates() {
                 }
             }
             for (const auto &install: tab->collectNewInstalls()) {
-                if (officialOnly && !RepositoryTabUtils::isHierarchyRepo(install.repoName))
+                if (officialOnly && !RepositoryTabUtils::isOfficialRepo(install.repoName))
                     continue;
 
                 if (!seenInstalls.contains(install.name)) {
@@ -445,8 +447,8 @@ void Klass::loadRepositoryTabs() {
                     break;
                 }
             } else {
-                if (rName == SLACK_OFICIAL || rName == SLACK_PATCHES || rName == SLACK_TESTING || rName ==
-                    SLACK_EXTRA) {
+                if (rName == SLACK_OFICIAL || rName == SLACK_PATCHES || rName == SLACK_TESTING ||
+                    rName == SLACK_EXTRA || rName == SLACK_PASTURE) {
                     resolvedRepo = rName;
                     break;
                 }
@@ -641,6 +643,33 @@ void Klass::handleOfficialBranchesChanged(const Mirrors::OfficialBranches &branc
 void Klass::handleRepoVerificationChanged(const RepoVerificationEntry &entry) {
     pendingRepoVerification = entry;
     helper->setupHelper(PendingAction::SetRepoVerification);
+}
+
+/**
+ * @brief Cleans up databases of disabled official branches and refreshes repository tabs when the mirror manager closes.
+ */
+void Klass::onMirrorManagerClosed() {
+    const auto branches = Mirrors::loadOfficialBranches();
+
+    bool needHelper = false;
+    auto checkAndClean = [&](const QString &repoName, const bool isEnabled) {
+        if (!isEnabled && QDir(KLASS_DATABASE + repoName).exists()) {
+            if (!QDir(KLASS_DATABASE + repoName).removeRecursively())
+                needHelper = true;
+        }
+    };
+
+    checkAndClean(SLACK_PASTURE, branches.pasture);
+    checkAndClean(SLACK_TESTING, branches.testing);
+    checkAndClean(SLACK_EXTRA, branches.extra);
+
+    if (needHelper) {
+        pendingOfficialBranches = branches;
+        helper->setupHelper(PendingAction::SetOfficialBranches);
+    }
+
+    packagesManager->reload();
+    loadRepositoryTabs();
 }
 
 /**

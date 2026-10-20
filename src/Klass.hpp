@@ -87,6 +87,8 @@ private:
 
     void handleRepoVerificationChanged(const RepoVerificationEntry &entry);
 
+    void onMirrorManagerClosed();
+
     void handleAddRuleRequested(const RuleEntry &addRule);
 
     void handleDeleteRulesRequested(const QList<RuleEntry> &rules);
@@ -104,7 +106,7 @@ private:
     QHBoxLayout *searchLayout{}, *toolBarLayout{};
     QLineEdit *searchBar{};
     QTabWidget *tabWidget{};
-    QVBoxLayout *mainLayout{};
+    QVBoxLayout *mainLayout{}, *tabLayout{};
     QWidget *toolBarWidget{};
     QTimer *searchDebounceTimer{};
 
