@@ -15,6 +15,7 @@
 #include <HelperUtils.hpp>
 #include <Mirrors.hpp>
 #include <Packages.hpp>
+#include <RepoVerificationManager.hpp>
 #include <SlackwareDefines.hpp>
 #include <Utils.hpp>
 
@@ -37,10 +38,19 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
     if (const auto [url, country] = Mirrors::activeOne(); !url.isEmpty()) {
         repos.append({SLACK_OFICIAL, url});
         repos.append({SLACK_PATCHES, url + "patches/"});
-        repos.append({SLACK_EXTRA, url + "extra/"});
-        repos.append({SLACK_TESTING, url + "testing/"});
+
+        const auto branches = Mirrors::loadOfficialBranches();
+        if (branches.pasture)
+            repos.append({SLACK_PASTURE, url + "pasture/"});
+        if (branches.extra)
+            repos.append({SLACK_EXTRA, url + "extra/"});
+        if (branches.testing)
+            repos.append({SLACK_TESTING, url + "testing/"});
     }
     repos.append(Mirrors::listActive());
+
+    AdminConfigManager adminConfig;
+    const bool globalVerifySignature = adminConfig.verifySignature();
 
     for (const auto &[name, url]: repos) {
         socket->waitForReadyRead(0);
@@ -49,13 +59,18 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
         (void) QDir().mkpath(KLASS_DATABASE + name);
         socket->write(OUTPUT + QByteArray("\nUpdating Mirror ") + name.toUtf8() + " : " + url.toUtf8() + SEP);
 
+        const bool isOfficialRepo = (name == SLACK_OFICIAL || name == SLACK_PATCHES ||
+                                     name == SLACK_EXTRA || name == SLACK_TESTING ||
+                                     name == SLACK_PASTURE);
+
         for (const QString &fileName: filesToDownload) {
             if (socket->readAll().contains("CANCEL_OPERATION")) // Só por garantia mesmo
                 operationCancelled = true;
 
             QStringList targets{};
             if (fileName.startsWith("ChangeLog")) {
-                if (!name.contains(SLACK_PATCHES) && !name.contains(SLACK_EXTRA) && !name.contains(SLACK_TESTING)) {
+                if (!name.contains(SLACK_PATCHES) && !name.contains(SLACK_EXTRA) &&
+                    !name.contains(SLACK_TESTING) && !name.contains(SLACK_PASTURE)) {
                     targets << fileName;
                     targets << "../" + fileName;
                     targets << "../../" + fileName;
@@ -101,6 +116,52 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
             }
             if (operationCancelled) break;
         }
+
+        bool checkChecksumSig = false;
+        if (globalVerifySignature) {
+            if (isOfficialRepo) {
+                checkChecksumSig = true;
+            } else {
+                const auto repoVerif = RepoVerificationManager::getVerification(name);
+                checkChecksumSig = repoVerif.verifyChecksumSig;
+            }
+        }
+
+        if (checkChecksumSig && !operationCancelled) { //NOLINT
+            const QString dbDir = KLASS_DATABASE + name + u'/';
+            QString checksumFile, checksumAscFile;
+
+            if (QFile::exists(dbDir + "CHECKSUMS.md5.gz"))
+                checksumFile = dbDir + "CHECKSUMS.md5.gz";
+            else if (QFile::exists(dbDir + "CHECKSUMS.md5"))
+                checksumFile = dbDir + "CHECKSUMS.md5";
+
+            if (QFile::exists(dbDir + "CHECKSUMS.md5.gz.asc"))
+                checksumAscFile = dbDir + "CHECKSUMS.md5.gz.asc";
+            else if (QFile::exists(dbDir + "CHECKSUMS.md5.asc"))
+                checksumAscFile = dbDir + "CHECKSUMS.md5.asc";
+
+            if (checksumFile.isEmpty() || checksumAscFile.isEmpty()) {
+                socket->write(
+                    ERROR + QByteArray("Verification required: Missing CHECKSUMS or signature (.asc) file for mirror ")
+                    + name.toUtf8() + ". Purging directory and aborting update." + SEP);
+                QDir(dbDir).removeRecursively();
+                operationCancelled = true;
+                break;
+            }
+
+            socket->write(OUTPUT + QByteArray("    --> Verifying CHECKSUMS GPG signature...") + SEP);
+            if (!verifyGpgSignature(checksumAscFile, checksumFile, name)) {
+                socket->write(ERROR + QByteArray("CHECKSUMS signature verification FAILED for mirror ")
+                              + name.toUtf8() + ". Purging corrupted directory and aborting update." + SEP);
+                QDir(dbDir).removeRecursively();
+                operationCancelled = true;
+                break;
+            }
+            socket->write(OUTPUT + QByteArray("    --> CHECKSUMS signature valid and verified.") + SEP);
+        }
+
+        if (operationCancelled) break; //NOLINT
     }
 
     if (!operationCancelled) {
@@ -123,8 +184,8 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
     bool kernelOperated = false;
 
     AdminConfigManager adminConfig;
-    const bool checkChecksum = adminConfig.verifyChecksum();
-    const bool checkSignature = adminConfig.verifySignature();
+    const bool globalVerifyChecksum = adminConfig.verifyChecksum();
+    const bool globalVerifySignature = adminConfig.verifySignature();
 
     for (const auto &pkg: pkgs) {
         if (socket->readAll().contains("CANCEL_OPERATION")) {
@@ -144,6 +205,21 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
 
         const QString fileName = pkg.url.mid(pkg.url.lastIndexOf(u'/') + 1);
         socket->write(OUTPUT + QByteArray("\nProcessing ") + fileName.toUtf8() + "..." + SEP);
+
+        const bool isOfficialRepo = pkg.repo == SLACK_OFICIAL || pkg.repo == SLACK_PATCHES ||
+                                    pkg.repo == SLACK_EXTRA || pkg.repo == SLACK_TESTING || pkg.repo == SLACK_PASTURE;
+
+        bool checkChecksum = false;
+        bool checkSignature = false;
+
+        if (isOfficialRepo) {
+            checkChecksum = globalVerifyChecksum;
+            checkSignature = globalVerifySignature;
+        } else {
+            const auto verif = RepoVerificationManager::getVerification(pkg.repo);
+            checkChecksum = globalVerifyChecksum && verif.verifyChecksum;
+            checkSignature = globalVerifySignature && verif.verifySig;
+        }
 
         if (checkChecksum && pkg.md5.trimmed().isEmpty()) {
             socket->write(ERROR + QByteArray("Verification required: Missing checksum for ")
