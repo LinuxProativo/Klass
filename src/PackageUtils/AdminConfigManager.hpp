@@ -19,7 +19,6 @@ enum class PostInstallTask {
     UpdateManDb,
     UpdateDesktopDatabase,
     UpdateGtkIconCache,
-    CompileGlibSchemas,
     UpdateGrub,
     UpdateLilo,
     GenerateInitrd,

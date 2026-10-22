@@ -431,13 +431,6 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             runTask("/usr/bin/gtk-update-icon-cache", {"-q", "-t", "-f", "/usr/share/icons/hicolor"});
         }
 
-        if (adminConfig.postInstallTask(PostInstallTask::CompileGlibSchemas) &&
-            QFile::exists("/usr/bin/glib-compile-schemas") &&
-            QDir("/usr/share/glib-2.0/schemas").exists()) {
-            socket->write(OUTPUT + QByteArray("\nCompiling GLib schemas...") + SEP);
-            runTask("/usr/bin/glib-compile-schemas", {"/usr/share/glib-2.0/schemas"});
-        }
-
         if (kernelOperated) {
             if (adminConfig.postInstallTask(PostInstallTask::UpdateGrub) &&
                 QFile::exists("/usr/sbin/grub-mkconfig")) {

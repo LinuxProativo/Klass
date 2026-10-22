@@ -150,7 +150,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     addPostInstallTask(tr("Update man database (mandb)"), PostInstallTask::UpdateManDb);
     addPostInstallTask(tr("Update desktop database"), PostInstallTask::UpdateDesktopDatabase);
     addPostInstallTask(tr("Update GTK icon cache"), PostInstallTask::UpdateGtkIconCache);
-    addPostInstallTask(tr("Compile GLib schemas"), PostInstallTask::CompileGlibSchemas);
     addPostInstallTask(tr("Update GRUB bootloader"), PostInstallTask::UpdateGrub);
     addPostInstallTask(tr("Update LILO bootloader"), PostInstallTask::UpdateLilo);
     addPostInstallTask(tr("Generate initrd for generic kernel"), PostInstallTask::GenerateInitrd);

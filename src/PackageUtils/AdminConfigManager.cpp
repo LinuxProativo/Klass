@@ -16,7 +16,6 @@ AdminConfigManager::AdminConfigManager() {
     postInstallTasks[PostInstallTask::UpdateManDb] = true;
     postInstallTasks[PostInstallTask::UpdateDesktopDatabase] = false;
     postInstallTasks[PostInstallTask::UpdateGtkIconCache] = false;
-    postInstallTasks[PostInstallTask::CompileGlibSchemas] = false;
     postInstallTasks[PostInstallTask::UpdateGrub] = false;
     postInstallTasks[PostInstallTask::UpdateLilo] = false;
     postInstallTasks[PostInstallTask::GenerateInitrd] = false;
@@ -42,8 +41,6 @@ QString AdminConfigManager::taskToKey(const PostInstallTask task) {
             return QStringLiteral("TASK_UPDATE_DESKTOP_DATABASE");
         case PostInstallTask::UpdateGtkIconCache:
             return QStringLiteral("TASK_UPDATE_GTK_ICON_CACHE");
-        case PostInstallTask::CompileGlibSchemas:
-            return QStringLiteral("TASK_COMPILE_GLIB_SCHEMAS");
         case PostInstallTask::UpdateGrub:
             return QStringLiteral("TASK_UPDATE_GRUB");
         case PostInstallTask::UpdateLilo:
