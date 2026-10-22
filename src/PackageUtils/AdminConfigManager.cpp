@@ -18,6 +18,7 @@ AdminConfigManager::AdminConfigManager() {
     postInstallTasks[PostInstallTask::UpdateGtkIconCache] = false;
     postInstallTasks[PostInstallTask::UpdateGrub] = false;
     postInstallTasks[PostInstallTask::UpdateLilo] = false;
+    postInstallTasks[PostInstallTask::UpdateElilo] = false;
     postInstallTasks[PostInstallTask::GenerateInitrd] = false;
     postInstallTasks[PostInstallTask::ReinstallVBoxModules] = false;
 
@@ -45,6 +46,8 @@ QString AdminConfigManager::taskToKey(const PostInstallTask task) {
             return QStringLiteral("TASK_UPDATE_GRUB");
         case PostInstallTask::UpdateLilo:
             return QStringLiteral("TASK_UPDATE_LILO");
+        case PostInstallTask::UpdateElilo:
+            return QStringLiteral("TASK_UPDATE_ELILO");
         case PostInstallTask::GenerateInitrd:
             return QStringLiteral("TASK_GENERATE_INITRD");
         case PostInstallTask::ReinstallVBoxModules:

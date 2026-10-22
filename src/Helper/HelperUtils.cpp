@@ -222,15 +222,17 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         }
 
         if (checkChecksum && pkg.md5.trimmed().isEmpty()) {
-            socket->write(ERROR + QByteArray("Verification required: Missing checksum for ")
-                          + fileName.toUtf8() + ". Aborting." + SEP);
+            socket->write(
+                OUTPUT + QByteArray("ERROR: Missing checksum for ") + fileName.toUtf8() + ". Aborting." + SEP +
+                QByteArray("TRANSACTION_DONE") + SEP);
             operationCancelled = true;
             break;
         }
 
         if (checkSignature && pkg.ascUrl.trimmed().isEmpty()) {
-            socket->write(ERROR + QByteArray("Verification required: Missing signature (.asc) for ")
-                          + fileName.toUtf8() + ". Aborting." + SEP);
+            socket->write(
+                OUTPUT + QByteArray("ERROR: Missing signature (.asc) for ") + fileName.toUtf8() + ". Aborting." + SEP +
+                QByteArray("TRANSACTION_DONE") + SEP);
             operationCancelled = true;
             break;
         }
@@ -265,7 +267,9 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             if (operationCancelled) break;
 
             if (!res.success) {
-                socket->write(ERROR + QByteArray("Failed to download ") + fileName.toUtf8() + ". Aborting." + SEP);
+                socket->write(
+                    OUTPUT + QByteArray("ERROR: Failed to download ") + fileName.toUtf8() + ". Aborting." + SEP +
+                    QByteArray("TRANSACTION_DONE") + SEP);
                 operationCancelled = true;
                 break;
             }
@@ -275,7 +279,8 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
                         QString(QCryptographicHash::hash(res.data, QCryptographicHash::Md5).toHex());
                 if (downloadedHash != pkg.md5) {
                     socket->write(
-                        ERROR + QByteArray("Failed to verify checksum for ") + fileName.toUtf8() + ". Aborting." + SEP);
+                        OUTPUT + QByteArray("ERROR: Failed to verify checksum for ") + fileName.toUtf8() + ". Aborting."
+                        + SEP + QByteArray("TRANSACTION_DONE") + SEP);
                     operationCancelled = true;
                     break;
                 }
@@ -286,7 +291,9 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
                 f.write(res.data);
                 f.close();
             } else {
-                socket->write(ERROR + QByteArray("Failed to save package file to disk. Aborting.") + SEP);
+                socket->write(
+                    OUTPUT + QByteArray("ERROR: Failed to save package file to disk. Aborting.") + SEP + QByteArray(
+                        "TRANSACTION_DONE") + SEP);
                 operationCancelled = true;
                 break;
             }
@@ -318,7 +325,8 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
 
                 if (!ascRes.success) {
                     socket->write(
-                        ERROR + QByteArray("No download signature for ") + fileName.toUtf8() + ". Aborting." + SEP);
+                        OUTPUT + QByteArray("ERROR: No download signature for ") + fileName.toUtf8() + ". Aborting." +
+                        SEP + QByteArray("TRANSACTION_DONE") + SEP);
                     operationCancelled = true;
                     break;
                 }
@@ -328,8 +336,8 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
                         QCryptographicHash::hash(ascRes.data, QCryptographicHash::Md5).toHex());
                     if (ascHash != pkg.ascMd5) {
                         socket->write(
-                            ERROR + QByteArray("MD5 mismatch for signature file ") + ascName.toUtf8() +
-                            ". Aborting." + SEP);
+                            OUTPUT + QByteArray("ERROR: MD5 mismatch for signature file ") + ascName.toUtf8() +
+                            ". Aborting." + SEP + QByteArray("TRANSACTION_DONE") + SEP);
                         operationCancelled = true;
                         break;
                     }
@@ -339,7 +347,9 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
                     f.write(ascRes.data);
                     f.close();
                 } else {
-                    socket->write(ERROR + QByteArray("Failed to save signature to disk. Aborting.") + SEP);
+                    socket->write(
+                        OUTPUT + QByteArray("ERROR: Failed to save signature to disk. Aborting.") + SEP + QByteArray(
+                            "TRANSACTION_DONE") + SEP);
                     operationCancelled = true;
                     break;
                 }
@@ -348,7 +358,8 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             socket->write(OUTPUT + QByteArray("    --> Verifying GPG signature...") + SEP);
             if (!verifyGpgSignature(ascPath, savePath, pkg.repo)) {
                 socket->write(
-                    ERROR + QByteArray("GPG signature check FAILED for ") + fileName.toUtf8() + ". Aborting." + SEP);
+                    OUTPUT + QByteArray("ERROR: GPG signature check FAILED for ") + fileName.toUtf8() + ". Aborting." +
+                    SEP + QByteArray("TRANSACTION_DONE") + SEP);
                 operationCancelled = true;
                 break;
             }
@@ -432,6 +443,29 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         }
 
         if (kernelOperated) {
+            if (adminConfig.postInstallTask(PostInstallTask::GenerateInitrd) &&
+                QFile::exists("/usr/share/mkinitrd/mkinitrd_command_generator.sh")) {
+                socket->write(OUTPUT + QByteArray("\nGenerating initrd for generic kernel (with fallback protection)...") + SEP);
+                const auto initrdCmd = QStringLiteral(
+                    "if [ -e /boot/initrd.gz ]; then "
+                    "  cp -L /boot/initrd.gz /boot/initrd.gz.bak; "
+                    "fi; "
+                    "if /usr/share/mkinitrd/mkinitrd_command_generator.sh | bash; then "
+                    "  if [ -f /boot/initrd.gz ]; then "
+                    "    KVER=$(uname -r); "
+                    "    mv /boot/initrd.gz /boot/initrd-${KVER}.gz && "
+                    "    ln -sf initrd-${KVER}.gz /boot/initrd.gz && "
+                    "    rm -f /boot/initrd.gz.bak; "
+                    "  fi; "
+                    "else "
+                    "  if [ -f /boot/initrd.gz.bak ]; then "
+                    "    mv /boot/initrd.gz.bak /boot/initrd.gz; "
+                    "  fi; "
+                    "fi"
+                );
+                runTask("/bin/sh", {"-c", initrdCmd});
+            }
+
             if (adminConfig.postInstallTask(PostInstallTask::UpdateGrub) &&
                 QFile::exists("/usr/sbin/grub-mkconfig")) {
                 socket->write(OUTPUT + QByteArray("\nUpdating GRUB bootloader configuration...") + SEP);
@@ -440,29 +474,141 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
 
             if (adminConfig.postInstallTask(PostInstallTask::UpdateLilo) &&
                 QFile::exists("/sbin/lilo") && QFile::exists("/etc/lilo.conf")) {
-                socket->write(OUTPUT + QByteArray("\nUpdating LILO bootloader...") + SEP);
-                runTask("/sbin/lilo", {});
+                socket->write(OUTPUT + QByteArray("\nScanning kernels and updating LILO bootloader...") + SEP);
+                const auto liloCmd = QStringLiteral(
+                    "LILO_CONF=\"/etc/lilo.conf\"; "
+                    "if [ -f \"$LILO_CONF\" ] && [ -x /sbin/lilo ]; then "
+                    "  cp -a \"$LILO_CONF\" \"${LILO_CONF}.klass.bak\"; "
+                    "  ROOT_DEV=$(grep -E '^[[:space:]]*root[[:space:]]*=' \"$LILO_CONF\" | head -n1 | cut -d= -f2- | tr -d ' '); "
+                    "  [ -z \"$ROOT_DEV\" ] && ROOT_DEV=$(mount | grep ' / ' | cut -d' ' -f1); "
+                    "  KVER=$(uname -r); "
+                    "  if [ ! -e /boot/initrd.gz ] && [ -f \"/boot/initrd-${KVER}.gz\" ]; then "
+                    "    ln -sf \"initrd-${KVER}.gz\" /boot/initrd.gz; "
+                    "  fi; "
+                    "  for k in /boot/vmlinuz-*; do "
+                    "    [ -f \"$k\" ] || continue; "
+                    "    case \"$k\" in *.bak|*.old|*.tmp) continue ;; esac; "
+                    "    if grep -q -F \"$k\" \"$LILO_CONF\"; then "
+                    "      continue; "
+                    "    fi; "
+                    "    KNAME=$(basename \"$k\"); "
+                    "    if echo \"$KNAME\" | grep -q \"generic\"; then "
+                    "      VER=$(echo \"$KNAME\" | sed 's/vmlinuz-generic-//'); "
+                    "      LABEL=\"gen-${VER}\"; "
+                    "    elif echo \"$KNAME\" | grep -q \"huge\"; then "
+                    "      VER=$(echo \"$KNAME\" | sed 's/vmlinuz-huge-//'); "
+                    "      LABEL=\"hug-${VER}\"; "
+                    "    else "
+                    "      VER=$(echo \"$KNAME\" | sed 's/vmlinuz-//'); "
+                    "      LABEL=\"k-${VER}\"; "
+                    "    fi; "
+                    "    LABEL=$(echo \"$LABEL\" | cut -c1-15); "
+                    "    if grep -q -E \"^[[:space:]]*label[[:space:]]*=[[:space:]]*\\\"?${LABEL}\\\"?\" \"$LILO_CONF\"; then "
+                    "      LABEL=\"k$(echo \"$LABEL\" | cut -c1-13)\"; "
+                    "    fi; "
+                    "    INITRD_FILE=\"\"; "
+                    "    if [ -f \"/boot/initrd-${VER}.gz\" ]; then "
+                    "      INITRD_FILE=\"/boot/initrd-${VER}.gz\"; "
+                    "    elif echo \"$KNAME\" | grep -q \"generic\" && [ -f /boot/initrd.gz ]; then "
+                    "      INITRD_FILE=\"/boot/initrd.gz\"; "
+                    "    fi; "
+                    "    echo \"\" >> \"$LILO_CONF\"; "
+                    "    echo \"# Added by Klass Package Manager\" >> \"$LILO_CONF\"; "
+                    "    echo \"image = $k\" >> \"$LILO_CONF\"; "
+                    "    [ -n \"$ROOT_DEV\" ] && echo \"  root = $ROOT_DEV\" >> \"$LILO_CONF\"; "
+                    "    echo \"  label = $LABEL\" >> \"$LILO_CONF\"; "
+                    "    [ -n \"$INITRD_FILE\" ] && echo \"  initrd = $INITRD_FILE\" >> \"$LILO_CONF\"; "
+                    "    echo \"  read-only\" >> \"$LILO_CONF\"; "
+                    "  done; "
+                    "  if /sbin/lilo -t > /dev/null 2>&1; then "
+                    "    /sbin/lilo; "
+                    "  else "
+                    "    cp -a \"${LILO_CONF}.klass.bak\" \"$LILO_CONF\"; "
+                    "    /sbin/lilo; "
+                    "  fi; "
+                    "fi"
+                );
+                runTask("/bin/sh", {"-c", liloCmd});
             }
 
-            if (adminConfig.postInstallTask(PostInstallTask::GenerateInitrd)) {
-                if (QFile::exists("/usr/share/mkinitrd/mkinitrd_command_generator.sh")) {
-                    socket->write(OUTPUT + QByteArray("\nGenerating initrd for generic kernel...") + SEP);
-                    runTask("/usr/share/mkinitrd/mkinitrd_command_generator.sh", {"-r"});
-                } else if (QFile::exists("/sbin/mkinitrd")) {
-                    socket->write(OUTPUT + QByteArray("\nRunning mkinitrd...") + SEP);
-                    runTask("/sbin/mkinitrd", {"-F"});
-                }
+             if (adminConfig.postInstallTask(PostInstallTask::UpdateElilo) &&
+                QDir("/boot/efi/EFI/Slackware").exists()) {
+                socket->write(OUTPUT + QByteArray("\nUpdating ELILO bootloader (syncing kernels, initrds, and config)...") + SEP);
+                const auto eliloCmd = QStringLiteral(
+                    "EFI_DIR=\"/boot/efi/EFI/Slackware\"; "
+                    "if [ -d \"$EFI_DIR\" ]; then "
+                    "  KVER=$(uname -r); "
+                    "  if [ ! -e /boot/initrd.gz ] && [ -f \"/boot/initrd-${KVER}.gz\" ]; then "
+                    "    ln -sf \"initrd-${KVER}.gz\" /boot/initrd.gz; "
+                    "  fi; "
+                    "  [ -e /boot/vmlinuz ] && cp -L /boot/vmlinuz \"$EFI_DIR/vmlinuz\"; "
+                    "  [ -e /boot/initrd.gz ] && cp -L /boot/initrd.gz \"$EFI_DIR/initrd.gz\"; "
+                    "  for k in /boot/vmlinuz-*; do "
+                    "    [ -f \"$k\" ] || continue; "
+                    "    case \"$k\" in *.bak|*.old|*.tmp) continue ;; esac; "
+                    "    cp -L \"$k\" \"$EFI_DIR/$(basename \"$k\")\"; "
+                    "  done; "
+                    "  for i in /boot/initrd-*.gz; do "
+                    "    [ -f \"$i\" ] || continue; "
+                    "    case \"$i\" in *.bak|*.old|*.tmp) continue ;; esac; "
+                    "    cp -L \"$i\" \"$EFI_DIR/$(basename \"$i\")\"; "
+                    "  done; "
+                    "  CONF=\"$EFI_DIR/elilo.conf\"; "
+                    "  if [ -f \"$CONF\" ]; then "
+                    "    cp -a \"$CONF\" \"${CONF}.klass.bak\"; "
+                    "    APPEND_LINE=$(grep -E '^[[:space:]]*append[[:space:]]*=' \"$CONF\" | head -n1); "
+                    "    ROOT_LINE=$(grep -E '^[[:space:]]*root[[:space:]]*=' \"$CONF\" | head -n1); "
+                    "    for k in /boot/vmlinuz-*; do "
+                    "      [ -f \"$k\" ] || continue; "
+                    "      case \"$k\" in *.bak|*.old|*.tmp) continue ;; esac; "
+                    "      KNAME=$(basename \"$k\"); "
+                    "      if grep -q -E \"^[[:space:]]*image[[:space:]]*=[[:space:]]*\\\"?${KNAME}\\\"?\" \"$CONF\"; then "
+                    "        continue; "
+                    "      fi; "
+                    "      if echo \"$KNAME\" | grep -q \"generic\"; then "
+                    "        VER=$(echo \"$KNAME\" | sed 's/vmlinuz-generic-//'); "
+                    "        LABEL=\"gen-${VER}\"; "
+                    "      elif echo \"$KNAME\" | grep -q \"huge\"; then "
+                    "        VER=$(echo \"$KNAME\" | sed 's/vmlinuz-huge-//'); "
+                    "        LABEL=\"hug-${VER}\"; "
+                    "      else "
+                    "        VER=$(echo \"$KNAME\" | sed 's/vmlinuz-//'); "
+                    "        LABEL=\"k-${VER}\"; "
+                    "      fi; "
+                    "      INITRD_ENTRY=\"\"; "
+                    "      if [ -f \"$EFI_DIR/initrd-${VER}.gz\" ]; then "
+                    "        INITRD_ENTRY=\"    initrd=initrd-${VER}.gz\"; "
+                    "      elif echo \"$KNAME\" | grep -q \"generic\" && [ -f \"$EFI_DIR/initrd.gz\" ]; then "
+                    "        INITRD_ENTRY=\"    initrd=initrd.gz\"; "
+                    "      fi; "
+                    "      echo \"\" >> \"$CONF\"; "
+                    "      echo \"# Added by Klass Package Manager\" >> \"$CONF\"; "
+                    "      echo \"image=$KNAME\" >> \"$CONF\"; "
+                    "      echo \"    label=$LABEL\" >> \"$CONF\"; "
+                    "      echo \"    read-only\" >> \"$CONF\"; "
+                    "      [ -n \"$ROOT_LINE\" ] && echo \"$ROOT_LINE\" >> \"$CONF\"; "
+                    "      [ -n \"$APPEND_LINE\" ] && echo \"$APPEND_LINE\" >> \"$CONF\"; "
+                    "      [ -n \"$INITRD_ENTRY\" ] && echo \"$INITRD_ENTRY\" >> \"$CONF\"; "
+                    "    done; "
+                    "  fi; "
+                    "fi"
+                );
+                runTask("/bin/sh", {"-c", eliloCmd});
             }
 
             if (adminConfig.postInstallTask(PostInstallTask::ReinstallVBoxModules)) {
-                const QString vboxScript = QFile::exists("/etc/rc.d/rc.vboxdrv")
-                                               ? "/etc/rc.d/rc.vboxdrv"
-                                               : QFile::exists("/sbin/rc.vboxdrv")
-                                                     ? "/sbin/rc.vboxdrv"
-                                                     : QString{};
-                if (!vboxScript.isEmpty()) {
-                    socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules...") + SEP);
-                    runTask(vboxScript, {"setup"});
+                if (QFile::exists("/sbin/vboxconfig")) {
+                    socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules (vboxconfig)...") + SEP);
+                    runTask("/sbin/vboxconfig", {});
+                } else if (QFile::exists("/sbin/rcvboxdrv")) {
+                    socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules (rcvboxdrv)...") + SEP);
+                    runTask("/sbin/rcvboxdrv", {"setup"});
+                } else if (QFile::exists("/etc/rc.d/rc.vboxdrv")) {
+                    socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules (rc.vboxdrv)...") + SEP);
+                    runTask("/etc/rc.d/rc.vboxdrv", {"setup"});
+                } else if (QFile::exists("/etc/init.d/vboxdrv")) {
+                    socket->write(OUTPUT + QByteArray("\nRebuilding VirtualBox kernel modules (vboxdrv)...") + SEP);
+                    runTask("/etc/init.d/vboxdrv", {"setup"});
                 }
             }
         }

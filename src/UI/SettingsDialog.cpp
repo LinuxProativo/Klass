@@ -152,6 +152,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     addPostInstallTask(tr("Update GTK icon cache"), PostInstallTask::UpdateGtkIconCache);
     addPostInstallTask(tr("Update GRUB bootloader"), PostInstallTask::UpdateGrub);
     addPostInstallTask(tr("Update LILO bootloader"), PostInstallTask::UpdateLilo);
+    addPostInstallTask(tr("Update ELILO bootloader"), PostInstallTask::UpdateElilo);
     addPostInstallTask(tr("Generate initrd for generic kernel"), PostInstallTask::GenerateInitrd);
     addPostInstallTask(tr("Reinstall VirtualBox kernel modules"), PostInstallTask::ReinstallVBoxModules);
 

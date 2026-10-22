@@ -1,5 +1,5 @@
 /**
-* @file AdminConfigManager.hpp
+ * @file AdminConfigManager.hpp
  * @brief Header for managing administrative and verification configurations in klass.conf.
  */
 
@@ -21,6 +21,7 @@ enum class PostInstallTask {
     UpdateGtkIconCache,
     UpdateGrub,
     UpdateLilo,
+    UpdateElilo,
     GenerateInitrd,
     ReinstallVBoxModules
 };
