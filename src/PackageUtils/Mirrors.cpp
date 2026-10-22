@@ -318,8 +318,17 @@ Mirrors::Channel Mirrors::detectChannel() {
 bool Mirrors::isUpdateRequired() {
     QList<MirrorPlusEntry> repos;
 
-    if (const auto [url, country] = activeOne(); !url.isEmpty())
+    if (const auto [url, country] = activeOne(); !url.isEmpty()) {
         repos.append({SLACK_OFICIAL, url});
+
+        const auto branches = loadOfficialBranches();
+        if (branches.pasture)
+            repos.append({SLACK_PASTURE, url + "pasture/"});
+        if (branches.extra)
+            repos.append({SLACK_EXTRA, url + "extra/"});
+        if (branches.testing)
+            repos.append({SLACK_TESTING, url + "testing/"});
+    }
     repos.append(listActive());
 
     for (const auto &[name, url]: repos) {
@@ -352,6 +361,7 @@ bool Mirrors::isUpdateRequired() {
 
 /**
  * @brief Loads the active state for official sub-branches (Pasture, Testing, Extra) from klass.conf.
+ * @return An OfficialBranches struct representing the enabled/disabled state of each official sub-branch.
  */
 Mirrors::OfficialBranches Mirrors::loadOfficialBranches() {
     OfficialBranches branches;
@@ -367,7 +377,9 @@ Mirrors::OfficialBranches Mirrors::loadOfficialBranches() {
 }
 
 /**
- * @brief Writes the official branches state under '# Official Repo' in klass.conf.
+ * @brief Writes the official branches state under '# Official Repo' in klass.conf and cleans disabled repo directories.
+ * @param branches An OfficialBranches struct containing the updated state for each official branch.
+ * @return True if the configuration was successfully written to disk; false on I/O failure.
  */
 bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
     QStringList lines = RepoManager::readConf();
@@ -393,6 +405,19 @@ bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
     updateOrInsert(QStringLiteral("OFFICIAL_PASTURE"), branches.pasture);
     updateOrInsert(QStringLiteral("OFFICIAL_TESTING"), branches.testing);
     updateOrInsert(QStringLiteral("OFFICIAL_EXTRA"), branches.extra);
+
+    if (!branches.pasture) {
+        if (QDir dir(KLASS_DATABASE + SLACK_PASTURE); dir.exists())
+            dir.removeRecursively();
+    }
+    if (!branches.testing) {
+        if (QDir dir(KLASS_DATABASE + SLACK_TESTING); dir.exists())
+            dir.removeRecursively();
+    }
+    if (!branches.extra) {
+        if (QDir dir(KLASS_DATABASE + SLACK_EXTRA); dir.exists())
+            dir.removeRecursively();
+    }
 
     return RepoManager::writeConf(lines);
 }
