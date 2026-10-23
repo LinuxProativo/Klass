@@ -11,11 +11,11 @@
 
 /**
  * @brief Checks if a specific package, version, repository, and category match a compiled rule.
- * @param  cRule The compiled rule containing evaluation flags, the raw rule entry, and the pre-compiled regex.
- * @param  pkg The name of the package to be evaluated.
- * @param  ver The version of the package (can be empty).
- * @param  cat The category or scope of the package.
- * @param  repo The repository where the package originates.
+ * @param cRule The compiled rule containing evaluation flags, the raw rule entry, and the pre-compiled regex.
+ * @param pkg The name of the package to be evaluated.
+ * @param ver The version of the package (can be empty).
+ * @param cat The category or scope of the package.
+ * @param repo The repository where the package originates.
  * @return True if the package details satisfy the rule criteria; otherwise false.
  */
 bool RulesManager::matchesCompiledRule(const CompiledRule &cRule, const QString &pkg, const QString &ver,
@@ -25,12 +25,23 @@ bool RulesManager::matchesCompiledRule(const CompiledRule &cRule, const QString 
     if (!cRule.isAllRepo && !rule.repo.isEmpty() && rule.repo != repo)
         return false;
 
-    if (!cRule.isPackageScope)
-        return rule.rule.contains(cat) || cat.contains(rule.rule);
+    if (!cRule.isPackageScope) {
+        if (cat.isEmpty())
+            return false;
+
+        if (cat.compare(rule.rule, Qt::CaseInsensitive) == 0)
+            return true;
+
+        if (cRule.isRegexValid && cRule.regex.match(cat).hasMatch())
+            return true;
+
+        return false;
+    }
 
     const QString fullPkgVersion = ver.isEmpty() ? pkg : QStringLiteral("%1-%2").arg(pkg, ver);
 
-    if (rule.rule == pkg || rule.rule == fullPkgVersion)
+    if (rule.rule.compare(pkg, Qt::CaseInsensitive) == 0 ||
+        rule.rule.compare(fullPkgVersion, Qt::CaseInsensitive) == 0)
         return true;
 
     if (cRule.isRegexValid) {
@@ -143,44 +154,41 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPac
     for (const RuleEntry &rule: r) {
         CompiledRule cRule;
         cRule.entry = rule;
-        cRule.isPackageScope = rule.scope == BY_PKG;
-        cRule.isAllRepo = rule.repo == ALL_REPOSITORIES;
-        if (cRule.isPackageScope) {
-            cRule.regex = QRegularExpression(rule.rule);
-            cRule.isRegexValid = cRule.regex.isValid();
-        } else {
-            cRule.isRegexValid = false;
-        }
+        cRule.isPackageScope = (rule.scope == BY_PKG);
+        cRule.isAllRepo = (rule.repo == ALL_REPOSITORIES);
+        cRule.regex = QRegularExpression(rule.rule, QRegularExpression::CaseInsensitiveOption);
+        cRule.isRegexValid = cRule.regex.isValid() && !rule.rule.trimmed().isEmpty();
         compiledRules.append(cRule);
     }
 
     for (const auto &pkg: allPackages)
         result.insert({pkg.name, pkg.version, pkg.repoName}, RuleSt::Normal);
 
-    QSet<QString> excludedNames;
+    QSet<QString> excludedGlobalNames;
     for (const CompiledRule &cRule: compiledRules) {
         if (cRule.entry.type != EXCEPT || !cRule.isPackageScope || !cRule.isAllRepo)
             continue;
 
         for (const auto &pkg: allPackages) {
             if (matchesCompiledRule(cRule, pkg.name, pkg.version, pkg.category, pkg.repoName))
-                excludedNames.insert(pkg.name);
+                excludedGlobalNames.insert(pkg.name);
         }
     }
 
     for (const auto &pkg: allPackages) {
-        bool isExcludedLocal = false;
-        if (!excludedNames.contains(pkg.name)) {
+        bool isExcluded = excludedGlobalNames.contains(pkg.name);
+
+        if (!isExcluded) {
             for (const CompiledRule &cRule: compiledRules) {
                 if (cRule.entry.type == EXCEPT &&
                     matchesCompiledRule(cRule, pkg.name, pkg.version, pkg.category, pkg.repoName)) {
-                    isExcludedLocal = true;
+                    isExcluded = true;
                     break;
                 }
             }
         }
 
-        if (excludedNames.contains(pkg.name) || isExcludedLocal)
+        if (isExcluded)
             result[{pkg.name, pkg.version, pkg.repoName}] = RuleSt::Excluded;
     }
 
@@ -214,20 +222,6 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPac
                 result[{inst->name, inst->version, inst->repoName}] = RuleSt::Prioritized;
             }
         }
-    }
-
-    QSet<QPair<QString, QString> > excludedNameVersions;
-    for (const auto &pkg: allPackages) {
-        if (result.value({pkg.name, pkg.version, pkg.repoName}) == RuleSt::Excluded)
-            excludedNameVersions.insert({pkg.name, pkg.version});
-    }
-
-    for (const auto &pkg: allPackages) {
-        const PkgKey key = {pkg.name, pkg.version, pkg.repoName};
-        if (result.value(key) == RuleSt::Prioritized)
-            continue;
-        if (excludedNameVersions.contains({pkg.name, pkg.version}))
-            result[key] = RuleSt::Excluded;
     }
 
     return result;
