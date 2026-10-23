@@ -9,6 +9,8 @@
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QProcess>
+#include <QRegularExpression>
 #include <QTimer>
 
 #include <AdminConfigManager.hpp>
@@ -20,6 +22,7 @@
 #include <Utils.hpp>
 
 #include <gpgme.h>
+#include <sys/utsname.h>
 
 /**
  * @brief Executes the update process for the database.
@@ -143,8 +146,9 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
 
             if (checksumFile.isEmpty() || checksumAscFile.isEmpty()) {
                 socket->write(
-                    ERROR + QByteArray("Verification required: Missing CHECKSUMS or signature (.asc) file for mirror ")
-                    + name.toUtf8() + ". Purging directory and aborting update." + SEP);
+                    OUTPUT + QByteArray("ERROR: Missing CHECKSUMS or signature (.asc) file for mirror ")
+                    + name.toUtf8() + ". Purging directory and aborting update." + SEP +
+                    QByteArray("TRANSACTION_DONE") + SEP);
                 QDir(dbDir).removeRecursively();
                 operationCancelled = true;
                 break;
@@ -152,8 +156,9 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
 
             socket->write(OUTPUT + QByteArray("    --> Verifying CHECKSUMS GPG signature...") + SEP);
             if (!verifyGpgSignature(checksumAscFile, checksumFile, name)) {
-                socket->write(ERROR + QByteArray("CHECKSUMS signature verification FAILED for mirror ")
-                              + name.toUtf8() + ". Purging corrupted directory and aborting update." + SEP);
+                socket->write(OUTPUT + QByteArray("CHECKSUMS signature verification FAILED for mirror ")
+                              + name.toUtf8() + ". Purging corrupted directory and aborting update." + SEP +
+                              QByteArray("TRANSACTION_DONE") + SEP);
                 QDir(dbDir).removeRecursively();
                 operationCancelled = true;
                 break;
@@ -445,25 +450,38 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         if (kernelOperated) {
             if (adminConfig.postInstallTask(PostInstallTask::GenerateInitrd) &&
                 QFile::exists("/usr/share/mkinitrd/mkinitrd_command_generator.sh")) {
-                socket->write(OUTPUT + QByteArray("\nGenerating initrd for generic kernel (with fallback protection)...") + SEP);
-                const auto initrdCmd = QStringLiteral(
-                    "if [ -e /boot/initrd.gz ]; then "
-                    "  cp -L /boot/initrd.gz /boot/initrd.gz.bak; "
-                    "fi; "
-                    "if /usr/share/mkinitrd/mkinitrd_command_generator.sh | bash; then "
-                    "  if [ -f /boot/initrd.gz ]; then "
-                    "    KVER=$(uname -r); "
-                    "    mv /boot/initrd.gz /boot/initrd-${KVER}.gz && "
-                    "    ln -sf initrd-${KVER}.gz /boot/initrd.gz && "
-                    "    rm -f /boot/initrd.gz.bak; "
-                    "  fi; "
-                    "else "
-                    "  if [ -f /boot/initrd.gz.bak ]; then "
-                    "    mv /boot/initrd.gz.bak /boot/initrd.gz; "
-                    "  fi; "
-                    "fi"
-                );
-                runTask("/bin/sh", {"-c", initrdCmd});
+                socket->write(OUTPUT + QByteArray("\nGenerating initrd for generic kernel...") + SEP);
+
+                const auto initrdPath = QStringLiteral("/boot/initrd.gz");
+                const auto backupPath = QStringLiteral("/boot/initrd.gz.bak");
+
+                if (QFile::exists(initrdPath)) {
+                    QFile::remove(backupPath);
+                    QFile::copy(initrdPath, backupPath);
+                }
+
+                runTask("/bin/sh", {"-c", "/usr/share/mkinitrd/mkinitrd_command_generator.sh | bash"});
+
+                if (QFile::exists(initrdPath)) {
+                    utsname u{};
+                    uname(&u);
+                    const QString kver = QString::fromLatin1(u.release);
+                    const QString versionedName = QStringLiteral("initrd-%1.gz").arg(kver);
+                    const QString versionedPath = QStringLiteral("/boot/") + versionedName;
+
+                    QFile::remove(versionedPath);
+                    if (QFile::rename(initrdPath, versionedPath)) {
+                        QFile::remove(initrdPath);
+                        QFile::link(versionedName, initrdPath);
+                        QFile::remove(backupPath);
+                        socket->write(
+                            OUTPUT + QByteArray("    --> Created /boot/") + versionedName.toUtf8() +
+                            " and updated /boot/initrd.gz\n" + SEP);
+                    }
+                } else if (QFile::exists(backupPath)) {
+                    QFile::rename(backupPath, initrdPath);
+                    socket->write(OUTPUT + QByteArray("Failed to generate new initrd. Restored backup.\n") + SEP);
+                }
             }
 
             if (adminConfig.postInstallTask(PostInstallTask::UpdateGrub) &&
@@ -475,125 +493,233 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             if (adminConfig.postInstallTask(PostInstallTask::UpdateLilo) &&
                 QFile::exists("/sbin/lilo") && QFile::exists("/etc/lilo.conf")) {
                 socket->write(OUTPUT + QByteArray("\nScanning kernels and updating LILO bootloader...") + SEP);
-                const auto liloCmd = QStringLiteral(
-                    "LILO_CONF=\"/etc/lilo.conf\"; "
-                    "if [ -f \"$LILO_CONF\" ] && [ -x /sbin/lilo ]; then "
-                    "  cp -a \"$LILO_CONF\" \"${LILO_CONF}.klass.bak\"; "
-                    "  ROOT_DEV=$(grep -E '^[[:space:]]*root[[:space:]]*=' \"$LILO_CONF\" | head -n1 | cut -d= -f2- | tr -d ' '); "
-                    "  [ -z \"$ROOT_DEV\" ] && ROOT_DEV=$(mount | grep ' / ' | cut -d' ' -f1); "
-                    "  KVER=$(uname -r); "
-                    "  if [ ! -e /boot/initrd.gz ] && [ -f \"/boot/initrd-${KVER}.gz\" ]; then "
-                    "    ln -sf \"initrd-${KVER}.gz\" /boot/initrd.gz; "
-                    "  fi; "
-                    "  for k in /boot/vmlinuz-*; do "
-                    "    [ -f \"$k\" ] || continue; "
-                    "    case \"$k\" in *.bak|*.old|*.tmp) continue ;; esac; "
-                    "    if grep -q -F \"$k\" \"$LILO_CONF\"; then "
-                    "      continue; "
-                    "    fi; "
-                    "    KNAME=$(basename \"$k\"); "
-                    "    if echo \"$KNAME\" | grep -q \"generic\"; then "
-                    "      VER=$(echo \"$KNAME\" | sed 's/vmlinuz-generic-//'); "
-                    "      LABEL=\"gen-${VER}\"; "
-                    "    elif echo \"$KNAME\" | grep -q \"huge\"; then "
-                    "      VER=$(echo \"$KNAME\" | sed 's/vmlinuz-huge-//'); "
-                    "      LABEL=\"hug-${VER}\"; "
-                    "    else "
-                    "      VER=$(echo \"$KNAME\" | sed 's/vmlinuz-//'); "
-                    "      LABEL=\"k-${VER}\"; "
-                    "    fi; "
-                    "    LABEL=$(echo \"$LABEL\" | cut -c1-15); "
-                    "    if grep -q -E \"^[[:space:]]*label[[:space:]]*=[[:space:]]*\\\"?${LABEL}\\\"?\" \"$LILO_CONF\"; then "
-                    "      LABEL=\"k$(echo \"$LABEL\" | cut -c1-13)\"; "
-                    "    fi; "
-                    "    INITRD_FILE=\"\"; "
-                    "    if [ -f \"/boot/initrd-${VER}.gz\" ]; then "
-                    "      INITRD_FILE=\"/boot/initrd-${VER}.gz\"; "
-                    "    elif echo \"$KNAME\" | grep -q \"generic\" && [ -f /boot/initrd.gz ]; then "
-                    "      INITRD_FILE=\"/boot/initrd.gz\"; "
-                    "    fi; "
-                    "    echo \"\" >> \"$LILO_CONF\"; "
-                    "    echo \"# Added by Klass Package Manager\" >> \"$LILO_CONF\"; "
-                    "    echo \"image = $k\" >> \"$LILO_CONF\"; "
-                    "    [ -n \"$ROOT_DEV\" ] && echo \"  root = $ROOT_DEV\" >> \"$LILO_CONF\"; "
-                    "    echo \"  label = $LABEL\" >> \"$LILO_CONF\"; "
-                    "    [ -n \"$INITRD_FILE\" ] && echo \"  initrd = $INITRD_FILE\" >> \"$LILO_CONF\"; "
-                    "    echo \"  read-only\" >> \"$LILO_CONF\"; "
-                    "  done; "
-                    "  if /sbin/lilo -t > /dev/null 2>&1; then "
-                    "    /sbin/lilo; "
-                    "  else "
-                    "    cp -a \"${LILO_CONF}.klass.bak\" \"$LILO_CONF\"; "
-                    "    /sbin/lilo; "
-                    "  fi; "
-                    "fi"
-                );
-                runTask("/bin/sh", {"-c", liloCmd});
+
+                const auto liloConfPath = QStringLiteral("/etc/lilo.conf");
+                const auto backupPath = QStringLiteral("/etc/lilo.conf.klass.bak");
+
+                QFile::remove(backupPath);
+                QFile::copy(liloConfPath, backupPath);
+
+                QString liloContent;
+                if (QFile f(liloConfPath); f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                    liloContent = QString::fromUtf8(f.readAll());
+                    f.close();
+                }
+
+                QString rootDev;
+                static const QRegularExpression rootRegex(R"(^[ \t]*root[ \t]*=[ \t]*([^\s\r\n]+))",
+                                                          QRegularExpression::MultilineOption);
+                if (const auto match = rootRegex.match(liloContent); match.hasMatch())
+                    rootDev = match.captured(1).trimmed();
+
+                utsname u{};
+                uname(&u);
+                const QString kver = QString::fromLatin1(u.release);
+                const QString versionedInitrd = QStringLiteral("/boot/initrd-%1.gz").arg(kver);
+                if (!QFile::exists("/boot/initrd.gz") && QFile::exists(versionedInitrd))
+                    QFile::link(QStringLiteral("initrd-%1.gz").arg(kver), QStringLiteral("/boot/initrd.gz"));
+
+                const QDir bootDir(QStringLiteral("/boot"));
+                const QStringList kernelFiles = bootDir.entryList({QStringLiteral("vmlinuz-*")}, QDir::Files,
+                                                                  QDir::Name);
+
+                QString newEntries;
+                for (const QString &kName: kernelFiles) {
+                    if (kName.endsWith(QLatin1String(".bak")) || kName.endsWith(QLatin1String(".old")) ||
+                        kName.endsWith(QLatin1String(".tmp")))
+                        continue;
+
+                    const QString fullKernelPath = QStringLiteral("/boot/") + kName;
+
+                    if (liloContent.contains(fullKernelPath))
+                        continue;
+
+                    QString ver;
+                    QString label;
+                    if (kName.startsWith(QLatin1String("vmlinuz-generic-"))) {
+                        ver = kName.mid(16);
+                        label = QStringLiteral("gen-") + ver;
+                    } else if (kName.startsWith(QLatin1String("vmlinuz-huge-"))) {
+                        ver = kName.mid(13);
+                        label = QStringLiteral("hug-") + ver;
+                    } else if (kName.startsWith(QLatin1String("vmlinuz-"))) {
+                        ver = kName.mid(8);
+                        label = QStringLiteral("k-") + ver;
+                    } else {
+                        continue;
+                    }
+
+                    if (label.length() > 15)
+                        label = label.left(15);
+
+                    const QRegularExpression labelRegex(
+                        QStringLiteral(R"(^[ \t]*label[ \t]*=[ \t]*"?%1"?)").arg(QRegularExpression::escape(label)),
+                        QRegularExpression::MultilineOption);
+                    if (liloContent.contains(labelRegex) || newEntries.contains(labelRegex)) {
+                        label = QStringLiteral("k") + label.left(13);
+                    }
+
+                    QString initrdPath;
+                    if (QFile::exists(QStringLiteral("/boot/initrd-%1.gz").arg(ver))) {
+                        initrdPath = QStringLiteral("/boot/initrd-%1.gz").arg(ver);
+                    } else if (kName.contains(QLatin1String("generic")) && QFile::exists("/boot/initrd.gz")) {
+                        initrdPath = QStringLiteral("/boot/initrd.gz");
+                    }
+
+                    newEntries += QStringLiteral("\n# Added by Klass Package Manager\n");
+                    newEntries += QStringLiteral("image = %1\n").arg(fullKernelPath);
+                    if (!rootDev.isEmpty())
+                        newEntries += QStringLiteral("  root = %1\n").arg(rootDev);
+                    newEntries += QStringLiteral("  label = %1\n").arg(label);
+                    if (!initrdPath.isEmpty())
+                        newEntries += QStringLiteral("  initrd = %1\n").arg(initrdPath);
+                    newEntries += QStringLiteral("  read-only\n");
+                }
+
+                if (!newEntries.isEmpty()) {
+                    if (QFile f(liloConfPath); f.open(QIODevice::Append | QIODevice::Text)) {
+                        QTextStream out(&f);
+                        out << newEntries;
+                        f.close();
+                    }
+                }
+
+                if (QProcess::execute(QStringLiteral("/sbin/lilo"), {QStringLiteral("-t")}) != 0) {
+                    socket->write(
+                        OUTPUT + QByteArray(
+                            "LILO test failed with new entries. Restoring previous lilo.conf.\n") + SEP);
+                    QFile::remove(liloConfPath);
+                    QFile::copy(backupPath, liloConfPath);
+                }
+
+                runTask(QStringLiteral("/sbin/lilo"), {});
+                QFile::remove(backupPath);
             }
 
-             if (adminConfig.postInstallTask(PostInstallTask::UpdateElilo) &&
-                QDir("/boot/efi/EFI/Slackware").exists()) {
-                socket->write(OUTPUT + QByteArray("\nUpdating ELILO bootloader (syncing kernels, initrds, and config)...") + SEP);
-                const auto eliloCmd = QStringLiteral(
-                    "EFI_DIR=\"/boot/efi/EFI/Slackware\"; "
-                    "if [ -d \"$EFI_DIR\" ]; then "
-                    "  KVER=$(uname -r); "
-                    "  if [ ! -e /boot/initrd.gz ] && [ -f \"/boot/initrd-${KVER}.gz\" ]; then "
-                    "    ln -sf \"initrd-${KVER}.gz\" /boot/initrd.gz; "
-                    "  fi; "
-                    "  [ -e /boot/vmlinuz ] && cp -L /boot/vmlinuz \"$EFI_DIR/vmlinuz\"; "
-                    "  [ -e /boot/initrd.gz ] && cp -L /boot/initrd.gz \"$EFI_DIR/initrd.gz\"; "
-                    "  for k in /boot/vmlinuz-*; do "
-                    "    [ -f \"$k\" ] || continue; "
-                    "    case \"$k\" in *.bak|*.old|*.tmp) continue ;; esac; "
-                    "    cp -L \"$k\" \"$EFI_DIR/$(basename \"$k\")\"; "
-                    "  done; "
-                    "  for i in /boot/initrd-*.gz; do "
-                    "    [ -f \"$i\" ] || continue; "
-                    "    case \"$i\" in *.bak|*.old|*.tmp) continue ;; esac; "
-                    "    cp -L \"$i\" \"$EFI_DIR/$(basename \"$i\")\"; "
-                    "  done; "
-                    "  CONF=\"$EFI_DIR/elilo.conf\"; "
-                    "  if [ -f \"$CONF\" ]; then "
-                    "    cp -a \"$CONF\" \"${CONF}.klass.bak\"; "
-                    "    APPEND_LINE=$(grep -E '^[[:space:]]*append[[:space:]]*=' \"$CONF\" | head -n1); "
-                    "    ROOT_LINE=$(grep -E '^[[:space:]]*root[[:space:]]*=' \"$CONF\" | head -n1); "
-                    "    for k in /boot/vmlinuz-*; do "
-                    "      [ -f \"$k\" ] || continue; "
-                    "      case \"$k\" in *.bak|*.old|*.tmp) continue ;; esac; "
-                    "      KNAME=$(basename \"$k\"); "
-                    "      if grep -q -E \"^[[:space:]]*image[[:space:]]*=[[:space:]]*\\\"?${KNAME}\\\"?\" \"$CONF\"; then "
-                    "        continue; "
-                    "      fi; "
-                    "      if echo \"$KNAME\" | grep -q \"generic\"; then "
-                    "        VER=$(echo \"$KNAME\" | sed 's/vmlinuz-generic-//'); "
-                    "        LABEL=\"gen-${VER}\"; "
-                    "      elif echo \"$KNAME\" | grep -q \"huge\"; then "
-                    "        VER=$(echo \"$KNAME\" | sed 's/vmlinuz-huge-//'); "
-                    "        LABEL=\"hug-${VER}\"; "
-                    "      else "
-                    "        VER=$(echo \"$KNAME\" | sed 's/vmlinuz-//'); "
-                    "        LABEL=\"k-${VER}\"; "
-                    "      fi; "
-                    "      INITRD_ENTRY=\"\"; "
-                    "      if [ -f \"$EFI_DIR/initrd-${VER}.gz\" ]; then "
-                    "        INITRD_ENTRY=\"    initrd=initrd-${VER}.gz\"; "
-                    "      elif echo \"$KNAME\" | grep -q \"generic\" && [ -f \"$EFI_DIR/initrd.gz\" ]; then "
-                    "        INITRD_ENTRY=\"    initrd=initrd.gz\"; "
-                    "      fi; "
-                    "      echo \"\" >> \"$CONF\"; "
-                    "      echo \"# Added by Klass Package Manager\" >> \"$CONF\"; "
-                    "      echo \"image=$KNAME\" >> \"$CONF\"; "
-                    "      echo \"    label=$LABEL\" >> \"$CONF\"; "
-                    "      echo \"    read-only\" >> \"$CONF\"; "
-                    "      [ -n \"$ROOT_LINE\" ] && echo \"$ROOT_LINE\" >> \"$CONF\"; "
-                    "      [ -n \"$APPEND_LINE\" ] && echo \"$APPEND_LINE\" >> \"$CONF\"; "
-                    "      [ -n \"$INITRD_ENTRY\" ] && echo \"$INITRD_ENTRY\" >> \"$CONF\"; "
-                    "    done; "
-                    "  fi; "
-                    "fi"
-                );
-                runTask("/bin/sh", {"-c", eliloCmd});
+            if (adminConfig.postInstallTask(PostInstallTask::UpdateElilo)) {
+                if (const auto efiDir = QStringLiteral("/boot/efi/EFI/Slackware"); QDir(efiDir).exists()) {
+                    socket->write(
+                        OUTPUT + QByteArray("\nUpdating ELILO bootloader (kernels, initrds and config)...") + SEP);
+
+                    utsname u{};
+                    uname(&u);
+                    const QString kver = QString::fromLatin1(u.release);
+                    const QString versionedInitrd = QStringLiteral("/boot/initrd-%1.gz").arg(kver);
+                    if (!QFile::exists("/boot/initrd.gz") && QFile::exists(versionedInitrd)) {
+                        QFile::link(QStringLiteral("initrd-%1.gz").arg(kver), QStringLiteral("/boot/initrd.gz"));
+                    }
+
+                    auto safeCopy = [](const QString &src, const QString &dst) {
+                        if (QFile::exists(src)) {
+                            QFile::remove(dst);
+                            QFile::copy(src, dst);
+                        }
+                    };
+
+                    safeCopy(QStringLiteral("/boot/vmlinuz"), efiDir + QStringLiteral("/vmlinuz"));
+                    safeCopy(QStringLiteral("/boot/initrd.gz"), efiDir + QStringLiteral("/initrd.gz"));
+
+                    const QDir bootDir(QStringLiteral("/boot"));
+                    const QStringList kernelFiles = bootDir.entryList({QStringLiteral("vmlinuz-*")}, QDir::Files,
+                                                                      QDir::Name);
+                    for (const QString &kName: kernelFiles) {
+                        if (kName.endsWith(QLatin1String(".bak")) || kName.endsWith(QLatin1String(".old")) || kName.
+                            endsWith(QLatin1String(".tmp")))
+                            continue;
+                        safeCopy(QStringLiteral("/boot/") + kName, efiDir + u'/' + kName);
+                    }
+
+                    const QStringList initrdFiles = bootDir.entryList({QStringLiteral("initrd-*.gz")}, QDir::Files,
+                                                                      QDir::Name);
+                    for (const QString &iName: initrdFiles) {
+                        if (iName.endsWith(QLatin1String(".bak")) || iName.endsWith(QLatin1String(".old")) || iName.
+                            endsWith(QLatin1String(".tmp")))
+                            continue;
+                        safeCopy(QStringLiteral("/boot/") + iName, efiDir + u'/' + iName);
+                    }
+
+                    if (const QString confPath = efiDir + QStringLiteral("/elilo.conf"); QFile::exists(confPath)) {
+                        const QString confBackup = confPath + QStringLiteral(".klass.bak");
+                        QFile::remove(confBackup);
+                        QFile::copy(confPath, confBackup);
+
+                        QString eliloContent;
+                        if (QFile f(confPath); f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                            eliloContent = QString::fromUtf8(f.readAll());
+                            f.close();
+                        }
+
+                        QString appendLine;
+                        static const QRegularExpression appendRegex(R"(^[ \t]*append[ \t]*=.*$)",
+                                                                    QRegularExpression::MultilineOption);
+                        if (const auto match = appendRegex.match(eliloContent); match.hasMatch())
+                            appendLine = match.captured(0).trimmed();
+
+                        QString rootLine;
+                        static const QRegularExpression rootRegex(R"(^[ \t]*root[ \t]*=.*$)",
+                                                                  QRegularExpression::MultilineOption);
+                        if (const auto match = rootRegex.match(eliloContent); match.hasMatch())
+                            rootLine = match.captured(0).trimmed();
+
+                        QString newEntries;
+                        for (const QString &kName: kernelFiles) {
+                            if (kName.endsWith(QLatin1String(".bak")) || kName.endsWith(QLatin1String(".old")) ||
+                                kName.endsWith(QLatin1String(".tmp")))
+                                continue;
+
+                            const QRegularExpression imageRegex(
+                                QStringLiteral(R"(^[ \t]*image[ \t]*=[ \t]*"?%1"?)").arg(
+                                    QRegularExpression::escape(kName)), QRegularExpression::MultilineOption);
+                            if (eliloContent.contains(imageRegex) || newEntries.contains(imageRegex))
+                                continue;
+
+                            QString ver, label;
+                            if (kName.startsWith(QLatin1String("vmlinuz-generic-"))) {
+                                ver = kName.mid(16);
+                                label = QStringLiteral("gen-") + ver;
+                            } else if (kName.startsWith(QLatin1String("vmlinuz-huge-"))) {
+                                ver = kName.mid(13);
+                                label = QStringLiteral("hug-") + ver;
+                            } else if (kName.startsWith(QLatin1String("vmlinuz-"))) {
+                                ver = kName.mid(8);
+                                label = QStringLiteral("k-") + ver;
+                            } else {
+                                continue;
+                            }
+
+                            QString initrdEntry;
+                            if (QFile::exists(efiDir + QStringLiteral("/initrd-%1.gz").arg(ver))) {
+                                initrdEntry = QStringLiteral("    initrd=initrd-%1.gz\n").arg(ver);
+                            } else if (kName.contains(QLatin1String("generic")) &&
+                                       QFile::exists(efiDir + QStringLiteral("/initrd.gz"))) {
+                                initrdEntry = QStringLiteral("    initrd=initrd.gz\n");
+                            }
+
+                            newEntries += QStringLiteral("\n# Added by Klass Package Manager\n");
+                            newEntries += QStringLiteral("image=%1\n").arg(kName);
+                            newEntries += QStringLiteral("    label=%1\n").arg(label);
+                            newEntries += QStringLiteral("    read-only\n");
+                            if (!rootLine.isEmpty())
+                                newEntries += QStringLiteral("    %1\n").arg(rootLine);
+                            if (!appendLine.isEmpty())
+                                newEntries += QStringLiteral("    %1\n").arg(appendLine);
+                            if (!initrdEntry.isEmpty())
+                                newEntries += initrdEntry;
+                        }
+
+                        if (!newEntries.isEmpty()) {
+                            if (QFile f(confPath); f.open(QIODevice::Append | QIODevice::Text)) {
+                                QTextStream out(&f);
+                                out << newEntries;
+                                f.close();
+                            }
+                        }
+                        QFile::remove(confBackup);
+                    }
+
+                    socket->write(
+                        OUTPUT + QByteArray("    --> ELILO EFI files and config successfully synchronized.\n") + SEP);
+                }
             }
 
             if (adminConfig.postInstallTask(PostInstallTask::ReinstallVBoxModules)) {
