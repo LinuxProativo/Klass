@@ -20,8 +20,7 @@ About::About(QWidget *parent) : Dialog(parent, Qt::WindowModal) {
     titleFont.setBold(true);
     titleFont.setPointSize(titleFont.pointSize() + 10);
 
-    dp = new DefaultPath();
-    const QPixmap iconPixmap(dp->defaultPath("klass.png"));
+    const QPixmap iconPixmap(DefaultPath::defaultPath("klass.png"));
 
     iconLabel = new QLabel(this);
     iconLabel->setPixmap(iconPixmap.scaled(128, 128, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -32,7 +31,7 @@ About::About(QWidget *parent) : Dialog(parent, Qt::WindowModal) {
     titleLabel->setFont(titleFont);
 
     titleFont.setPointSize(titleFont.pointSize() - 9);
-    versionLabel = new QLabel(VERSION + tr(" RELEASE CANDIDATE"), this); //TODO BETA VERSION
+    versionLabel = new QLabel(VERSION + tr(" RELEASE CANDIDATE"), this); //TODO RC VERSION
     versionLabel->setAlignment(Qt::AlignCenter);
     versionLabel->setFont(titleFont);
 
@@ -55,11 +54,11 @@ About::About(QWidget *parent) : Dialog(parent, Qt::WindowModal) {
     btnLicenseIcons = new QPushButton(tr("Material Icons by Google License"), this);
 
     connect(btnLicenseKlass, &QPushButton::clicked, this, [this] {
-        (new LicenseView(tr("Klass License"), dp->defaultPath("LICENSE"), this))->show();
+        (new LicenseView(tr("Klass License"), DefaultPath::defaultPath("LICENSE"), this))->show();
     });
 
     connect(btnLicenseIcons, &QPushButton::clicked, this, [this] {
-        (new LicenseView(tr("Material Icons License"), dp->defaultPath("icons/LICENSE"), this))->show();
+        (new LicenseView(tr("Material Icons License"), DefaultPath::defaultPath("icons/LICENSE"), this))->show();
     });
 
     buttonLayout = new QHBoxLayout();
