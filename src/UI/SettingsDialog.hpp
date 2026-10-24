@@ -32,6 +32,8 @@ class SettingsDialog : public Dialog {
 public:
     explicit SettingsDialog(QWidget *parent = nullptr);
 
+    ~SettingsDialog() override;
+
 signals:
     void settingsChanged();
 
