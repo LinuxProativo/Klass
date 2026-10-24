@@ -20,7 +20,9 @@ class ChangeLog : public Dialog {
     Q_OBJECT
 
 public:
-    explicit ChangeLog(QWidget *parent = nullptr);
+    explicit ChangeLog(QWidget *parent = {});
+
+    ~ChangeLog() override;
 
 protected:
     void showEvent(QShowEvent *event) override;
