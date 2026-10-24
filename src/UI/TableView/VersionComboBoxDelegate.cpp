@@ -11,6 +11,7 @@
 
 #include <DefaultPath.hpp>
 #include <Packages.hpp>
+#include <PackageTableModel.hpp>
 #include <VersionComboBoxDelegate.hpp>
 
 inline constexpr int margin = 5;
@@ -37,7 +38,7 @@ void VersionComboBoxDelegate::paint(QPainter *painter, const QStyleOptionViewIte
     initStyleOption(&opt, index);
 
     const auto varPkgs = index.data(Qt::UserRole + 4);
-    if (const auto pkgList = varPkgs.value<QList<PkgInfo>>(); pkgList.size() > 1) {
+    if (const auto pkgList = varPkgs.value<QList<const PkgInfo *> >(); pkgList.size() > 1) {
         painter->save();
 
         QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
@@ -101,7 +102,7 @@ bool VersionComboBoxDelegate::editorEvent(QEvent *event, QAbstractItemModel *mod
         if (const auto *mouseEvent = dynamic_cast<QMouseEvent *>(event); mouseEvent->button() == Qt::LeftButton) {
             const auto varPkgs = index.data(Qt::UserRole + 4);
 
-            if (const auto pkgList = varPkgs.value<QList<PkgInfo>>(); pkgList.size() > 1) {
+            if (const auto pkgList = varPkgs.value<QList<const PkgInfo *> >(); pkgList.size() > 1) {
                 const int buttonSize = qMax(height, option.rect.height() - margin * 2);
 
                 const QRect buttonRect(
@@ -120,10 +121,10 @@ bool VersionComboBoxDelegate::editorEvent(QEvent *event, QAbstractItemModel *mod
 
                     QMenu menu(pw);
                     for (int i = 0; i < pkgList.size(); ++i) {
-                        QAction *action = menu.addAction(pkgList.at(i).version);
+                        QAction *action = menu.addAction(pkgList.at(i)->version);
                         action->setData(i);
 
-                        if (pkgList.at(i).version == currentVersion) {
+                        if (pkgList.at(i)->version == currentVersion) {
                             action->setCheckable(true);
                             action->setChecked(true);
                         }
