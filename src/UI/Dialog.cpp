@@ -1,9 +1,10 @@
 /**
  * @file Dialog.cpp
- * @brief Custom dialog that restricts interaction with the main window while active.
+ * @brief Custom dialog base class that enforces cleanup and proper modality.
  */
 
 #include <Dialog.hpp>
+#include <Utils.hpp>
 
 /**
  * @brief Constructs the custom dialog.
@@ -14,6 +15,7 @@
  *   - Qt::NonModal: allows interaction with all windows.
  */
 Dialog::Dialog(QWidget *parent, const Qt::WindowModality modality) : QDialog(parent) {
+    this->setAttribute(Qt::WA_DeleteOnClose);
     this->setAttribute(Qt::WA_StaticContents);
     this->setWindowModality(modality);
     this->setWindowFlags(Qt::Dialog);
