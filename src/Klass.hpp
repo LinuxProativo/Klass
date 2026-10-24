@@ -7,6 +7,7 @@
 #define KLASS_HPP
 
 #include <QHash>
+#include <QPointer>
 #include <QTabWidget>
 #include <QTimer>
 
@@ -73,6 +74,10 @@ private:
 
     void onOpenSettings();
 
+    void onOpenMirrorManager();
+
+    void onOpenRulesManager();
+
     void onShowAbout();
 
     void onShowChangelog();
@@ -113,13 +118,14 @@ private:
     Buttons *btnAdd{}, *btnException{}, *btnUpdate{}, *btnUp{}, *btnApply{};
     Buttons *btnSettings{}, *btnChangelog{}, *btnAbout{};
     HelperController *helper{};
-    MirrorManager *mirrorManager{};
     Packages *packagesManager{};
-    RulesManagerDialog *rulesManagerDialog{};
     SettingsManager *settingsManager{};
     StatusBar *statusBar{};
     SysTray *tray{};
     Terminal *terminalDialog{};
+
+    QPointer<MirrorManager> mirrorManager{nullptr};
+    QPointer<RulesManagerDialog> rulesManagerDialog{nullptr};
 
     std::string pathIcon{DefaultPath::defaultPath("icons/available.svg").toStdString()};
     RuleEntry rule{}, edit{};
@@ -131,10 +137,11 @@ private:
     QList<RuleEntry> pendingRules{};
     QMap<QString, QString> mirrorMap{};
     QStringList pendingRepoDisable{};
+    QStringList cachedRepos{};
     QString pendingMirrorUrl{}, pendingAdminConfigPayload{};
     Mirrors::OfficialBranches pendingOfficialBranches{};
     RepoVerificationEntry pendingRepoVerification{};
-    bool updateNotificationShown{false}, started{false};
+    bool updateNotificationShown{false}, started{false}, hasPendingMirrorUpdate{false};
 };
 
 #endif
