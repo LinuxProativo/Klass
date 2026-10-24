@@ -8,6 +8,7 @@
 
 #include <QAbstractTableModel>
 #include <QList>
+#include <QMetaType>
 
 #include <Packages.hpp>
 #include <SlackwareDefines.hpp>
@@ -30,8 +31,10 @@ struct PackageRowData {
     QString actionSymbol{};
     QString targetVersion{};
     QString targetRepo{};
-    QList<PkgInfo> pkgList{};
+    QList<const PkgInfo *> pkgList{};
 };
+
+Q_DECLARE_METATYPE(QList<const PkgInfo*>)
 
 /**
  * @class PackageTableModel

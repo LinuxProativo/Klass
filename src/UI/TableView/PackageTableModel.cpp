@@ -94,8 +94,8 @@ QVariant PackageTableModel::data(const QModelIndex &index, const int role) const
         if (role == Qt::UserRole + 3) {
             QStringList versions;
             versions.reserve(row.pkgList.size());
-            for (const auto &p: row.pkgList)
-                versions.append(p.version);
+            for (const auto *p: row.pkgList)
+                versions.append(p->version);
             return versions;
         }
         if (role == Qt::UserRole + 4)
@@ -138,20 +138,21 @@ void PackageTableModel::notifyStatusChanged(const int row) {
     if (row >= 0 && row < m_rows.size()) {
         const QModelIndex idx = index(row, 0);
         emit dataChanged(idx, idx, {
-            Qt::DecorationRole,
-            RepositoryTabUtils::PackageStatusRole,
-            Qt::UserRole + 5,
-            Qt::UserRole + 6,
-            Qt::UserRole + 7
-        });
+                             Qt::DecorationRole,
+                             RepositoryTabUtils::PackageStatusRole,
+                             Qt::UserRole + 5,
+                             Qt::UserRole + 6,
+                             Qt::UserRole + 7
+                         });
     }
 }
 
 /**
- * @brief Clears all model rows.
+ * @brief Clears all model rows and releases memory.
  */
 void PackageTableModel::clear() {
     beginResetModel();
     m_rows.clear();
+    m_rows.squeeze();
     endResetModel();
 }
