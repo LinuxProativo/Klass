@@ -15,12 +15,16 @@
 #include <Utils.hpp>
 #include <zlib.h>
 
+#if defined(__linux__) && defined(__GLIBC__)
+#include <malloc.h>
+#endif
+
 /**
  * @brief Synchronously downloads data from a specified URL with Wget-like behavior.
  * @param url The target endpoint to fetch.
  * @param range Optional HTTP Range header (e.g., "bytes=0-255").
  * @param cancelCheck Optional callback executed periodically to query whether to abort the operation.
- * @return DownResult Containing execution status, HTTP status code, raw data payload, and network errors.
+ * @return DownloadResult Containing execution status, HTTP status code, raw data payload, and network errors.
  */
 DownloadResult Utils::download(const QUrl &url, const QByteArray &range, const std::function<bool()> &cancelCheck) {
     DownloadResult result;
@@ -69,12 +73,12 @@ DownloadResult Utils::download(const QUrl &url, const QByteArray &range, const s
 
 /**
  * @brief Collapses runs of consecutive spaces into a single space and drops one leading space.
- * @param raw View over the raw text to normalize (not modified; source must outlive the call).
+ * @param raw View over the raw text to normalize.
  * @return A newly built string with normalized internal whitespace.
  */
-QString Utils::normalizeSpaces(QStringView raw) {
+QString Utils::normalizeSpaces(const QStringView raw) {
     if (raw.startsWith(u' '))
-        raw = raw.mid(1);
+        return normalizeSpaces(raw.mid(1));
 
     QString normalized;
     normalized.reserve(raw.size());
@@ -208,4 +212,13 @@ QString Utils::serializePendingList(const QList<PendingPkg> &list) {
         formatted.append(std::move(entry));
     }
     return formatted.join(u',');
+}
+
+/**
+ * @brief Forces the glibc allocator to release cached, unused heap memory back to the operating system kernel.
+ */
+void Utils::releaseFreeMemory() {
+#if defined(__linux__) && defined(__GLIBC__)
+    malloc_trim(0);
+#endif
 }

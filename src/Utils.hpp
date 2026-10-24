@@ -48,6 +48,8 @@ public:
     static bool isVersionNewer(const QString &v1, const QString &v2);
 
     static QString serializePendingList(const QList<PendingPkg> &list);
+
+    static void releaseFreeMemory();
 };
 
 #endif
