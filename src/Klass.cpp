@@ -41,20 +41,6 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     tray = new SysTray(this, helper->socket(), settingsManager);
     packagesManager = new Packages(this);
 
-    rulesManagerDialog = new RulesManagerDialog(this);
-    rulesManagerDialog->loadRules(RulesManager::loadRules());
-    connect(rulesManagerDialog, &RulesManagerDialog::ruleAdded, this, &Klass::handleAddRuleRequested);
-    connect(rulesManagerDialog, &RulesManagerDialog::ruleRemoved, this, &Klass::handleDeleteRulesRequested);
-    connect(rulesManagerDialog, &RulesManagerDialog::ruleEdited, this, &Klass::handleEditRuleRequested);
-
-    mirrorManager = new MirrorManager(this);
-    connect(mirrorManager, &MirrorManager::mirrorChangeRequested, this, &Klass::handleMirrorChangeRequested);
-    connect(mirrorManager, &MirrorManager::reposEnable, this, &Klass::handleReposEnable);
-    connect(mirrorManager, &MirrorManager::reposRemoved, this, &Klass::handleReposRemoved);
-    connect(mirrorManager, &MirrorManager::officialBranchesChanged, this, &Klass::handleOfficialBranchesChanged);
-    connect(mirrorManager, &MirrorManager::repoVerificationChanged, this, &Klass::handleRepoVerificationChanged);
-    connect(mirrorManager, &MirrorManager::dialogClosed, this, &Klass::onMirrorManagerClosed);
-
     searchBar = new QLineEdit(this);
     searchBar->setMinimumHeight(30);
     searchBar->setPlaceholderText(" " + tr("Search packages") + "...");
@@ -69,10 +55,10 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     connect(searchDebounceTimer, &QTimer::timeout, this, &Klass::applySearchFilterToAllTabs);
 
     btnAdd = new Buttons(Icon::Id::Add, tr("Add/Manage Slackware Mirrors"));
-    connect(btnAdd, &Buttons::clicked, mirrorManager, &MirrorManager::show);
+    connect(btnAdd, &Buttons::clicked, this, &Klass::onOpenMirrorManager);
 
     btnException = new Buttons(Icon::Id::Exception, tr("Manage Priorities/Exception Rules"));
-    connect(btnException, &Buttons::clicked, rulesManagerDialog, &RulesManagerDialog::show);
+    connect(btnException, &Buttons::clicked, this, &Klass::onOpenRulesManager);
 
     btnUpdate = new Buttons(Icon::Id::Update, tr("Update Database"));
     connect(btnUpdate, &Buttons::clicked, this, &Klass::onUpdate);
@@ -154,7 +140,7 @@ void Klass::connectTabSignals(const RepositoryTab *tab) const {
 /**
  * @brief Handles incoming package action requests from repository tabs.
  * @param pkgs The PendingPackage struct containing packages metadata.
- * @param type The action type requested (ActionType::Install, ActionType::Reinstall, ActionType::Remove).
+ * @param type The action type requested.
  */
 void Klass::handlePackageAction(const QList<PendingPkg> &pkgs, const ActionType type) {
     if (pkgs.isEmpty()) return;
@@ -340,7 +326,7 @@ void Klass::setCheckingStatus(const bool checking) const {
 }
 
 /**
- * @brief Dynamically loads and populates all repository tabs in the tab widget.
+ * @brief Dynamically loads and populates all repository tabs using lightweight pointer lists.
  */
 void Klass::loadRepositoryTabs() {
     while (tabWidget->count() > 0) {
@@ -404,10 +390,7 @@ void Klass::loadRepositoryTabs() {
     sortedRepos.prepend(SLACK_PATCHES);
     sortedRepos.prepend(SLACK_OFICIAL);
 
-    if (rulesManagerDialog) {
-        rulesManagerDialog->setRepositories(sortedRepos);
-        rulesManagerDialog->setPriorityRepositories(sortedRepos);
-    }
+    cachedRepos = sortedRepos;
 
     bool attachTestingEnabled = false;
     QStringList mergedIntoSlackware;
@@ -478,13 +461,18 @@ void Klass::loadRepositoryTabs() {
 
     const QHash<PkgKey, RuleSt> ruleStatuses = RulesManager::resolveStatuses(allPackages, currentRules);
 
+    QList<const PkgInfo *> allPkgPointers;
+    allPkgPointers.reserve(allPackages.size());
+    for (const auto &pkg: allPackages)
+        allPkgPointers.append(&pkg);
+
     auto *allTab = new RepositoryTab(tabWidget, false, packagesManager);
     allTab->setProperty("repoName", ALL_REPOSITORIES);
     allTab->setProperty("attachTesting", attachTestingEnabled);
     allTab->setMirrorMap(mMap);
     allTab->setRuleStatuses(ruleStatuses);
     allTab->setGlobalPackages(&globalByName);
-    allTab->fillTable(allPackages);
+    allTab->fillTable(allPkgPointers);
     connectTabSignals(allTab);
     tabWidget->addTab(allTab, tr("All Packages"));
 
@@ -492,33 +480,33 @@ void Klass::loadRepositoryTabs() {
         if (mergedIntoSlackware.contains(repoName))
             continue;
 
-        if (auto it = repoMap.find(repoName); it != repoMap.end()) {
-            const auto &repo = it.value();
+        QList<const PkgInfo *> repoPointers;
+        repoPointers.reserve(2000);
 
-            QList<PkgInfo> combinedPackages = repo.packages;
-            if (extraRepoPackages.contains(repoName))
-                combinedPackages.append(extraRepoPackages.value(repoName));
-
-            if (repoName == SLACK_OFICIAL) {
-                for (const QString &mergedRepo: mergedIntoSlackware) {
-                    if (auto mIt = repoMap.find(mergedRepo); mIt != repoMap.end())
-                        combinedPackages.append(mIt.value().packages);
-                    if (extraRepoPackages.contains(mergedRepo))
-                        combinedPackages.append(extraRepoPackages.value(mergedRepo));
-                }
-            }
-
-            auto *repoTab = new RepositoryTab(tabWidget, repo.hasCategories, packagesManager);
-            repoTab->setProperty("repoName", repoName);
-            repoTab->setProperty("attachTesting", attachTestingEnabled);
-            repoTab->setMirrorMap(mMap);
-            repoTab->setRuleStatuses(ruleStatuses);
-            repoTab->setGlobalPackages(&globalByName);
-            repoTab->fillTable(combinedPackages);
-            connectTabSignals(repoTab);
-
-            tabWidget->addTab(repoTab, repoName);
+        for (const auto *p: allPkgPointers) {
+            if (p->repoName == repoName || (repoName == SLACK_OFICIAL && mergedIntoSlackware.contains(p->repoName)))
+                repoPointers.append(p);
         }
+
+        if (repoPointers.isEmpty())
+            continue;
+
+        auto *repoTab = new RepositoryTab(tabWidget, repoMap.value(repoName).hasCategories, packagesManager);
+        repoTab->setProperty("repoName", repoName);
+        repoTab->setProperty("attachTesting", attachTestingEnabled);
+        repoTab->setMirrorMap(mMap);
+        repoTab->setRuleStatuses(ruleStatuses);
+        repoTab->setGlobalPackages(&globalByName);
+        repoTab->fillTable(repoPointers);
+        connectTabSignals(repoTab);
+
+        tabWidget->addTab(repoTab, repoName);
+    }
+
+    QList<const PkgInfo *> orphanPointers;
+    for (const auto *p: allPkgPointers) {
+        if (p->repoName == SLACK_OTHERS)
+            orphanPointers.append(p);
     }
 
     auto *uncategorizedTab = new RepositoryTab(tabWidget, false, packagesManager);
@@ -527,7 +515,7 @@ void Klass::loadRepositoryTabs() {
     uncategorizedTab->setMirrorMap(mMap);
     uncategorizedTab->setRuleStatuses(ruleStatuses);
     uncategorizedTab->setGlobalPackages(&globalByName);
-    uncategorizedTab->fillTable(orphanPackages);
+    uncategorizedTab->fillTable(orphanPointers);
     connectTabSignals(uncategorizedTab);
     tabWidget->addTab(uncategorizedTab, tr("Others"));
 
@@ -541,6 +529,7 @@ void Klass::loadRepositoryTabs() {
     }
 
     updateStatusIndicator();
+    Utils::releaseFreeMemory();
 }
 
 /**
@@ -564,10 +553,41 @@ void Klass::onSearchTextChanged(const QString &text) const {
  */
 void Klass::onOpenSettings() {
     auto *settingsDialog = new SettingsDialog(this);
-    settingsDialog->setAttribute(Qt::WA_DeleteOnClose);
     connect(settingsDialog, &SettingsDialog::settingsChanged, this, &Klass::loadRepositoryTabs);
     connect(settingsDialog, &SettingsDialog::adminConfigSaveRequested, this, &Klass::handleAdminConfigSaveRequested);
     settingsDialog->show();
+}
+
+/**
+ * @brief Constructs and displays the mirror manager dialog on demand.
+ */
+void Klass::onOpenMirrorManager() {
+    mirrorManager = new MirrorManager(this);
+
+    connect(mirrorManager, &MirrorManager::mirrorChangeRequested, this, &Klass::handleMirrorChangeRequested);
+    connect(mirrorManager, &MirrorManager::reposEnable, this, &Klass::handleReposEnable);
+    connect(mirrorManager, &MirrorManager::reposRemoved, this, &Klass::handleReposRemoved);
+    connect(mirrorManager, &MirrorManager::officialBranchesChanged, this, &Klass::handleOfficialBranchesChanged);
+    connect(mirrorManager, &MirrorManager::repoVerificationChanged, this, &Klass::handleRepoVerificationChanged);
+    connect(mirrorManager, &MirrorManager::dialogClosed, this, &Klass::onMirrorManagerClosed);
+
+    mirrorManager->show();
+}
+
+/**
+ * @brief Constructs and displays the rules manager dialog on demand.
+ */
+void Klass::onOpenRulesManager() {
+    rulesManagerDialog = new RulesManagerDialog(this);
+    rulesManagerDialog->setRepositories(cachedRepos);
+    rulesManagerDialog->setPriorityRepositories(cachedRepos);
+    rulesManagerDialog->loadRules(RulesManager::loadRules());
+
+    connect(rulesManagerDialog, &RulesManagerDialog::ruleAdded, this, &Klass::handleAddRuleRequested);
+    connect(rulesManagerDialog, &RulesManagerDialog::ruleRemoved, this, &Klass::handleDeleteRulesRequested);
+    connect(rulesManagerDialog, &RulesManagerDialog::ruleEdited, this, &Klass::handleEditRuleRequested);
+
+    rulesManagerDialog->show();
 }
 
 /**
@@ -575,7 +595,6 @@ void Klass::onOpenSettings() {
  */
 void Klass::onShowAbout() {
     auto *about = new About(this);
-    about->setAttribute(Qt::WA_DeleteOnClose);
     about->show();
 }
 
@@ -584,7 +603,6 @@ void Klass::onShowAbout() {
  */
 void Klass::onShowChangelog() {
     auto *logView = new ChangeLog(this);
-    logView->setAttribute(Qt::WA_DeleteOnClose);
     logView->show();
 }
 
@@ -592,7 +610,10 @@ void Klass::onShowChangelog() {
  * @brief Handles the completion of the repository update process.
  */
 void Klass::onUpdateFinished() {
-    mirrorManager->pendingUpdate(false);
+    hasPendingMirrorUpdate = false;
+    if (mirrorManager)
+        mirrorManager->pendingUpdate(false);
+
     updateNotificationShown = false;
     tray->resetIcon();
     tray->getTray()->setToolTip(tr("Klass Package Manager"));
@@ -681,7 +702,8 @@ void Klass::onUpdate() {
         return;
     }
 
-    if (!updateNotificationShown && !mirrorManager->pendingUpdate()) {
+    if (const bool hasPending = hasPendingMirrorUpdate || (mirrorManager && mirrorManager->pendingUpdate());
+        !updateNotificationShown && !hasPending) {
         const QMessageBox::StandardButton reply = QMessageBox::question(
             this,
             tr("Update Database"),
@@ -716,8 +738,8 @@ void Klass::handleDeleteRulesRequested(const QList<RuleEntry> &rules) {
 
 /**
  * @brief Handles the request to edit an existing exception or priority rule.
- * @param oldRule The rule as it currently exists (used to locate it for removal).
- * @param newRule The rule's new values (used to add the replacement).
+ * @param oldRule The rule as it currently exists.
+ * @param newRule The rule's new values.
  */
 void Klass::handleEditRuleRequested(const RuleEntry &oldRule, const RuleEntry &newRule) {
     rule = oldRule;
@@ -740,7 +762,6 @@ void Klass::handleAdminConfigSaveRequested(const QString &payload) {
  */
 void Klass::handlePackage(const QString &file) const {
     auto *installDialog = new InstallPackage::Install(const_cast<Klass *>(this));
-    installDialog->setAttribute(Qt::WA_DeleteOnClose);
     installDialog->setPackage(file);
     installDialog->show();
 }
@@ -758,27 +779,37 @@ void Klass::onHelperReady() {
         helper->socket()->write(QByteArray("UPDATE") + SEP);
     } else if (pending == PendingAction::SetMirror && !pendingMirrorUrl.isEmpty()) {
         helper->socket()->write(QByteArray("SETMIRROR:") + pendingMirrorUrl.toUtf8() + SEP);
-        mirrorManager->officialMirrorWidget()->setText(pendingMirrorUrl);
-        mirrorManager->pendingUpdate(true);
+        hasPendingMirrorUpdate = true;
+        if (mirrorManager) {
+            mirrorManager->officialMirrorWidget()->setText(pendingMirrorUrl);
+            mirrorManager->pendingUpdate(true);
+        }
         pendingMirrorUrl.clear();
     } else if (pending == PendingAction::EnableRepo && !pendingRepoEnable.isEmpty()) {
         QStringList parts;
         for (const auto &[name, url]: pendingRepoEnable)
             parts << name + "=" + url;
         helper->socket()->write(QByteArray("ENABLEREPOS:") + parts.join(';').toUtf8() + SEP);
-        mirrorManager->thirdMirrorUpdate(pendingRepoEnable);
-        mirrorManager->pendingUpdate(true);
+        hasPendingMirrorUpdate = true;
+        if (mirrorManager) {
+            mirrorManager->thirdMirrorUpdate(pendingRepoEnable);
+            mirrorManager->pendingUpdate(true);
+        }
         pendingRepoEnable.clear();
     } else if (pending == PendingAction::DisableRepo && !pendingRepoDisable.isEmpty()) {
         helper->socket()->write(QByteArray("DISABLEREPOS:") + pendingRepoDisable.join(';').toUtf8() + SEP);
-        mirrorManager->thirdMirrorUpdate(pendingRepoDisable);
-        mirrorManager->pendingUpdate(true);
+        hasPendingMirrorUpdate = true;
+        if (mirrorManager) {
+            mirrorManager->thirdMirrorUpdate(pendingRepoDisable);
+            mirrorManager->pendingUpdate(true);
+        }
         pendingRepoDisable.clear();
     } else if (pending == PendingAction::AddRule) {
         // Um de cada vez, não precisa ser em massa
         const QString p = QString("ADDRULE:%1,%2,%3,%4").arg(rule.type, rule.repo, rule.scope, rule.rule);
         helper->socket()->write(p.toUtf8() + SEP);
-        rulesManagerDialog->appendRuleToTable(rule);
+        if (rulesManagerDialog)
+            rulesManagerDialog->appendRuleToTable(rule);
     } else if (pending == PendingAction::DeleteRule) {
         QStringList ruleStrings;
         ruleStrings.reserve(pendingRules.size());
@@ -786,13 +817,15 @@ void Klass::onHelperReady() {
             ruleStrings.append(QString("%1,%2,%3,%4").arg(r.type, r.repo, r.scope, r.rule));
         const QString p = QString("DELRULES:%1").arg(ruleStrings.join(";")); // Deletar em massa
         helper->socket()->write(p.toUtf8() + SEP);
-        rulesManagerDialog->removeRulesFromTable(pendingRules);
+        if (rulesManagerDialog)
+            rulesManagerDialog->removeRulesFromTable(pendingRules);
     } else if (pending == PendingAction::EditRule) {
         // Um de cada vez, não precisa ser em massa
         const QString oldPart = QString("%1,%2,%3,%4").arg(rule.type, rule.repo, rule.scope, rule.rule);
         const QString newPart = QString("%1,%2,%3,%4").arg(edit.type, edit.repo, edit.scope, edit.rule);
         helper->socket()->write(QByteArray("EDITRULE:") + oldPart.toUtf8() + "|" + newPart.toUtf8() + SEP);
-        rulesManagerDialog->replaceRuleInTable(rule, edit);
+        if (rulesManagerDialog)
+            rulesManagerDialog->replaceRuleInTable(rule, edit);
     } else if (pending == PendingAction::ProcessTransaction) {
         terminalDialog->setWindowTitle(tr("Processing Packages"));
         terminalDialog->setOperationRequest(true);
@@ -811,17 +844,17 @@ void Klass::onHelperReady() {
         helper->socket()->write(payload.toUtf8() + SEP);
     } else if (pending == PendingAction::SetOfficialBranches) {
         const QString payload = QStringLiteral("SETOFFICIALBRANCHES:pasture=%1;testing=%2;extra=%3")
-            .arg(pendingOfficialBranches.pasture ? QStringLiteral("true") : QStringLiteral("false"),
-                 pendingOfficialBranches.testing ? QStringLiteral("true") : QStringLiteral("false"),
-                 pendingOfficialBranches.extra ? QStringLiteral("true") : QStringLiteral("false"));
+                .arg(pendingOfficialBranches.pasture ? QStringLiteral("true") : QStringLiteral("false"),
+                     pendingOfficialBranches.testing ? QStringLiteral("true") : QStringLiteral("false"),
+                     pendingOfficialBranches.extra ? QStringLiteral("true") : QStringLiteral("false"));
         helper->socket()->write(payload.toUtf8() + SEP);
     } else if (pending == PendingAction::SetRepoVerification) {
         const QString payload = QStringLiteral("SETREPOVERIFICATION:%1,%2,%3,%4,%5")
-            .arg(pendingRepoVerification.repo,
-                 pendingRepoVerification.verifySig ? QStringLiteral("true") : QStringLiteral("false"),
-                 pendingRepoVerification.verifyChecksumSig ? QStringLiteral("true") : QStringLiteral("false"),
-                 pendingRepoVerification.verifyChecksum ? QStringLiteral("true") : QStringLiteral("false"),
-                 pendingRepoVerification.preferredChecksum);
+                .arg(pendingRepoVerification.repo,
+                     pendingRepoVerification.verifySig ? QStringLiteral("true") : QStringLiteral("false"),
+                     pendingRepoVerification.verifyChecksumSig ? QStringLiteral("true") : QStringLiteral("false"),
+                     pendingRepoVerification.verifyChecksum ? QStringLiteral("true") : QStringLiteral("false"),
+                     pendingRepoVerification.preferredChecksum);
         helper->socket()->write(payload.toUtf8() + SEP);
     } else if (pending == PendingAction::SaveAdminConfig && !pendingAdminConfigPayload.isEmpty()) {
         helper->socket()->write(QByteArray("SETADMINCONFIG:") + pendingAdminConfigPayload.toUtf8() + SEP);
@@ -849,7 +882,7 @@ void Klass::onUpdateAvailable() {
 }
 
 /**
- * @brief Intercepts the close event to manage system tray minimization instead of closing.
+ * @brief Intercepts the close event to manage system tray minimization and memory reclamation.
  * @param event The QCloseEvent instance.
  */
 void Klass::closeEvent(QCloseEvent *event) {
@@ -862,6 +895,7 @@ void Klass::closeEvent(QCloseEvent *event) {
             helper->socket()->write(QByteArray("IDLE") + SEP);
         }
         this->hide();
+        Utils::releaseFreeMemory();
         event->ignore();
     } else {
         event->accept();
