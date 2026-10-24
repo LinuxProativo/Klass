@@ -29,6 +29,8 @@ class MirrorManager final : public Dialog {
 public:
     explicit MirrorManager(QWidget *parent = nullptr);
 
+    ~MirrorManager() override;
+
     [[nodiscard]] QLineEdit *officialMirrorWidget() const { return officialMirror; }
 
     [[nodiscard]] bool pendingUpdate() const { return pending_update; }
@@ -83,7 +85,6 @@ private:
     QVBoxLayout *buttonLayout{}, *mainLayout{};
 
     TableView *repositoryList{};
-
     bool pending_update{false};
 };
 
