@@ -22,6 +22,8 @@ class Terminal final : public Dialog {
 public:
     explicit Terminal(QWidget *parent = nullptr);
 
+    ~Terminal() override;
+
     void writeOutput(const QByteArray &data) const;
 
     void setFinished(bool v);

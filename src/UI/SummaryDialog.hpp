@@ -23,7 +23,9 @@ class SummaryDialog : public Dialog {
     Q_OBJECT
 
 public:
-    explicit SummaryDialog(QWidget *parent = nullptr);
+    explicit SummaryDialog(QWidget *parent = {});
+
+    ~SummaryDialog() override;
 
     void loadTransaction(const QList<PendingPkg> &installs, const QList<PendingPkg> &updates,
                          const QList<PendingPkg> &reinstalls, const QList<PendingPkg> &removes);
