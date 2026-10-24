@@ -13,6 +13,7 @@
  * @param parent Parent widget.
  */
 CustomRepoDialog::CustomRepoDialog(const Mode mode, QWidget *parent) : Dialog(parent), mode(mode) {
+    this->setAttribute(Qt::WA_DeleteOnClose, false);
     this->setMinimumWidth(450);
     this->fixed();
 

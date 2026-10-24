@@ -30,7 +30,9 @@ class CustomRepoDialog final : public Dialog {
     Q_OBJECT
 
 public:
-    explicit CustomRepoDialog(Mode mode, QWidget *parent = nullptr);
+    explicit CustomRepoDialog(Mode mode, QWidget *parent = {});
+
+    ~CustomRepoDialog() override = default;
 
     [[nodiscard]] QString name() const { return nameEdit->text(); }
 

@@ -29,6 +29,8 @@ class MirrorPickerDialog final : public QDialog {
 public:
     explicit MirrorPickerDialog(QWidget *parent = nullptr);
 
+    ~MirrorPickerDialog() override;
+
     [[nodiscard]] QString selectedMirror() const { return selectedUrl; }
 
 protected:

@@ -23,7 +23,9 @@ class RepoPlusPickerDialog final : public QDialog {
     Q_OBJECT
 
 public:
-    explicit RepoPlusPickerDialog(QWidget *parent = nullptr);
+    explicit RepoPlusPickerDialog(QWidget *parent = {});
+
+    ~RepoPlusPickerDialog() override;
 
     [[nodiscard]] QList<Mirrors::MirrorPlusEntry> selectedRepos() const { return selectedEntries; }
 
