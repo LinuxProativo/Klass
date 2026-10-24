@@ -23,7 +23,7 @@ namespace RepositoryTabUtils {
      * @param item Pointer to the target QStandardItem to update.
      * @param status The new PkgStatus value to assign.
      */
-    void setPackageStatus(QStandardItem *item, PkgStatus status) {
+    void setPackageStatus(QStandardItem *item, const PkgStatus status) {
         if (!item)
             return;
 
@@ -55,26 +55,26 @@ namespace RepositoryTabUtils {
 
     /**
      * @brief Determines whether an upgrade or replacement is available for a package list.
-     * @param pkgList Candidate package list for a given row.
+     * @param pkgList Candidate package pointer list for a given row.
      * @param attachTesting Whether testing repository is attached to official repository.
      * @return True if a newer version or higher-priority package is available, false otherwise.
      */
-    bool computeHasUpdate(const QList<PkgInfo> &pkgList, const bool attachTesting) {
+    bool computeHasUpdate(const QList<const PkgInfo *> &pkgList, const bool attachTesting) {
         if (pkgList.size() <= 1)
             return false;
 
         bool rowIsTestingOnly = true;
-        for (const auto &p: pkgList) {
-            if (!p.repoName.contains(SLACK_TESTING)) {
+        for (const auto *p: pkgList) {
+            if (!p->repoName.contains(SLACK_TESTING)) {
                 rowIsTestingOnly = false;
                 break;
             }
         }
 
         const PkgInfo *installedCandidate = nullptr;
-        for (const auto &p: pkgList) {
-            if (p.isInstalled) {
-                installedCandidate = &p;
+        for (const auto *p: pkgList) {
+            if (p->isInstalled) {
+                installedCandidate = p;
                 break;
             }
         }
@@ -82,20 +82,20 @@ namespace RepositoryTabUtils {
         const PkgInfo *bestAvailable = nullptr;
         int maxPriority = -1;
 
-        for (const auto &p: pkgList) {
-            if (p.isInstalled)
+        for (const auto *p: pkgList) {
+            if (p->isInstalled)
                 continue;
 
-            if (p.repoName.contains(SLACK_TESTING) && !attachTesting && !rowIsTestingOnly)
+            if (p->repoName.contains(SLACK_TESTING) && !attachTesting && !rowIsTestingOnly)
                 continue;
 
-            if (const int priority = repoPriority(p.repoName, attachTesting, rowIsTestingOnly);
+            if (const int priority = repoPriority(p->repoName, attachTesting, rowIsTestingOnly);
                 priority > maxPriority) {
                 maxPriority = priority;
-                bestAvailable = &p;
+                bestAvailable = p;
             } else if (priority == maxPriority && bestAvailable) {
-                if (Utils::isVersionNewer(p.version, bestAvailable->version))
-                    bestAvailable = &p;
+                if (Utils::isVersionNewer(p->version, bestAvailable->version))
+                    bestAvailable = p;
             }
         }
 

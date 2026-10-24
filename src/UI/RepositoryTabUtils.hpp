@@ -37,7 +37,7 @@ namespace RepositoryTabUtils {
 
     int repoPriority(const QString &repo, bool attachTesting, bool rowIsTestingOnly);
 
-    bool computeHasUpdate(const QList<PkgInfo> &pkgList, bool attachTesting);
+    bool computeHasUpdate(const QList<const PkgInfo*> &pkgList, bool attachTesting);
 }
 
 #endif
