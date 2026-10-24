@@ -1,6 +1,6 @@
 /**
  * @file RepositoryTab.cpp
- * @brief Interface providing a split-pane layout for categories, package lists, and others tabs.
+ * @brief Interface providing a split-pane layout for categories, package lists, and details panel.
  */
 
 #include <QFile>
@@ -13,6 +13,7 @@
 #include <Icon.hpp>
 #include <RepositoryTab.hpp>
 #include <RepositoryTabUtils.hpp>
+#include <Utils.hpp>
 
 /**
  * @brief Constructs a new Repository Tab.
@@ -128,6 +129,16 @@ RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *pa
 }
 
 /**
+ * @brief Destructor releasing internal model structures immediately.
+ */
+RepositoryTab::~RepositoryTab() {
+    packageRowIndex.clear();
+    nameRowIndex.clear();
+    pendingFiles.clear();
+    pendingFiles.squeeze();
+}
+
+/**
  * @brief Filters the package table rows based on the selected category item.
  * @param item The tree widget item that was clicked, containing the category text.
  */
@@ -157,33 +168,33 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
     auto &rowData = packageModel->rowAt(row);
 
     if (const auto &pkgList = rowData.pkgList; vIndex >= 0 && vIndex < pkgList.size()) {
-        const PkgInfo &nPkg = pkgList[vIndex];
+        const PkgInfo *nPkg = pkgList[vIndex];
         const PkgInfo *metaPkgPtr{};
         const PkgInfo *slackwarePkgPtr{};
         bool rowHasPriorityWinner = false;
 
-        for (const auto &pkg: pkgList) {
-            if (!pkg.isInstalled && !metaPkgPtr)
-                metaPkgPtr = &pkg;
-            if (!slackwarePkgPtr && pkg.repoName.compare(SLACK_OFICIAL) == 0)
-                slackwarePkgPtr = &pkg;
-            if (ruleStatuses.value({pkg.name, pkg.version, pkg.repoName}, RuleSt::Normal) == RuleSt::Prioritized)
+        for (const auto *pkg: pkgList) {
+            if (!pkg->isInstalled && !metaPkgPtr)
+                metaPkgPtr = pkg;
+            if (!slackwarePkgPtr && pkg->repoName.compare(SLACK_OFICIAL) == 0)
+                slackwarePkgPtr = pkg;
+            if (ruleStatuses.value({pkg->name, pkg->version, pkg->repoName}, RuleSt::Normal) == RuleSt::Prioritized)
                 rowHasPriorityWinner = true;
         }
 
-        const PkgInfo &metaPkg = metaPkgPtr ? *metaPkgPtr : nPkg;
+        const PkgInfo &metaPkg = metaPkgPtr ? *metaPkgPtr : *nPkg;
         const QString categorySource = slackwarePkgPtr ? slackwarePkgPtr->category : metaPkg.category;
-        const RuleSt status = ruleStatuses.value({nPkg.name, nPkg.version, nPkg.repoName}, RuleSt::Normal);
+        const RuleSt status = ruleStatuses.value({nPkg->name, nPkg->version, nPkg->repoName}, RuleSt::Normal);
 
         PkgStatus packageState;
         if (status == RuleSt::Excluded) {
             packageState = PkgStatus::Excluded;
-        } else if (!rowData.actionSymbol.isEmpty() && nPkg.version == rowData.targetVersion) {
+        } else if (!rowData.actionSymbol.isEmpty() && nPkg->version == rowData.targetVersion) {
             if (rowData.actionSymbol == QStringLiteral("update"))
                 packageState = PkgStatus::PendingUpdate;
             else
-                packageState = nPkg.isInstalled ? PkgStatus::PendingReinstall : PkgStatus::PendingInstall;
-        } else if (nPkg.isInstalled) {
+                packageState = nPkg->isInstalled ? PkgStatus::PendingReinstall : PkgStatus::PendingInstall;
+        } else if (nPkg->isInstalled) {
             packageState = PkgStatus::Installed;
         } else {
             packageState = PkgStatus::Available;
@@ -191,17 +202,18 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
 
         rowData.status = packageState;
         rowData.isPrioritized = rowHasPriorityWinner;
-        rowData.version = nPkg.version;
+        rowData.version = nPkg->version;
         rowData.description = metaPkg.description;
         rowData.category = categorySource;
-        rowData.isInstalled = nPkg.isInstalled;
-        rowData.hasUpdate = RepositoryTabUtils::computeHasUpdate(rowData.pkgList, this->property("attachTesting").toBool());
+        rowData.isInstalled = nPkg->isInstalled;
+        rowData.hasUpdate = RepositoryTabUtils::computeHasUpdate(rowData.pkgList,
+                                                                 this->property("attachTesting").toBool());
 
-        QString targetRepoName = nPkg.repoName;
-        if (nPkg.isInstalled) {
-            for (const auto &pkg: pkgList) {
-                if (!pkg.isInstalled && pkg.version == nPkg.version) {
-                    targetRepoName = pkg.repoName;
+        QString targetRepoName = nPkg->repoName;
+        if (nPkg->isInstalled) {
+            for (const auto *pkg: pkgList) {
+                if (!pkg->isInstalled && pkg->version == nPkg->version) {
+                    targetRepoName = pkg->repoName;
                     break;
                 }
             }
@@ -209,7 +221,7 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
         rowData.repoName = targetRepoName;
 
         packageModel->notifyRowChanged(row);
-        Debug::msg("Package version changed to", "RepositoryTab", {DColor::Cyan, nPkg.version});
+        Debug::msg("Package version changed to", "RepositoryTab", {DColor::Cyan, nPkg->version});
     }
 
     const QModelIndex proxyTarget0 = proxyModel->mapFromSource(packageModel->index(row, 0));
@@ -397,6 +409,8 @@ void RepositoryTab::onSelectionChanged(const QItemSelection &selected, const QIt
     fileList->clear();
 
     if (isInstalled) {
+        pendingFiles.clear();
+        pendingFiles.squeeze();
         pendingFiles = Packages::listPackageFiles(name, version);
 
         if (!pendingFiles.isEmpty()) {
@@ -468,10 +482,10 @@ void RepositoryTab::appendDependencyField(QTextCursor cursor, const QString &lab
 }
 
 /**
- * @brief Fills the package model with the provided package list.
- * @param pkgs List containing the package information to display.
+ * @brief Fills the package model with the provided package pointer list without allocating duplicate strings.
+ * @param pkgs List containing pointers to package information stored in the main package catalog.
  */
-void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
+void RepositoryTab::fillTable(const QList<const PkgInfo *> &pkgs) {
     proxyModel->setSourceModel(nullptr);
     packageTable->block();
 
@@ -484,16 +498,16 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
     const QString curRepo = this->property("repoName").toString();
     const bool isMultiple = curRepo == ALL_REPOSITORIES;
 
-    auto statusOf = [&](const PkgInfo &p) -> RuleSt {
-        return ruleStatuses.value({p.name, p.version, p.repoName}, RuleSt::Normal);
+    auto statusOf = [&](const PkgInfo *p) -> RuleSt {
+        return ruleStatuses.value({p->name, p->version, p->repoName}, RuleSt::Normal);
     };
 
     QHash<QString, QList<const PkgInfo *> > groupedPackages;
     groupedPackages.reserve(pkgs.size());
 
-    for (const auto &pkg: pkgs) {
-        const QString key = isMultiple ? pkg.repoName + u'|' + pkg.name : pkg.name;
-        groupedPackages[key].append(&pkg);
+    for (const auto *pkg: pkgs) {
+        const QString key = isMultiple ? pkg->repoName + u'|' + pkg->name : pkg->name;
+        groupedPackages[key].append(pkg);
     }
 
     QSet<QString> categories;
@@ -505,10 +519,13 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
         if (pkgVersions.isEmpty())
             continue;
 
-        const PkgInfo *installedPkg{}, *metaPkg{}, *prioritizedPkg{}, *slackwarePkg{};
+        const PkgInfo *installedPkg{};
+        const PkgInfo *metaPkg{};
+        const PkgInfo *prioritizedPkg{};
+        const PkgInfo *slackwarePkg{};
 
         for (const auto *pkg: pkgVersions) {
-            if (!prioritizedPkg && statusOf(*pkg) == RuleSt::Prioritized)
+            if (!prioritizedPkg && statusOf(pkg) == RuleSt::Prioritized)
                 prioritizedPkg = pkg;
             if (pkg->isInstalled && !installedPkg)
                 installedPkg = pkg;
@@ -529,7 +546,7 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
                                         : *pkgVersions.first();
         const QString categorySource = slackwarePkg ? slackwarePkg->category : mPkg.category;
 
-        const RuleSt dStatus = statusOf(dPkg);
+        const RuleSt dStatus = statusOf(&dPkg);
         const bool isExcluded = dStatus == RuleSt::Excluded;
         const bool rowHasPriorityWinner = prioritizedPkg != nullptr;
 
@@ -556,11 +573,7 @@ void RepositoryTab::fillTable(const QList<PkgInfo> &pkgs) {
             }
         }
         row.repoName = initialRepo;
-
-        row.pkgList.reserve(pkgVersions.size());
-        for (const auto *v: pkgVersions)
-            row.pkgList.append(*v);
-
+        row.pkgList = pkgVersions;
         row.hasUpdate = RepositoryTabUtils::computeHasUpdate(row.pkgList, attachTestingEnabled);
 
         rows.append(std::move(row));
@@ -618,15 +631,15 @@ int RepositoryTab::getRepoPriority(const QString &repo, const bool rowIsTestingO
 /**
  * @brief Resolves candidate package records for installation or upgrade evaluation.
  * @param pkg Name of the target package to resolve.
- * @param fallback List of fallback package candidates used when primary resolution yields no match.
+ * @param fallback List of fallback package pointers used when primary resolution yields no match.
  * @param testing Flag indicating whether testing repository candidates should be considered.
- * @return List of candidate PkgInfo structures prioritized for installation or update.
+ * @return List of candidate PkgInfo pointers prioritized for installation or update.
  */
-QList<PkgInfo> RepositoryTab::resolveCand(const QString &pkg, const QList<PkgInfo> &fallback,
-                                          const bool testing) const {
+QList<const PkgInfo *> RepositoryTab::resolveCand(const QString &pkg, const QList<const PkgInfo *> &fallback,
+                                                  const bool testing) const {
     bool rowIsHierarchy = false;
-    for (const auto &pkgName: fallback) {
-        if (RepositoryTabUtils::isHierarchyRepo(pkgName.repoName)) {
+    for (const auto *pkgPtr: fallback) {
+        if (RepositoryTabUtils::isHierarchyRepo(pkgPtr->repoName)) {
             rowIsHierarchy = true;
             break;
         }
@@ -644,21 +657,21 @@ QList<PkgInfo> RepositoryTab::resolveCand(const QString &pkg, const QList<PkgInf
 
     const QList<const PkgInfo *> &global = it.value();
 
-    QList<PkgInfo> hierarchyOnly;
+    QList<const PkgInfo *> hierarchyOnly;
     hierarchyOnly.reserve(global.size());
     for (const auto *pkgPtr: global) {
         if (RepositoryTabUtils::isHierarchyRepo(pkgPtr->repoName))
-            hierarchyOnly.append(*pkgPtr);
+            hierarchyOnly.append(pkgPtr);
     }
 
     if (this->property("attachTesting").toBool() || testing)
         return hierarchyOnly;
 
-    QList<PkgInfo> filtered;
+    QList<const PkgInfo *> filtered;
     filtered.reserve(hierarchyOnly.size());
-    for (const auto &pkgName: hierarchyOnly) {
-        if (!pkgName.repoName.contains(SLACK_TESTING))
-            filtered.append(pkgName);
+    for (const auto *pkgPtr: hierarchyOnly) {
+        if (!pkgPtr->repoName.contains(SLACK_TESTING))
+            filtered.append(pkgPtr);
     }
     return filtered;
 }
@@ -701,14 +714,15 @@ PendingPkg RepositoryTab::createPendingPackage(const QString &pkg, const QString
 /**
  * @brief Resolves the best available update candidate for a given package among repository entries.
  * @param pkg Name of the package to resolve.
- * @param list List of candidate PkgInfo records associated with the package.
+ * @param list List of candidate PkgInfo pointers associated with the package.
  * @param testing Flag indicating whether testing repository candidates are eligible.
  * @return PendingPkg structure representing the optimal update target.
  */
-PendingPkg RepositoryTab::resolveBestUpdate(const QString &pkg, const QList<PkgInfo> &list, const bool testing) const {
+PendingPkg RepositoryTab::resolveBestUpdate(const QString &pkg, const QList<const PkgInfo *> &list,
+                                            const bool testing) const {
     bool rowIsTestingOnly = !list.isEmpty();
-    for (const auto &p: list) {
-        if (!p.repoName.contains(SLACK_TESTING)) {
+    for (const auto *p: list) {
+        if (!p->repoName.contains(SLACK_TESTING)) {
             rowIsTestingOnly = false;
             break;
         }
@@ -717,12 +731,12 @@ PendingPkg RepositoryTab::resolveBestUpdate(const QString &pkg, const QList<PkgI
     if (rowIsTestingOnly && !testing && !this->property("attachTesting").toBool())
         return PendingPkg{};
 
-    const QList<PkgInfo> candidates = resolveCand(pkg, list, rowIsTestingOnly);
+    const QList<const PkgInfo *> candidates = resolveCand(pkg, list, rowIsTestingOnly);
 
     const PkgInfo *installedCandidate = nullptr;
-    for (const auto &pkgName: candidates) {
-        if (pkgName.isInstalled) {
-            installedCandidate = &pkgName;
+    for (const auto *pkgPtr: candidates) {
+        if (pkgPtr->isInstalled) {
+            installedCandidate = pkgPtr;
             break;
         }
     }
@@ -751,14 +765,14 @@ PendingPkg RepositoryTab::resolveBestUpdate(const QString &pkg, const QList<PkgI
     const PkgInfo *bestCand = nullptr;
     int maxPriority = -1;
 
-    for (const auto &p: candidates) {
-        if (p.isInstalled || ruleStatuses.value({p.name, p.version, p.repoName},
-                                                RuleSt::Normal) == RuleSt::Excluded)
+    for (const auto *p: candidates) {
+        if (p->isInstalled || ruleStatuses.value({p->name, p->version, p->repoName},
+                                                 RuleSt::Normal) == RuleSt::Excluded)
             continue;
 
-        if (const int priority = getRepoPriority(p.repoName, rowIsTestingOnly); priority > maxPriority) {
+        if (const int priority = getRepoPriority(p->repoName, rowIsTestingOnly); priority > maxPriority) {
             maxPriority = priority;
-            bestCand = &p;
+            bestCand = p;
         }
     }
 
@@ -903,8 +917,8 @@ void RepositoryTab::executeCommand(const ActionType cmd) {
         const auto &pkgList = rowData.pkgList;
 
         bool rowIsTestingOnly = !pkgList.isEmpty();
-        for (const auto &p: pkgList) {
-            if (!p.repoName.contains(SLACK_TESTING)) {
+        for (const auto *p: pkgList) {
+            if (!p->repoName.contains(SLACK_TESTING)) {
                 rowIsTestingOnly = false;
                 break;
             }
@@ -944,10 +958,10 @@ void RepositoryTab::executeCommand(const ActionType cmd) {
         if (cmd == ActionType::Install) {
             if (isInstalled) continue;
 
-            const QList<PkgInfo> candidates = resolveCand(pkg, pkgList, rowIsTestingOnly);
+            const QList<const PkgInfo *> candidates = resolveCand(pkg, pkgList, rowIsTestingOnly);
             bool installedElsewhere = false;
-            for (const auto &pkgName: candidates) {
-                if (pkgName.isInstalled) {
+            for (const auto *pkgPtr: candidates) {
+                if (pkgPtr->isInstalled) {
                     installedElsewhere = true;
                     break;
                 }
@@ -958,12 +972,12 @@ void RepositoryTab::executeCommand(const ActionType cmd) {
             const PkgInfo *bestCandidate = nullptr;
             int maxPriority = -1;
 
-            for (const auto &pkgName: candidates) {
-                if (!pkgName.isInstalled) {
-                    if (const int priority = getRepoPriority(pkgName.repoName, rowIsTestingOnly);
+            for (const auto *pkgPtr: candidates) {
+                if (!pkgPtr->isInstalled) {
+                    if (const int priority = getRepoPriority(pkgPtr->repoName, rowIsTestingOnly);
                         priority > maxPriority) {
                         maxPriority = priority;
-                        bestCandidate = &pkgName;
+                        bestCandidate = pkgPtr;
                     }
                 }
             }
@@ -1024,8 +1038,8 @@ void RepositoryTab::updatePackageStatusBatch(const QList<PendingPkg> &pkgs, cons
 
             const auto &pkgsInfo = rowData.pkgList;
             bool belongsToThisRow = pkgsInfo.isEmpty();
-            for (const auto &p: pkgsInfo) {
-                if (p.repoName == pkg.repoName) {
+            for (const auto *p: pkgsInfo) {
+                if (p->repoName == pkg.repoName) {
                     belongsToThisRow = true;
                     break;
                 }
@@ -1034,10 +1048,10 @@ void RepositoryTab::updatePackageStatusBatch(const QList<PendingPkg> &pkgs, cons
             if (!belongsToThisRow && isUpdateRelated) {
                 bool rowIsHierarchy = false;
                 bool rowIsTestingOnly = !pkgsInfo.isEmpty();
-                for (const auto &p: pkgsInfo) {
-                    if (RepositoryTabUtils::isHierarchyRepo(p.repoName))
+                for (const auto *p: pkgsInfo) {
+                    if (RepositoryTabUtils::isHierarchyRepo(p->repoName))
                         rowIsHierarchy = true;
-                    if (!p.repoName.contains(SLACK_TESTING))
+                    if (!p->repoName.contains(SLACK_TESTING))
                         rowIsTestingOnly = false;
                 }
 
@@ -1089,8 +1103,8 @@ void RepositoryTab::refreshTable() const {
         auto &r = packageModel->rowAt(row);
         bool rowHasPriorityWinner = false;
 
-        for (const auto &pkg: r.pkgList) {
-            if (statusOf(pkg.name, pkg.version, pkg.repoName) == RuleSt::Prioritized) {
+        for (const auto *pkg: r.pkgList) {
+            if (statusOf(pkg->name, pkg->version, pkg->repoName) == RuleSt::Prioritized) {
                 rowHasPriorityWinner = true;
                 break;
             }

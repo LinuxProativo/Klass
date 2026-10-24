@@ -67,7 +67,9 @@ class RepositoryTab : public QWidget {
 public:
     explicit RepositoryTab(QWidget *parent, bool isvisible, Packages *packagesManager);
 
-    void fillTable(const QList<PkgInfo> &pkgs);
+    ~RepositoryTab() override;
+
+    void fillTable(const QList<const PkgInfo *> &pkgs);
 
     void setMirrorMap(const QMap<QString, QString> &mMap) { mirrorMap = mMap; }
 
@@ -123,11 +125,13 @@ private:
 
     [[nodiscard]] int getRepoPriority(const QString &repo, bool rowIsTestingOnly) const;
 
-    [[nodiscard]] QList<PkgInfo> resolveCand(const QString &pkg, const QList<PkgInfo> &fallback, bool testing) const;
+    [[nodiscard]] QList<const PkgInfo *> resolveCand(const QString &pkg, const QList<const PkgInfo *> &fallback,
+                                                     bool testing) const;
 
     [[nodiscard]] PendingPkg createPendingPackage(const QString &pkg, const QString &ver, const QString &repo) const;
 
-    [[nodiscard]] PendingPkg resolveBestUpdate(const QString &pkg, const QList<PkgInfo> &list, bool testing) const;
+    [[nodiscard]] PendingPkg resolveBestUpdate(const QString &pkg, const QList<const PkgInfo *> &list,
+                                               bool testing) const;
 
     [[nodiscard]] PkgInfo findDependencyCandidate(const QString &depName, const QString &parentRepoName) const;
 
