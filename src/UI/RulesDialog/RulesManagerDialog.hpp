@@ -28,6 +28,8 @@ class RulesManagerDialog : public Dialog {
 public:
     explicit RulesManagerDialog(QWidget *parent = nullptr);
 
+    ~RulesManagerDialog() override;
+
     void setRepositories(const QStringList &repos) const;
 
     void setPriorityRepositories(const QStringList &repos) const;
