@@ -1,6 +1,6 @@
 /**
  * @file Dialog.hpp
- * @brief Header for Dialog.
+ * @brief Header for base Dialog class.
  */
 
 #ifndef DIALOG_HPP
@@ -12,7 +12,7 @@
 
 /**
  * @class Dialog
- * @brief Base class for application dialogs.
+ * @brief Base class for application dialogs with automatic memory reclamation.
  */
 class Dialog : public QDialog {
     Q_OBJECT
@@ -20,19 +20,21 @@ class Dialog : public QDialog {
 public:
     explicit Dialog(QWidget *parent = nullptr, Qt::WindowModality modality = Qt::ApplicationModal);
 
+    ~Dialog() override;
+
     void fixed() { isfixed = true; }
 
     void maximum() { this->setMaximumSize(SettingsManager::defSize()); }
 
     void minimum() { this->setMinimumSize(SettingsManager::defSize()); }
 
-private:
-    bool isfixed{false};
-
 protected:
     void changeEvent(QEvent *event) override;
 
     void showEvent(QShowEvent *event) override;
+
+private:
+    bool isfixed{false};
 };
 
 #endif
