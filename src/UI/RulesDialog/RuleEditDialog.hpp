@@ -34,6 +34,8 @@ class RuleEditDialog final : public Dialog {
 public:
     explicit RuleEditDialog(RuleMode mode, const RuleEntry &rule, const QStringList &repos, QWidget *parent = nullptr);
 
+    ~RuleEditDialog() override = default;
+
     [[nodiscard]] RuleEntry updatedRule() const { return result; }
 
 private:

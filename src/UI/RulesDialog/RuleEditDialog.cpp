@@ -19,6 +19,7 @@
  */
 RuleEditDialog::RuleEditDialog(const RuleMode mode, const RuleEntry &rule, const QStringList &repos, QWidget *parent)
     : Dialog(parent, Qt::ApplicationModal), mode(mode), result(rule) {
+    this->setAttribute(Qt::WA_DeleteOnClose, false);
     this->setWindowTitle(mode == RuleMode::Exception ? tr("Edit Exception") : tr("Edit Priority"));
     this->setMinimumWidth(450);
     this->fixed();

@@ -26,6 +26,8 @@ class RepoVerificationDialog final : public Dialog {
 public:
     explicit RepoVerificationDialog(const QString &repoName, QWidget *parent = nullptr);
 
+    ~RepoVerificationDialog() override = default;
+
     [[nodiscard]] bool verifySignature() const { return checkVerifySignature->isChecked(); }
 
     [[nodiscard]] bool verifyChecksumSignature() const { return checkVerifyChecksumSignature->isChecked(); }

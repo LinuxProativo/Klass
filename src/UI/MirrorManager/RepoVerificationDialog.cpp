@@ -12,6 +12,7 @@
  */
 RepoVerificationDialog::RepoVerificationDialog(const QString &repoName, QWidget *parent)
     : Dialog(parent, Qt::ApplicationModal), currentRepoName(repoName) {
+    this->setAttribute(Qt::WA_DeleteOnClose, false);
     this->setWindowTitle(tr("Repository Verification & Security"));
     this->setMinimumWidth(500);
     this->fixed();
