@@ -18,6 +18,8 @@ class UpdateWorker final : public QObject {
 public:
     UpdateWorker() = default;
 
+    ~UpdateWorker() override = default;
+
     void start();
 
 signals:
@@ -25,6 +27,8 @@ signals:
 
 private:
     void check();
+
+    QTimer *updateTimer{};
 };
 
 #endif
