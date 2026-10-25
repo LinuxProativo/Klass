@@ -38,7 +38,7 @@ RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *pa
     packageTable = new TableView();
     packageTable->setShowHorizontalGrid(true);
     packageTable->setModel(proxyModel);
-    packageTable->setItemDelegateForColumn(0, new CenterDelegate());
+    packageTable->setItemDelegateForColumn(0, new CenterDelegate(packageTable));
     packageTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
     connect(packageTable, &QTableView::customContextMenuRequested, this, &RepositoryTab::showContextMenu);
     connect(packageTable->selectionModel(), &QItemSelectionModel::selectionChanged, this,
