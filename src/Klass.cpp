@@ -337,11 +337,17 @@ void Klass::loadRepositoryTabs() {
 
     tabWidget->clear();
     pendingInstalls.clear();
+    pendingInstalls.squeeze();
     pendingUpdates.clear();
+    pendingUpdates.squeeze();
     pendingReinstalls.clear();
+    pendingReinstalls.squeeze();
     pendingRemoves.clear();
+    pendingRemoves.squeeze();
     globalByName.clear();
+    globalByName.squeeze();
     allPackages.clear();
+    allPackages.squeeze();
 
     const QList<RuleEntry> currentRules = RulesManager::loadRules();
     const auto &allInstalled = packagesManager->getInstalledPackages();
@@ -656,11 +662,19 @@ void Klass::handleReposRemoved(const QStringList &names) {
     helper->setupHelper(PendingAction::DisableRepo);
 }
 
+/**
+ * TODO
+ * @param branches
+ */
 void Klass::handleOfficialBranchesChanged(const Mirrors::OfficialBranches &branches) {
     pendingOfficialBranches = branches;
     helper->setupHelper(PendingAction::SetOfficialBranches);
 }
 
+/**
+ * TODO
+ * @param entry
+ */
 void Klass::handleRepoVerificationChanged(const RepoVerificationEntry &entry) {
     pendingRepoVerification = entry;
     helper->setupHelper(PendingAction::SetRepoVerification);
