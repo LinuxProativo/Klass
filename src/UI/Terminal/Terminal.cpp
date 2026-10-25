@@ -43,6 +43,13 @@ Terminal::Terminal(QWidget *parent) : Dialog(parent) {
 }
 
 /**
+ * @brief Destructor resetting terminal stream buffers and cursor state.
+ */
+Terminal::~Terminal() {
+    resetTerminal();
+}
+
+/**
  * @brief Writes output received from the backend process and ensures the cursor blink is active while data is flowing.
  * @param data Raw output data.
  */

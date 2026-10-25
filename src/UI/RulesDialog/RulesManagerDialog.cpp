@@ -126,6 +126,16 @@ RulesManagerDialog::RulesManagerDialog(QWidget *parent) : Dialog(parent, Qt::App
 }
 
 /**
+ * @brief Destructor cleaning up exception and priority standard item models.
+ */
+RulesManagerDialog::~RulesManagerDialog() {
+    if (exceptionsModel)
+        exceptionsModel->clear();
+    if (prioritiesModel)
+        prioritiesModel->clear();
+}
+
+/**
  * @brief Populates the repository filter combo box in the Exceptions tab.
  * @param repos List of repository names/identifiers.
  */

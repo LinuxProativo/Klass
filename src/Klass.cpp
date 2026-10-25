@@ -663,8 +663,8 @@ void Klass::handleReposRemoved(const QStringList &names) {
 }
 
 /**
- * TODO
- * @param branches
+ * @brief Handles changes to official secondary branches (Pasture, Testing, Extra).
+ * @param branches Struct containing the updated boolean flags for each branch.
  */
 void Klass::handleOfficialBranchesChanged(const Mirrors::OfficialBranches &branches) {
     pendingOfficialBranches = branches;
@@ -672,8 +672,8 @@ void Klass::handleOfficialBranchesChanged(const Mirrors::OfficialBranches &branc
 }
 
 /**
- * TODO
- * @param entry
+ * @brief Handles changes to signature and checksum verification rules for a repository.
+ * @param entry The verification configuration parameters for the target repository.
  */
 void Klass::handleRepoVerificationChanged(const RepoVerificationEntry &entry) {
     pendingRepoVerification = entry;

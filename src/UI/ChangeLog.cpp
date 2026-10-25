@@ -46,6 +46,14 @@ ChangeLog::ChangeLog(QWidget *parent) : Dialog(parent, Qt::WindowModal) {
 }
 
 /**
+ * @brief Destructor that clears allocated tabs and ensures text view deallocation.
+ */
+ChangeLog::~ChangeLog() {
+    if (tabs)
+        tabs->clear();
+}
+
+/**
  * @brief Triggers log retrieval and dialog configuration upon display.
  * @param event The show event triggering this action.
  */

@@ -176,6 +176,14 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
 }
 
 /**
+ * @brief Destructor explicitly deallocating administrative and persistent configuration handlers.
+ */
+SettingsDialog::~SettingsDialog() {
+    delete adminConfigManager;
+    delete settingsManager;
+}
+
+/**
  * @brief Helper to append a checkable maintenance task item to the post-installation list.
  * @param label Visual description of the maintenance action.
  * @param task The task enumeration identifier.

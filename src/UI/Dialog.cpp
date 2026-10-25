@@ -22,6 +22,13 @@ Dialog::Dialog(QWidget *parent, const Qt::WindowModality modality) : QDialog(par
 }
 
 /**
+ * @brief Virtual destructor enforcing heap reclamation via malloc_trim upon dialog destruction.
+ */
+Dialog::~Dialog() {
+    Utils::releaseFreeMemory();
+}
+
+/**
  * @brief Intercepts window state changes to prevent minimization.
  * @param event The QEvent instance.
  */

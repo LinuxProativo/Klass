@@ -15,6 +15,7 @@
  * @param parent Parent widget.
  */
 MirrorPickerDialog::MirrorPickerDialog(QWidget *parent) : QDialog(parent) {
+    this->setAttribute(Qt::WA_DeleteOnClose, false);
     this->setWindowTitle(tr("Select Mirror"));
     this->setMinimumSize(672, 378);
 
@@ -64,6 +65,14 @@ MirrorPickerDialog::MirrorPickerDialog(QWidget *parent) : QDialog(parent) {
 
     populate();
     testLatencies();
+}
+
+/**
+ * @brief Destructor releasing latency measurement models and stopping active TCP sockets.
+ */
+MirrorPickerDialog::~MirrorPickerDialog() {
+    if (model)
+        model->clear();
 }
 
 /**

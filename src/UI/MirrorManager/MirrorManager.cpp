@@ -103,6 +103,14 @@ MirrorManager::MirrorManager(QWidget *parent) : Dialog(parent) {
 }
 
 /**
+ * @brief Destructor that purges repository table models and releases associated item structures.
+ */
+MirrorManager::~MirrorManager() {
+    if (model)
+        model->clear();
+}
+
+/**
  * @brief Updates the enabled state of action buttons based on table selection.
  */
 void MirrorManager::updateSelectionButtons() const {

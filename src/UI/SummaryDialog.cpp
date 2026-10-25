@@ -52,6 +52,7 @@ namespace {
  */
 SummaryDialog::SummaryDialog(QWidget *parent) : Dialog(parent, Qt::ApplicationModal) {
     this->setWindowTitle(tr("Transaction Summary"));
+    this->setAttribute(Qt::WA_DeleteOnClose, false);
     this->minimum();
     this->fixed();
 
@@ -83,6 +84,14 @@ SummaryDialog::SummaryDialog(QWidget *parent) : Dialog(parent, Qt::ApplicationMo
 
     connect(confirmBtn, &QPushButton::clicked, this, &SummaryDialog::onConfirmClicked);
     connect(cancelBtn, &QPushButton::clicked, this, &SummaryDialog::onCancelClicked);
+}
+
+/**
+ * @brief Destructor releasing summary tree widget items and dependency graphs.
+ */
+SummaryDialog::~SummaryDialog() {
+    if (summaryTree)
+        summaryTree->clear();
 }
 
 /**

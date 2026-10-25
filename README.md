@@ -1,3 +1,4 @@
+<!--suppress HtmlRequiredAltAttribute, CheckImageSize, HtmlDeprecatedAttribute -->
 <p align="center">
   <img src="klass.png" width="280"/>
 </p>
@@ -15,24 +16,23 @@
 
 ## 🔍 Visão Geral
 
-> VERSÃO RELEASE CANDIDATE 2 - AVISOS
+> VERSÃO RELEASE CANDIDATE 3 - AVISOS
 >
-> - RC3 será focado em correções finais, economia de RAM e novos recursos.
-> - AINDA não há qualquer tentativa de autoreinstalação de modulos dkms. -> Sem previsão.
-> - AINDA não há verificações relacionadas ao uso de NVIDIA. -> Sem previsão.
-> - AINDA não há uma configuração de pós instalação para o VMWare. -> Sem previsão.
-> - EM BREVE: Rotina pós-instalação para mapear arquivos.new. -> Implementação RC3/4.
+> - RC4 será focado em otimizações de RAM e novos recursos.
+> - Não há qualquer tentativa de autoreinstalação de modulos dkms — sem previsão.
+> - Não há verificações relacionadas ao uso de NVIDIA — sem previsão.
+> - Não há uma configuração de pós-instalação para o VMWare — sem previsão.
 >
-> Ajustes já mapeados para as próximas versões estáveis:
+> Ajustes mapeados para a versão estável:
+> - EM BREVE: Rotina pós-instalação para mapear arquivos.new após upgrade. -> Implementação RC3/4.
+> - Opção de proceder com a atualização do sistema logo após o update.
 > - Opção de limpeza de cache após a instalação. -> RC3/4.
-> - Opção de usar ou não o repo testing e extra. -> Antes do Latest Release.
 > - Rollback em caso de necessidade.
-> - Download paralelo opcional. -> RC3/4 via comandos externos.
-> - Opção para setar assinatura é opcional ou obrigatória para mirrors específicas. -> Antes do Latest Release.
-> - Verificação da assinatura da lista de checksum e opção para ignorar porque nem todos os repos tem.
+> - Download paralelo opcional. -> Antes do Latest Release.
 > - Regras avançadas de controle manual.
 > - Menu para atualizar a base de dados sem abrir a interface.
-> - Opção de proceder com a atualização do sistema logo após o update.
+> - Atualização da lista de pacotes na interface, no hide/show, e via parametro --list-update.
+> - Ferramenta de migração de regras do slackpkg blacklist. 
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacote gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
@@ -58,7 +58,7 @@ repositórios individualmente se você quiser.
 ## 🪶 Filosofia
 
 Como sabemos, a principal filosofia original do Slackware é o `KISS`
-(**K**eep **I**t **S**imple, **S**tupid), que na prática se traduz no famoso estilo
+(**K**eep **I**t **S**imple, **S**tupid) que, na prática, se traduz no famoso estilo
 `DIY` (**D**o **I**t **Y**ourself), ou seja, **faça você mesmo**. A distribuição
 geralmente evita interfaces gráficas de configuração e ferramentas de automatização
 complexas, exigindo que o usuário interaja diretamente com arquivos de texto e linhas
@@ -82,7 +82,7 @@ geral dos pacotes (instalação, atualização, etc) segue a mesma lógica.
   terá nenhuma opção para tentar automatizar esse processo, pois isso exigiria um
   helper privilegiado em background desde a inicialização do sistema, além da
   dificuldade de depurar depois, qualquer possibilidade de quebra do sistema por 
-  conta de uma regra mau definida, por exemplo.
+  conta de uma regra mal definida, por exemplo.
 
 - **🔄 Atualização do Sistema**  
   A atualização do sistema vai funcionar levando em conta as atualizações de
@@ -110,7 +110,7 @@ geral dos pacotes (instalação, atualização, etc) segue a mesma lógica.
 
 - **🔝 Gerenciamento de Prioridades e Excessões**  
   Função importante e útil para adicionar algumas regras de excessões que podem ser
-  por pacote ou por categoria, também pode priorizar pacotes por repositório que é
+  por pacote ou por categoria, também pode priorizar pacotes por repositório,
   útil para priorizar um pacote de terceiro acima de um pacote do repositório oficial
   do Slackware, por exemplo, ffmpeg.
 
@@ -142,7 +142,7 @@ no `Slackware` sem dependências adicionais. Mas para um sistema minimalista, é
 garantir alguns requisitos:
 
 - **pkgtools:** Gerenciador de pacotes do Slackware. (Nem precisava pontuar).
-- **slackpkg:** É sério, por causa do acesso ao `/etc/slackpkg/mirrors`. (Duvido que
+- **slackpkg:** É sério, devido ao acesso ao `/etc/slackpkg/mirrors`. (Duvido que
 alguém seria doido de mexer nesses pacotes, mas vale o aviso).
 - **libnotify:** Suporte a notificação.
 - **gpgme:** Verificação de chave GPG e assinatura.
@@ -223,63 +223,92 @@ e fazer o download dos pacotes para a instalação:
   Onde são baixados os pacotes para a instalação ou atualização.
 
 - `/etc/klass/klass.conf`  
-  Onde ficam as configurações do gerenciador de pacotes. 
+  Onde ficam as configurações do gerenciador de pacotes.
 
+## 🛠️ Opções de Tarefas de Pós-Instalação Disponíveis
 
-## 🛠️ Opções de Pós-Instalações Disponíveis
+Ferramentas oficiais do Slackware não costumam automatizar operações de
+pós-configurações. Mas o **Klass** pode executar rotinas administrativas de forma
+totalmente automatizada após a conclusão de transações de pacotes. Essas rotinas
+garantem a integridade das bibliotecas do sistema, menus gráficos, índices de manuais,
+módulos de terceiros e carregadores de boot.
 
-Ferremantas oficiais do Slackware não costumam automatizar operações de
-pós-configurações. Mas o Klass possui configurações de pós-instalação que podem
-ser ativadas nas configurações do programa. Nesse caso, o usuário decide quais
-opções ativar para executar após as opreações de pacotes. Dentre elas:
+As opções são configuráveis na aba **Ações Administrativas** nas configurações do
+aplicativo para que o usuário decida quais opções fazem mais sentido ativar.
+
+### Manutenção Geral do Sistema
+
+Executadas sempre que pacotes são adicionados, atualizados ou removidos:
 
 1. **Atualizar cache de bibliotecas compartilhadas (`ldconfig`)**
-   - **Comando:** `/sbin/ldconfig`  
-     Atualiza as ligações simbólicas e o cache de memória do sistema para bibliotecas
-     dinâmicas (`.so`) recém-instaladas.
+    - **Comando:** `/sbin/ldconfig`  
+      Atualiza as ligações simbólicas e o cache binário (`/etc/ld.so.cache`)
+      para que o vinculador dinâmico do sistema localize imediatamente as novas
+      bibliotecas compartilhadas (`.so`).
 
 2. **Atualizar banco de dados MIME (`update-mime-database`)**
-   - **Comando:** `/usr/bin/update-mime-database /usr/share/mime`  
-     Registra e atualiza os tipos de arquivo e associações do sistema para os
-     aplicativos.
-
-3. **Atualizar banco de páginas de manual (`mandb`)**
-   - **Comando:** `/usr/bin/mandb -q`
-     Reconstrói o índice do banco de dados das páginas de manual (`man`).
+    - **Comando:** `/usr/bin/update-mime-database /usr/share/mime`  
+      Registra e padroniza as associações de tipos de arquivo (MIME types)
+      do sistema para que os gerenciadores de arquivos e aplicações
+      identifiquem novos formatos.
+    
+3. **Atualizar índice de páginas de manual (`mandb`)**
+    - **Comando:** `/usr/bin/mandb -q`  
+      Reconstrói o índice do banco de dados das páginas de manual (`man`),
+      permitindo pesquisas rápidas via terminal (como `apropos` e `whatis`).
 
 4. **Atualizar banco de dados de arquivos Desktop (`update-desktop-database`)**
-   - **Comando:** `/usr/bin/update-desktop-database -q`  
-     Atualiza o cache dos arquivos `.desktop`, garantindo que novos programas
-     apareçam corretamente no menu do ambiente gráfico.
+    - **Comando:** `/usr/bin/update-desktop-database -q`  
+      Atualiza o cache dos lançadores `.desktop`, garantindo que os novos aplicativos
+      instalados apareçam instantaneamente no menu do ambiente gráfico.
 
-5. **Atualizar cache de ícones do GTK (`gtk-update-icon-cache`)**
-   - **Comando:** `/usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor`  
-     Regenera o cache de temas de ícones para acelerar a renderização visual dos
-     aplicativos.
+5. **Atualizar cache de temas de ícones GTK (`gtk-update-icon-cache`)**
+    - **Comando:** `/usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor`  
+      Regenera o arquivo `icon-theme.cache` do tema base, otimizando o consumo de
+      memória e acelerando o carregamento visual dos ícones nas aplicações.
 
-6. **Compilar esquemas do GLib (`glib-compile-schemas`)**
-   - **Comando:** `/usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas`  
-     Compila os arquivos de esquemas XML do GSettings/GLib para o formato binário
-     usado pelos programas.
+### Manutenção Específica de Kernel
 
-7. **Atualizar carregador de inicialização GRUB (`grub-mkconfig`)**
-   - **Comando:** `/usr/sbin/grub-mkconfig -o /boot/grub/grub.cfg`  
-     Regenera o arquivo de menu do GRUB útil após instalações ou atualizações de
-     kernel.
+Disparadas automaticamente e em ordem prioritária caso a transação envolva pacotes
+de **Kernel (`kernel-*`)**:
 
-8. **Atualizar carregador de inicialização LILO (`lilo`)**
-   - **Comando:** `/sbin/lilo`  
-     Grava as novas referências de boot na MBR do disco conforme o `/etc/lilo.conf`.
+6. **Gerar initrd com proteção contra falhas (`mkinitrd`)**  
+    - **Comando:** `/usr/share/mkinitrd/mkinitrd_command_generator.sh | bash`  
+      Detecta a configuração de hardware do sistema e compila a imagem de boot em
+      RAM necessária para inicializar o kernel genérico (`generic`).
+    - **Segurança integrada:** Realiza uma cópia preventiva do `initrd.gz` antes da
+      compilação. Se o processo for bem-sucedido, o arquivo é versionado como
+      `initrd-$(uname -r).gz`, o link simbólico padrão é atualizado e a cópia
+      temporária é removido; em caso de falha, a cópia anterior é restaurada
+      automaticamente para não comprometer o boot.
 
-9. **Gerar initrd para kernel genérico (`mkinitrd`)**
-   - **Comando:** `/usr/share/mkinitrd/mkinitrd_command_generator.sh -r` ou `/sbin/mkinitrd -F`  
-     Gera automaticamente o disco inicial em RAM (`initrd`) necessário para dar boot
-     com o kernel `generic`.
+7. **Atualizar carregador de boot GRUB (`grub-mkconfig`)**
+    - **Comando:** `/usr/sbin/grub-mkconfig -o /boot/grub/grub.cfg`  
+      Detecta dinamicamente todos os kernels e sistemas operacionais instalados
+      na máquina e regrava o arquivo de configuração `/boot/grub/grub.cfg`.
 
-10. **Recompilar módulos de kernel do VirtualBox (`rc.vboxdrv setup`)**
-    - **Comando:** `/etc/rc.d/rc.vboxdrv setup` ou `/sbin/rc.vboxdrv setup`  
-      Recompila e reinstala os módulos de driver do VirtualBox contra os cabeçalhos
-      do kernel atual.
+8. **Atualizar carregador de boot LILO (`lilo`) com suporte multi-kernel**
+    - **Comando:** `/sbin/lilo` (com varredura dinâmica e teste preventivo)  
+      Varre `/boot/vmlinuz-*` e `/boot/initrd-*.gz`, gerando novas entradas no
+      `/etc/lilo.conf` para versões de kernel ainda não cadastradas
+      (com labels de até 15 caracteres). Executa um teste preventivo em memória
+      (`/sbin/lilo -t`) e, somente após confirmação de integridade, grava o
+      novo mapa na MBR do disco.
+
+9. **Atualizar carregador de boot ELILO (Sincronização UEFI multi-kernel)**
+    - **Comando:** Sincronização automatizada para `/boot/efi/EFI/Slackware/`  
+      Projeta o suporte nativo a múltiplos kernels em sistemas UEFI com ELILO:
+      - Copia kernels (`vmlinuz-*`) e initrds (`initrd-*.gz`) para o diretório EFI
+        desreferenciando links (`cp -L`), contornando a limitação de links em
+        partições FAT32.
+      - Analisa e atualiza o `/boot/efi/EFI/Slackware/elilo.conf`, criando seções
+        de boot individuais para cada versão de kernel detectada.
+
+10. **Recompilar módulos do VirtualBox (`vboxconfig` / `rcvboxdrv`)**
+    - **Comando:** `/sbin/vboxconfig` (com fallback para `/sbin/rcvboxdrv setup` ou `/etc/rc.d/rc.vboxdrv setup`)  
+      Recompila e recarrega os módulos de driver do VirtualBox
+      (`vboxdrv`, `vboxnetflt`, `vboxnetadp`) contra os cabeçalhos (`kernel-headers`)
+      do novo kernel instalado.
 
 ## 🛡️ Segurança do Helper
 
@@ -349,7 +378,7 @@ para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre 
 - **Isolamento via Namespace Abstrato (Abstract Namespace)**  
   Para eliminar riscos associados a arquivos residuais no sistema de arquivos, o
   servidor de comunicação local (`QLocalServer`) foi configurado utilizando a
-  opção `AbstractNamespaceOption` junto com `WorldAccessOption`. Isso traz duas
+  opção `AbstractNamespaceOption` junto ao `WorldAccessOption`. Isso traz duas
   grandes vantagens de segurança e resiliência:
 
     * **Inexistência de Arquivo Físico**  
@@ -393,7 +422,7 @@ Segue as implementações para o futuro:
 
 A remoção de pacotes obsoletos vai ignorar por padrão pacotes de terceiros e só
 vai agir em pacotes sem tag e tags tipo _slack*. Para quem criar os próprios pacotes,
-adicionar suas próprias tags ajudam a evitar remoções acidentais.
+adicionar as suas próprias tags ajudam a evitar remoções acidentais.
 
 > **INTEGRAÇÃO FLATPAK:**  
 > Só SSSSEEEEE eu tiver muita vontade, SSSSEEEEE eu achar que vai ser útil e vai valer
@@ -404,7 +433,7 @@ adicionar suas próprias tags ajudam a evitar remoções acidentais.
 > Sei que tem gente que usa no Slackware e não vive sem, mesmos termos acima.
 >
 > **INTEGRAÇÃO SNAP:**  
-> Eu já vi gente (pelo menos um) querendo isso no Slackware. Não vai dá não.
+> Eu já vi gente (pelo menos um) querendo isso no Slackware. Não vai dar não.
 
 ## Contrubuição
 

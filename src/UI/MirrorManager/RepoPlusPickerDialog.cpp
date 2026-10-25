@@ -13,6 +13,7 @@
  * @param parent Parent widget.
  */
 RepoPlusPickerDialog::RepoPlusPickerDialog(QWidget *parent) : QDialog(parent) {
+    this->setAttribute(Qt::WA_DeleteOnClose, false);
     this->setWindowTitle(tr("Add Repository"));
     this->setMinimumSize(672, 378);
 
@@ -41,6 +42,15 @@ RepoPlusPickerDialog::RepoPlusPickerDialog(QWidget *parent) : QDialog(parent) {
     mainLayout->addWidget(buttonBox);
 
     populate();
+}
+
+/**
+ * @brief Destructor releasing the third-party mirror selection model and caching collections.
+ */
+RepoPlusPickerDialog::~RepoPlusPickerDialog() {
+    if (model)
+        model->clear();
+    selectedEntries.clear();
 }
 
 /**
