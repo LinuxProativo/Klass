@@ -23,6 +23,23 @@ TaskManager::TaskManager(QLocalSocket *s, QObject *parent) : QObject(parent) {
     socket = s;
 }
 
+TaskManager::~TaskManager() {
+    if (notifier) {
+        notifier->setEnabled(false);
+        delete notifier;
+        notifier = nullptr;
+    }
+    if (childPid > 0) {
+        kill(childPid, SIGTERM);
+        int status = 0;
+        waitpid(childPid, &status, WNOHANG);
+    }
+    if (masterFd >= 0) {
+        close(masterFd);
+        masterFd = -1;
+    }
+}
+
 /**
  * @brief Starts a command attached to a pseudo-terminal.
  * @param cmd Executable name.
