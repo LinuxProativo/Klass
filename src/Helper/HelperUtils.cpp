@@ -148,7 +148,7 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
                 socket->write(
                     OUTPUT + QByteArray("ERROR: Missing CHECKSUMS or signature (.asc) file for mirror ")
                     + name.toUtf8() + ". Purging directory and aborting update." + SEP +
-                    QByteArray("TRANSACTION_DONE") + SEP);
+                    QByteArray("UPDATE_DONE") + SEP);
                 QDir(dbDir).removeRecursively();
                 operationCancelled = true;
                 break;
@@ -158,7 +158,7 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
             if (!verifyGpgSignature(checksumAscFile, checksumFile, name)) {
                 socket->write(OUTPUT + QByteArray("CHECKSUMS signature verification FAILED for mirror ")
                               + name.toUtf8() + ". Purging corrupted directory and aborting update." + SEP +
-                              QByteArray("TRANSACTION_DONE") + SEP);
+                              QByteArray("UPDATE_DONE") + SEP);
                 QDir(dbDir).removeRecursively();
                 operationCancelled = true;
                 break;
