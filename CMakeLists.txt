@@ -50,6 +50,7 @@ add_subdirectory("src/SingleApplication")
 include_directories(
         src
         src/Helper
+        src/Models
         src/PackageUtils
         src/Style
         src/UI
@@ -62,6 +63,7 @@ include_directories(
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
         src/*
         src/Helper/*
+        src/Models/*
         src/PackageUtils/*
         src/Style/*
         src/UI/*
