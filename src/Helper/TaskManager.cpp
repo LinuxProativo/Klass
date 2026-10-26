@@ -23,6 +23,9 @@ TaskManager::TaskManager(QLocalSocket *s, QObject *parent) : QObject(parent) {
     socket = s;
 }
 
+/**
+ * Destructor for TaskManager.
+ */
 TaskManager::~TaskManager() {
     if (notifier) {
         notifier->setEnabled(false);
