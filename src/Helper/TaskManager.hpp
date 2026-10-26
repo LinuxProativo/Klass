@@ -20,6 +20,8 @@ class TaskManager : public QObject {
 public:
     explicit TaskManager(QLocalSocket *s, QObject *parent = nullptr);
 
+    ~TaskManager() override;
+
     void startCommand(const QString &cmd, const QStringList &args);
 
     void sendInput(const QByteArray &input) const;

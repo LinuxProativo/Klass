@@ -64,7 +64,7 @@ Helper::Helper(QObject *parent) : QObject(parent) {
         }
 
         QTextStream(stdout) << "Client Connected & Authenticated";
-        auto *task = new TaskManager(clientSocket, this);
+        auto *task = new TaskManager(clientSocket, clientSocket);
 
         connect(clientSocket, &QLocalSocket::readyRead, this, [task, this] {
             for (const QByteArray data = clientSocket->readAll(); const QByteArray &rawCmd: data.split(SEP)) {
