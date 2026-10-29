@@ -39,7 +39,7 @@ DownloadResult Utils::download(const QUrl &url, const QByteArray &range, const s
         request.setRawHeader("Range", range);
 
     QEventLoop loop;
-    static QNetworkAccessManager nam;
+    QNetworkAccessManager nam;
     QNetworkReply *reply = nam.get(request);
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
 
