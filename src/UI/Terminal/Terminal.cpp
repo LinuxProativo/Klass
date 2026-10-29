@@ -12,6 +12,7 @@
  * @param parent Parent widget.
  */
 Terminal::Terminal(QWidget *parent) : Dialog(parent) {
+    this->setAttribute(Qt::WA_DeleteOnClose, false);
     this->setWindowTitle("Generic Terminal");
     this->minimum();
 
