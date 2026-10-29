@@ -159,7 +159,6 @@ private:
     QHash<PkgKey, RuleSt> ruleStatuses{};
     const QHash<QString, QList<const PkgInfo *> > *globalByName{nullptr};
     QMap<QString, QString> mirrorMap{};
-    QMultiHash<QString, int> packageRowIndex{};
     QMultiHash<QString, int> nameRowIndex{};
     QTextBlockFormat depMidFormat{}, depLastFormat{}, descFormat{}, fieldFormat{};
     QTextCharFormat boldFormat{}, normalFormat{};

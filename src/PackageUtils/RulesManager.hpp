@@ -98,7 +98,7 @@ public:
 
     static bool editRule(const RuleEntry &oldRule, const RuleEntry &newRule);
 
-    static QHash<PkgKey, RuleSt> resolveStatuses(const QList<PkgInfo> &allPackages, const QList<RuleEntry> &r);
+    static QHash<PkgKey, RuleSt> resolveStatuses(const QList<const PkgInfo *> &allPkgs, const QList<RuleEntry> &r);
 
 private:
     static bool matchesCompiledRule(const CompiledRule &cRule, const QString &pkg, const QString &ver,

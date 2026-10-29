@@ -348,6 +348,8 @@ void Klass::loadRepositoryTabs() {
     globalByName.squeeze();
     allPackages.clear();
     allPackages.squeeze();
+    orphanAndExtraPackages.clear();
+    orphanAndExtraPackages.squeeze();
 
     const QList<RuleEntry> currentRules = RulesManager::loadRules();
     const auto &allInstalled = packagesManager->getInstalledPackages();
@@ -372,15 +374,15 @@ void Klass::loadRepositoryTabs() {
         }
     }
 
-    QList<PkgInfo> allPkgs;
-    allPkgs.reserve(totalRepoPackages + allInstalled.size());
+    allPackages.reserve(totalRepoPackages + allInstalled.size());
     QSet<std::pair<QString, QString> > existingPackages;
     existingPackages.reserve(totalRepoPackages);
 
     for (const auto &[repoName, repoData]: repoMap.asKeyValueRange()) {
-        allPkgs.append(repoData.packages);
-        for (const auto &pkg: repoData.packages)
+        for (const auto &pkg: repoData.packages) {
+            allPackages.append(&pkg);
             existingPackages.insert({pkg.name, pkg.version});
+        }
     }
 
     QStringList sortedRepos = repoMap.keys();
@@ -417,9 +419,7 @@ void Klass::loadRepositoryTabs() {
         }
     }
 
-    QMap<QString, QList<PkgInfo> > extraRepoPackages;
-    QList<PkgInfo> orphanPackages;
-    orphanPackages.reserve(allInstalled.size());
+    orphanAndExtraPackages.reserve(allInstalled.size());
 
     for (const auto &inst: allInstalled) {
         if (existingPackages.contains({inst.name, inst.version}))
@@ -444,33 +444,19 @@ void Klass::loadRepositoryTabs() {
             }
         }
 
-        if (!resolvedRepo.isEmpty()) {
-            PkgInfo matchedPkg = inst;
-            matchedPkg.repoName = resolvedRepo;
-            extraRepoPackages[resolvedRepo].append(matchedPkg);
-        } else {
-            PkgInfo orphanPkg = inst;
-            orphanPkg.repoName = SLACK_OTHERS;
-            orphanPackages.append(orphanPkg);
-        }
+        PkgInfo extraPkg = inst;
+        extraPkg.repoName = !resolvedRepo.isEmpty() ? resolvedRepo : SLACK_OTHERS;
+        orphanAndExtraPackages.append(std::move(extraPkg));
     }
 
-    for (const auto &pkgsList: std::as_const(extraRepoPackages))
-        allPkgs.append(pkgsList);
-    allPkgs.append(orphanPackages);
-
-    allPackages = std::move(allPkgs);
+    for (const auto &pkg: orphanAndExtraPackages)
+        allPackages.append(&pkg);
 
     globalByName.reserve(allPackages.size());
-    for (const auto &pkg: allPackages)
-        globalByName[pkg.name].append(&pkg);
+    for (const auto *pkg: allPackages)
+        globalByName[pkg->name].append(pkg);
 
     const QHash<PkgKey, RuleSt> ruleStatuses = RulesManager::resolveStatuses(allPackages, currentRules);
-
-    QList<const PkgInfo *> allPkgPointers;
-    allPkgPointers.reserve(allPackages.size());
-    for (const auto &pkg: allPackages)
-        allPkgPointers.append(&pkg);
 
     auto *allTab = new RepositoryTab(tabWidget, false, packagesManager);
     allTab->setProperty("repoName", ALL_REPOSITORIES);
@@ -478,7 +464,7 @@ void Klass::loadRepositoryTabs() {
     allTab->setMirrorMap(mMap);
     allTab->setRuleStatuses(ruleStatuses);
     allTab->setGlobalPackages(&globalByName);
-    allTab->fillTable(allPkgPointers);
+    allTab->fillTable(allPackages);
     connectTabSignals(allTab);
     tabWidget->addTab(allTab, tr("All Packages"));
 
@@ -489,7 +475,7 @@ void Klass::loadRepositoryTabs() {
         QList<const PkgInfo *> repoPointers;
         repoPointers.reserve(2000);
 
-        for (const auto *p: allPkgPointers) {
+        for (const auto *p: allPackages) {
             if (p->repoName == repoName || (repoName == SLACK_OFICIAL && mergedIntoSlackware.contains(p->repoName)))
                 repoPointers.append(p);
         }
@@ -510,7 +496,7 @@ void Klass::loadRepositoryTabs() {
     }
 
     QList<const PkgInfo *> orphanPointers;
-    for (const auto *p: allPkgPointers) {
+    for (const auto *p: allPackages) {
         if (p->repoName == SLACK_OTHERS)
             orphanPointers.append(p);
     }

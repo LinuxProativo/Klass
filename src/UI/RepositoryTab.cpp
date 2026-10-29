@@ -132,7 +132,7 @@ RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *pa
  * @brief Destructor releasing internal model structures immediately.
  */
 RepositoryTab::~RepositoryTab() {
-    packageRowIndex.clear();
+    currentLoadSignature.clear();
     nameRowIndex.clear();
     pendingFiles.clear();
     pendingFiles.squeeze();
@@ -243,6 +243,7 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
  * @brief Appends pending package files to the tree view in asynchronous chunks.
  */
 void RepositoryTab::appendFileBatch() {
+    if (currentLoadSignature.isEmpty()) return;
     const QString localSignature = currentLoadSignature;
     constexpr int BatchSize = 500;
     Debug::msg("Processing file batch for signature", "RepositoryTab", {DColor::Blue, localSignature});
@@ -604,17 +605,14 @@ void RepositoryTab::fillTable(const QList<const PkgInfo *> &pkgs) {
  * @brief Rebuilds the fast O(1) lookup indices for row positions.
  */
 void RepositoryTab::rebuildPackageRowIndex() {
-    packageRowIndex.clear();
     nameRowIndex.clear();
 
     const int count = packageModel->rowCount();
-    packageRowIndex.reserve(count);
     nameRowIndex.reserve(count);
 
     for (int row = 0; row < count; ++row) {
         const auto &rowData = packageModel->rowAt(row);
         nameRowIndex.insert(rowData.name, row);
-        packageRowIndex.insert(rowData.name + u'|' + rowData.version, row);
     }
 }
 
@@ -1023,12 +1021,7 @@ void RepositoryTab::updatePackageStatusBatch(const QList<PendingPkg> &pkgs, cons
     packageTable->block();
 
     for (const auto &pkg: pkgs) {
-        QList<int> candidateRows = packageRowIndex.values(pkg.name + u'|' + pkg.version);
-
-        if (candidateRows.isEmpty())
-            candidateRows = nameRowIndex.values(pkg.name);
-
-        for (const int row: candidateRows) {
+        for (const auto candidateRows = nameRowIndex.values(pkg.name); const int row: candidateRows) {
             if (row < 0 || row >= packageModel->rowCount())
                 continue;
 

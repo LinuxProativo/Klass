@@ -132,7 +132,8 @@ private:
 
     QHash<QString, QList<const PkgInfo *> > globalByName;
     QList<PendingPkg> pendingInstalls{}, pendingReinstalls{}, pendingRemoves{}, pendingUpdates{};
-    QList<PkgInfo> allPackages{};
+    QList<PkgInfo> orphanAndExtraPackages{};
+    QList<const PkgInfo *> allPackages{};
     QList<Mirrors::MirrorPlusEntry> pendingRepoEnable{};
     QList<RuleEntry> pendingRules{};
     QMap<QString, QString> mirrorMap{};

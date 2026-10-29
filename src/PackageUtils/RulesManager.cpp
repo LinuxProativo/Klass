@@ -144,10 +144,13 @@ bool RulesManager::editRule(const RuleEntry &oldRule, const RuleEntry &newRule) 
 
 /**
  * @brief Resolves exception and priority rules across the full cross-repository package universe at once.
+ * @param allPkgs List of pointers to package metadata structures across all loaded repositories.
+ * @param r List of user-defined exception and priority rules to evaluate.
+ * @return A QHash mapping each composite package key (PkgKey) to its resolved RuleSt state.
  */
-QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPackages, const QList<RuleEntry> &r) {
+QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<const PkgInfo *> &allPkgs, const QList<RuleEntry> &r) {
     QHash<PkgKey, RuleSt> result;
-    result.reserve(allPackages.size());
+    result.reserve(allPkgs.size());
 
     QList<CompiledRule> compiledRules;
     compiledRules.reserve(r.size());
@@ -161,27 +164,27 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPac
         compiledRules.append(cRule);
     }
 
-    for (const auto &pkg: allPackages)
-        result.insert({pkg.name, pkg.version, pkg.repoName}, RuleSt::Normal);
+    for (const auto *pkg: allPkgs)
+        result.insert({pkg->name, pkg->version, pkg->repoName}, RuleSt::Normal);
 
     QSet<QString> excludedGlobalNames;
     for (const CompiledRule &cRule: compiledRules) {
         if (cRule.entry.type != EXCEPT || !cRule.isPackageScope || !cRule.isAllRepo)
             continue;
 
-        for (const auto &pkg: allPackages) {
-            if (matchesCompiledRule(cRule, pkg.name, pkg.version, pkg.category, pkg.repoName))
-                excludedGlobalNames.insert(pkg.name);
+        for (const auto *pkg: allPkgs) {
+            if (matchesCompiledRule(cRule, pkg->name, pkg->version, pkg->category, pkg->repoName))
+                excludedGlobalNames.insert(pkg->name);
         }
     }
 
-    for (const auto &pkg: allPackages) {
-        bool isExcluded = excludedGlobalNames.contains(pkg.name);
+    for (const auto *pkg: allPkgs) {
+        bool isExcluded = excludedGlobalNames.contains(pkg->name);
 
         if (!isExcluded) {
             for (const CompiledRule &cRule: compiledRules) {
                 if (cRule.entry.type == EXCEPT &&
-                    matchesCompiledRule(cRule, pkg.name, pkg.version, pkg.category, pkg.repoName)) {
+                    matchesCompiledRule(cRule, pkg->name, pkg->version, pkg->category, pkg->repoName)) {
                     isExcluded = true;
                     break;
                 }
@@ -189,13 +192,13 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<PkgInfo> &allPac
         }
 
         if (isExcluded)
-            result[{pkg.name, pkg.version, pkg.repoName}] = RuleSt::Excluded;
+            result[{pkg->name, pkg->version, pkg->repoName}] = RuleSt::Excluded;
     }
 
     QHash<QString, QList<const PkgInfo *> > byName;
-    byName.reserve(allPackages.size());
-    for (const auto &pkg: allPackages)
-        byName[pkg.name].append(&pkg);
+    byName.reserve(allPkgs.size());
+    for (const auto *pkg: allPkgs)
+        byName[pkg->name].append(pkg);
 
     for (auto it = byName.constBegin(); it != byName.constEnd(); ++it) {
         const QList<const PkgInfo *> &instances = it.value();
