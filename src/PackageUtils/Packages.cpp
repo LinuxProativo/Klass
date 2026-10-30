@@ -76,15 +76,11 @@ QHash<QString, ChecksumEntry> Packages::parseRepoChecksums(const QString &repoPa
         return {};
 
     QHash<QString, ChecksumEntry> result;
-    result.reserve(15000);
+    result.reserve(4000);
 
     for (const auto lines = qTokenize(content, u'\n'); QStringView line: lines) {
         QStringView trimmed = line.trimmed();
-        if (trimmed.size() < 35)
-            continue;
-
-        const QStringView md5View = trimmed.left(32);
-        if (trimmed.at(32) != u' ')
+        if (trimmed.size() < 35 || trimmed.at(32) != u' ')
             continue;
 
         qsizetype pathStart = 33;
@@ -98,12 +94,20 @@ QHash<QString, ChecksumEntry> Packages::parseRepoChecksums(const QString &repoPa
         if (pathView.startsWith(QLatin1String("./")))
             pathView = pathView.mid(2);
 
+        const bool isPkg = pathView.endsWith(u".txz") || pathView.endsWith(u".tgz") ||
+                           pathView.endsWith(u".tbz") || pathView.endsWith(u".tlz");
+        const bool isAsc = pathView.endsWith(u".asc");
+
+        if (!isPkg && !isAsc)
+            continue;
+
         const int lastSlash = static_cast<int>(pathView.lastIndexOf(u'/'));
         const QStringView keyView = lastSlash != -1 ? pathView.mid(lastSlash + 1) : pathView;
 
-        result.insert(keyView.toString(), {md5View.toString(), pathView.toString()});
+        result.insert(keyView.toString(), {trimmed.left(32).toString(), pathView.toString()});
     }
 
+    result.squeeze();
     return result;
 }
 
