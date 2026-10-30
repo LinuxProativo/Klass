@@ -20,13 +20,15 @@
 #endif
 
 /**
- * @brief Synchronously downloads data from a specified URL with Wget-like behavior.
+ * @brief Synchronously downloads data from a specified URL.
  * @param url The target endpoint to fetch.
+ * @param destinationPath Optional filesystem destination path to write streamed data directly.
  * @param range Optional HTTP Range header (e.g., "bytes=0-255").
  * @param cancelCheck Optional callback executed periodically to query whether to abort the operation.
- * @return DownloadResult Containing execution status, HTTP status code, raw data payload, and network errors.
+ * @return DownloadResult Containing execution status, HTTP status code, on-the-fly MD5, and payload (if in-memory).
  */
-DownloadResult Utils::download(const QUrl &url, const QByteArray &range, const std::function<bool()> &cancelCheck) {
+DownloadResult Utils::download(const QUrl &url, const QString &destinationPath,
+                               const QByteArray &range, const std::function<bool()> &cancelCheck) {
     DownloadResult result;
     QNetworkRequest request(url);
     request.setMaximumRedirectsAllowed(20);
@@ -38,9 +40,36 @@ DownloadResult Utils::download(const QUrl &url, const QByteArray &range, const s
     if (!range.isEmpty())
         request.setRawHeader("Range", range);
 
+    const bool toFile = !destinationPath.isEmpty();
+    const QString tempPath = destinationPath + QStringLiteral(".part");
+    QFile file;
+    QCryptographicHash md5(QCryptographicHash::Md5);
+
+    if (toFile) {
+        const QFileInfo fileInfo(destinationPath);
+        if (const QDir dir = fileInfo.dir(); !dir.exists())
+            dir.mkpath(QStringLiteral("."));
+
+        file.setFileName(tempPath);
+        if (!file.open(QIODevice::WriteOnly)) {
+            result.success = false;
+            return result;
+        }
+    }
+
     QEventLoop loop;
     QNetworkAccessManager nam;
     QNetworkReply *reply = nam.get(request);
+
+    QObject::connect(reply, &QNetworkReply::readyRead, [&] {
+        if (toFile) {
+            if (const QByteArray chunk = reply->readAll(); !chunk.isEmpty()) {
+                file.write(chunk);
+                md5.addData(chunk);
+            }
+        }
+    });
+
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
 
     QTimer timer;
@@ -60,11 +89,31 @@ DownloadResult Utils::download(const QUrl &url, const QByteArray &range, const s
     result.statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     result.error = reply->error();
 
+    if (toFile) {
+        if (reply->bytesAvailable() > 0) {
+            const QByteArray remaining = reply->readAll();
+            file.write(remaining);
+            md5.addData(remaining);
+        }
+        file.close();
+    }
+
     if (result.error == QNetworkReply::NoError && result.statusCode >= 200 && result.statusCode < 300) {
         result.success = true;
-        result.data = reply->readAll();
+        if (toFile) {
+            result.computedMd5 = QString::fromLatin1(md5.result().toHex());
+            QFile::remove(destinationPath);
+            if (!file.rename(destinationPath)) {
+                result.success = false;
+                QFile::remove(tempPath);
+            }
+        } else {
+            result.data = reply->readAll();
+        }
     } else {
         result.success = false;
+        if (toFile)
+            QFile::remove(tempPath);
     }
 
     reply->deleteLater();

@@ -24,7 +24,8 @@ struct PendingPkg;
 struct DownloadResult {
     bool success{false};
     int statusCode{0};
-    QByteArray data;
+    QByteArray data{};
+    QString computedMd5{};
     QNetworkReply::NetworkError error{QNetworkReply::NoError};
 };
 
@@ -34,8 +35,8 @@ struct DownloadResult {
  */
 class Utils {
 public:
-    static DownloadResult download(const QUrl &url, const QByteArray &range = {},
-                                   const std::function<bool()> &cancelCheck = nullptr);
+    static DownloadResult download(const QUrl &url, const QString &destinationPath = {},
+                                   const QByteArray &range = {}, const std::function<bool()> &cancelCheck = nullptr);
 
     static QString normalizeSpaces(QStringView raw);
 
