@@ -62,9 +62,8 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
         (void) QDir().mkpath(KLASS_DATABASE + name);
         socket->write(OUTPUT + QByteArray("\nUpdating Mirror ") + name.toUtf8() + " : " + url.toUtf8() + SEP);
 
-        const bool isOfficialRepo = (name == SLACK_OFICIAL || name == SLACK_PATCHES ||
-                                     name == SLACK_EXTRA || name == SLACK_TESTING ||
-                                     name == SLACK_PASTURE);
+        const bool isOfficialRepo = name == SLACK_OFICIAL || name == SLACK_PATCHES || name == SLACK_EXTRA ||
+                                    name == SLACK_TESTING || name == SLACK_PASTURE;
 
         for (const QString &fileName: filesToDownload) {
             if (socket->readAll().contains("CANCEL_OPERATION")) // Só por garantia mesmo
@@ -87,35 +86,26 @@ void HelperUtils::performUpdate(QLocalSocket *socket) {
             } else
                 targets << fileName;
 
-            bool success = false;
-            for (QString &targetFile: targets) {
+            for (const QString &targetFile: targets) {
                 const QString targetUrl = url + (url.endsWith('/') ? "" : "/") + targetFile;
-                const auto res = Utils::download(QUrl(targetUrl), {}, [this, socket] {
+                const auto saveName = fileName.startsWith("ChangeLog") ? QStringLiteral("ChangeLog.txt") : targetFile;
+                const QString savePath = KLASS_DATABASE + name + "/" + saveName;
+
+                const auto res = Utils::download(QUrl(targetUrl), savePath, {}, [this, socket] {
                     return checkSocketCancellation(socket, operationCancelled);
                 });
 
-                if (operationCancelled) break;
+                if (operationCancelled) {
+                    QFile::remove(savePath);
+                    break;
+                }
 
                 if (res.success) {
-                    if (fileName.startsWith("ChangeLog"))
-                        targetFile = QString("ChangeLog.txt");
-
-                    const QString savePath = KLASS_DATABASE + name + "/" + targetFile;
-                    if (QFile file(savePath); file.open(QIODevice::WriteOnly)) {
-                        const qint64 bytesWritten = file.write(res.data);
-                        file.close();
-
-                        if (bytesWritten >= 0 && !operationCancelled) { // NOLINT
-                            success = true;
-                            socket->write(OUTPUT + QByteArray("    --> Download File ") + targetUrl.toUtf8() + SEP);
-                        }
-                    }
-                } else {
-                    const auto msg = "HTTP StatusCode [" + QString::number(res.statusCode) + "] Code: " +
-                                     QString::number(res.error);
-                    QTextStream(stdout) << msg;
+                    socket->write(OUTPUT + QByteArray("    --> Download File ") + targetUrl.toUtf8() + SEP);
+                    break;
                 }
-                if (success) break;
+                const auto msg = "StatusCode " + QString::number(res.statusCode) + " -> " + QString::number(res.error);
+                QTextStream(stdout) << msg;
             }
             if (operationCancelled) break;
         }
@@ -265,7 +255,7 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
 
         if (needDownloadPkg) {
             socket->write(OUTPUT + QByteArray("    --> Downloading package from: ") + pkg.url.toUtf8() + SEP);
-            const auto res = Utils::download(QUrl(pkg.url), {}, [this, socket] {
+            const auto res = Utils::download(QUrl(pkg.url), savePath, {}, [this, socket] {
                 return checkSocketCancellation(socket, operationCancelled);
             });
 
@@ -280,27 +270,15 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
             }
 
             if (checkChecksum) {
-                const auto downloadedHash =
-                        QString(QCryptographicHash::hash(res.data, QCryptographicHash::Md5).toHex());
-                if (downloadedHash != pkg.md5) {
+                if (res.computedMd5 != pkg.md5) {
                     socket->write(
                         OUTPUT + QByteArray("ERROR: Failed to verify checksum for ") + fileName.toUtf8() + ". Aborting."
                         + SEP + QByteArray("TRANSACTION_DONE") + SEP);
+                    QFile::remove(savePath);
                     operationCancelled = true;
                     break;
                 }
                 socket->write(OUTPUT + QByteArray("    --> Checksum successfully validated.") + SEP);
-            }
-
-            if (QFile f(savePath); f.open(QIODevice::WriteOnly)) {
-                f.write(res.data);
-                f.close();
-            } else {
-                socket->write(
-                    OUTPUT + QByteArray("ERROR: Failed to save package file to disk. Aborting.") + SEP + QByteArray(
-                        "TRANSACTION_DONE") + SEP);
-                operationCancelled = true;
-                break;
             }
         }
 
@@ -322,7 +300,7 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
 
             if (needDownloadAsc) {
                 socket->write(OUTPUT + QByteArray("    --> Downloading signature: ") + ascName.toUtf8() + SEP);
-                const auto ascRes = Utils::download(QUrl(pkg.ascUrl), {}, [this, socket] {
+                const auto ascRes = Utils::download(QUrl(pkg.ascUrl), ascPath, {}, [this, socket] {
                     return checkSocketCancellation(socket, operationCancelled);
                 });
 
@@ -337,26 +315,14 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
                 }
 
                 if (!pkg.ascMd5.isEmpty()) {
-                    const auto ascHash = QString(
-                        QCryptographicHash::hash(ascRes.data, QCryptographicHash::Md5).toHex());
-                    if (ascHash != pkg.ascMd5) {
+                    if (ascRes.computedMd5 != pkg.ascMd5) {
                         socket->write(
                             OUTPUT + QByteArray("ERROR: MD5 mismatch for signature file ") + ascName.toUtf8() +
                             ". Aborting." + SEP + QByteArray("TRANSACTION_DONE") + SEP);
+                        QFile::remove(ascPath);
                         operationCancelled = true;
                         break;
                     }
-                }
-
-                if (QFile f(ascPath); f.open(QIODevice::WriteOnly)) {
-                    f.write(ascRes.data);
-                    f.close();
-                } else {
-                    socket->write(
-                        OUTPUT + QByteArray("ERROR: Failed to save signature to disk. Aborting.") + SEP + QByteArray(
-                            "TRANSACTION_DONE") + SEP);
-                    operationCancelled = true;
-                    break;
                 }
             }
 
