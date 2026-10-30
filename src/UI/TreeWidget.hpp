@@ -1,22 +1,24 @@
 /**
  * @file TreeWidget.hpp
- * @brief Header for TreeWidget.
+ * @brief Header for customized QTreeView with custom branch rendering and clipboard support.
  */
 
 #ifndef TREEWIDGET_HPP
 #define TREEWIDGET_HPP
 
-#include <QTreeWidget>
+#include <QTreeView>
 
 /**
  * @class TreeWidget
- * @brief Custom QTreeWidget with custom branch rendering, context menu, and text copying support.
+ * @brief Custom QTreeView with custom branch rendering, context menu, and text copying support.
  */
-class TreeWidget : public QTreeWidget {
+class TreeWidget : public QTreeView {
     Q_OBJECT
 
 public:
     explicit TreeWidget(QWidget *parent = nullptr);
+
+    void copySelectedItemsText() const;
 
 protected:
     void drawBranches(QPainter *painter, const QRect &rect, const QModelIndex &index) const override;
@@ -25,8 +27,6 @@ protected:
 
 private:
     void showContextMenu(const QPoint &pos);
-
-    void copySelectedItemsText() const;
 };
 
 #endif

@@ -1,10 +1,11 @@
 /**
  * @file TreeWidget.cpp
- * @brief TreeWidget class with custom rendering and clipboard support.
+ * @brief Implementation of TreeWidget adapted to QTreeView with custom rendering and clipboard support.
  */
 
 #include <QApplication>
 #include <QClipboard>
+#include <QHeaderView>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QPainter>
@@ -13,10 +14,10 @@
 #include <TreeWidget.hpp>
 
 /**
- * @brief Constructs a TreeWidget instance.
+ * @brief Constructs a TreeWidget instance based on QTreeView.
  * @param parent The parent widget, or nullptr if none.
  */
-TreeWidget::TreeWidget(QWidget *parent) : QTreeWidget(parent) {
+TreeWidget::TreeWidget(QWidget *parent) : QTreeView(parent) {
     this->setAttribute(Qt::WA_StaticContents);
     this->setAttribute(Qt::WA_OpaquePaintEvent);
     this->setAttribute(Qt::WA_NoSystemBackground);
@@ -24,7 +25,9 @@ TreeWidget::TreeWidget(QWidget *parent) : QTreeWidget(parent) {
     this->setUniformRowHeights(true);
     this->setSelectionMode(ExtendedSelection);
     this->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this, &QTreeWidget::customContextMenuRequested, this, &TreeWidget::showContextMenu);
+    this->header()->setStretchLastSection(true);
+
+    connect(this, &QTreeView::customContextMenuRequested, this, &TreeWidget::showContextMenu);
 }
 
 /**
@@ -32,55 +35,58 @@ TreeWidget::TreeWidget(QWidget *parent) : QTreeWidget(parent) {
  * @param pos The local position where the menu should appear.
  */
 void TreeWidget::showContextMenu(const QPoint &pos) {
-    if (this->selectedItems().isEmpty())
+    if (!this->selectionModel() || !this->selectionModel()->hasSelection())
         return;
 
     QMenu contextMenu(this);
     QAction *copyAction = contextMenu.addAction(tr("Copy"));
     copyAction->setShortcut(QKeySequence::Copy);
     connect(copyAction, &QAction::triggered, this, &TreeWidget::copySelectedItemsText);
-    contextMenu.exec(this->mapToGlobal(pos));
+    contextMenu.exec(this->viewport()->mapToGlobal(pos));
 }
 
 /**
  * @brief Copies the selected items text to the system clipboard.
  */
 void TreeWidget::copySelectedItemsText() const {
-    const QList<QTreeWidgetItem *> items = this->selectedItems();
-    if (items.isEmpty())
+    if (!this->selectionModel())
+        return;
+
+    const QModelIndexList selectedRows = this->selectionModel()->selectedRows();
+    if (selectedRows.isEmpty())
         return;
 
     QStringList textList;
-    textList.reserve(items.size());
+    textList.reserve(selectedRows.size());
 
-    for (const QTreeWidgetItem *item: items)
-        textList.append(item->text(0));
+    for (const QModelIndex &index: selectedRows)
+        textList.append(index.data(Qt::DisplayRole).toString());
 
-    QApplication::clipboard()->setText(textList.join("\n"));
+    QApplication::clipboard()->setText(textList.join(u'\n'));
 }
 
 /**
- * @brief Draws custom branch lines for non-root items.
+ * @brief Draws custom branch lines for hierarchical tree items.
  * @param painter The painter used for rendering the branches.
  * @param rect The bounding rectangle for drawing the branches.
  * @param index The model index of the item being drawn.
  */
 void TreeWidget::drawBranches(QPainter *painter, const QRect &rect, const QModelIndex &index) const {
     const bool isRoot = !index.parent().isValid();
-    const bool hasChildren = this->model()->hasChildren(index);
+    const bool hasChildren = this->model() && this->model()->hasChildren(index);
 
     if (isRoot && hasChildren) {
-        QTreeWidget::drawBranches(painter, rect, index);
+        QTreeView::drawBranches(painter, rect, index);
         return;
     }
 
     if (!isRoot) {
-        const int indentation = this->indentation();
+        const int indent = this->indentation();
         QStyleOptionViewItem opt;
         opt.initFrom(this);
 
         if (index.parent().parent().isValid())
-            opt.rect = QRect(rect.left() + rect.width() - indentation - 10, rect.top(), indentation, rect.height());
+            opt.rect = QRect(rect.left() + rect.width() - indent - 10, rect.top(), indent, rect.height());
         else opt.rect = rect;
         opt.state = QStyle::State_Item;
 
@@ -95,8 +101,8 @@ void TreeWidget::drawBranches(QPainter *painter, const QRect &rect, const QModel
     painter->save();
     painter->setPen(QPen(this->palette().color(QPalette::Mid), 1, Qt::SolidLine));
 
-    const int indentation = this->indentation();
-    const int centerX = rect.left() + rect.width() - indentation + 8;
+    const int indent = this->indentation();
+    const int centerX = rect.left() + rect.width() - indent + 8;
     const int centerY = rect.top() + rect.height() / 2;
     const bool hasNextSibling = index.sibling(index.row() + 1, 0).isValid();
 
@@ -118,7 +124,7 @@ void TreeWidget::drawBranches(QPainter *painter, const QRect &rect, const QModel
     int depth = 1;
 
     while (ancestor.isValid() && ancestor.parent().isValid()) {
-        const int ancestorX = centerX - depth * indentation;
+        const int ancestorX = centerX - depth * indent;
         if (ancestor.sibling(ancestor.row() + 1, 0).isValid())
             painter->drawLine(ancestorX, rect.top(), ancestorX, rect.bottom());
         ancestor = ancestor.parent();
@@ -139,5 +145,5 @@ void TreeWidget::keyPressEvent(QKeyEvent *event) {
         return;
     }
 
-    QTreeWidget::keyPressEvent(event);
+    QTreeView::keyPressEvent(event);
 }
