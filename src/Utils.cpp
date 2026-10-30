@@ -24,8 +24,8 @@
  * @param url The target endpoint to fetch.
  * @param destinationPath Optional filesystem destination path to write streamed data directly.
  * @param range Optional HTTP Range header (e.g., "bytes=0-255").
- * @param cancelCheck Optional callback executed periodically to query whether to abort the operation.
- * @return DownloadResult Containing execution status, HTTP status code, on-the-fly MD5, and payload (if in-memory).
+ * @param cancelCheck Optional callback executed periodically to query whether to abort.
+ * @return DownloadResult Containing execution status, HTTP status code, on-the-fly MD5, and payload.
  */
 DownloadResult Utils::download(const QUrl &url, const QString &destinationPath,
                                const QByteArray &range, const std::function<bool()> &cancelCheck) {
@@ -44,6 +44,7 @@ DownloadResult Utils::download(const QUrl &url, const QString &destinationPath,
     const QString tempPath = destinationPath + QStringLiteral(".part");
     QFile file;
     QCryptographicHash md5(QCryptographicHash::Md5);
+    QByteArray inMemoryBuffer;
 
     if (toFile) {
         const QFileInfo fileInfo(destinationPath);
@@ -62,11 +63,14 @@ DownloadResult Utils::download(const QUrl &url, const QString &destinationPath,
     QNetworkReply *reply = nam.get(request);
 
     QObject::connect(reply, &QNetworkReply::readyRead, [&] {
+        const QByteArray chunk = reply->readAll();
+        if (chunk.isEmpty()) return;
+
         if (toFile) {
-            if (const QByteArray chunk = reply->readAll(); !chunk.isEmpty()) {
-                file.write(chunk);
-                md5.addData(chunk);
-            }
+            file.write(chunk);
+            md5.addData(chunk);
+        } else {
+            inMemoryBuffer.append(chunk);
         }
     });
 
@@ -96,6 +100,9 @@ DownloadResult Utils::download(const QUrl &url, const QString &destinationPath,
             md5.addData(remaining);
         }
         file.close();
+    } else {
+        if (reply->bytesAvailable() > 0)
+            inMemoryBuffer.append(reply->readAll());
     }
 
     if (result.error == QNetworkReply::NoError && result.statusCode >= 200 && result.statusCode < 300) {
@@ -108,7 +115,7 @@ DownloadResult Utils::download(const QUrl &url, const QString &destinationPath,
                 QFile::remove(tempPath);
             }
         } else {
-            result.data = reply->readAll();
+            result.data = inMemoryBuffer;
         }
     } else {
         result.success = false;
