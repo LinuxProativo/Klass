@@ -80,6 +80,8 @@ private:
     static bool parseMirrorLine(const QString &raw, QString &outUrl);
 
     static bool accept(const QString &url);
+
+    static QString extractTimestamp(const QString &text);
 };
 
 #endif

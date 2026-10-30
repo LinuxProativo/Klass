@@ -338,23 +338,29 @@ bool Mirrors::isUpdateRequired() {
 
         const QUrl remoteUrl(url + (url.endsWith('/') ? "" : "/") + str + "ChangeLog.txt");
 
-        const auto res = Utils::download(remoteUrl, "bytes=0-255");
-        if (!res.success) continue;
+        const auto res = Utils::download(remoteUrl, {}, "bytes=0-255");
+        if (!res.success || res.data.isEmpty())
+            continue;
 
-        const QString remoteFirstLine = QString::fromUtf8(res.data).split('\n').first().trimmed();
+        const QString remoteTimestamp = extractTimestamp(QString::fromUtf8(res.data));
+        if (remoteTimestamp.isEmpty())
+            continue;
 
         QFile local(KLASS_DATABASE + name + "/ChangeLog.txt");
         if (!local.open(QIODevice::ReadOnly | QIODevice::Text))
             return true;
 
-        const QString localFirstLine = QTextStream(&local).readLine().trimmed();
+        const QString localTimestamp = extractTimestamp(QString::fromUtf8(local.read(1024)));
         local.close();
 
-        if (remoteFirstLine != localFirstLine) {
-            Debug::msg("Update Available in " + name, "RepoManager", {"true"});
+        if (localTimestamp.isEmpty())
+            return true;
+
+        if (remoteTimestamp != localTimestamp) {
+            Debug::msg("Update Available in " + name, "RepoManager", {remoteTimestamp, DColor::Yellow});
             return true;
         }
-        Debug::msg("Update Available in " + name, "RepoManager", {"false"});
+        Debug::msg("Repository up to date: " + name, "RepoManager", {localTimestamp, DColor::Green});
     }
     return false;
 }
@@ -420,4 +426,19 @@ bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
     }
 
     return RepoManager::writeConf(lines);
+}
+
+/**
+ * @brief Extracts the first non-decorative, non-empty timestamp line from a ChangeLog buffer.
+ * @details Skips decorative frame lines (such as '+---' or '===') and empty lines to obtain the real date entry.
+ * @param text Raw ChangeLog content.
+ * @return The trimmed timestamp line, or an empty QString if none found.
+ */
+QString Mirrors::extractTimestamp(const QString &text) {
+    for (const auto lines = qTokenize(text, u'\n'); QStringView line : lines) {
+        const QStringView trimmed = line.trimmed();
+        if (!trimmed.isEmpty() && !trimmed.startsWith(u'+') && !trimmed.startsWith(u'='))
+            return trimmed.toString();
+    }
+    return {};
 }
