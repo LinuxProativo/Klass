@@ -1,6 +1,6 @@
 /**
  * @file UpdateWorker.cpp
- * @brief Implementation of asynchronous background update checking thread.
+ * @brief Implementation of the asynchronous background update checking thread.
  */
 
 #include <QTimer>
@@ -8,13 +8,13 @@
 #include <UpdateWorker.hpp>
 
 /**
- * todo
- * @param parent todo
+ * @brief Constructor for UpdateWorker.
+ * @param parent The parent QObject for memory management.
  */
 UpdateWorker::UpdateWorker(QObject *parent) : QThread(parent) {}
 
 /**
- * todo
+ * @brief Destructor for UpdateWorker.
  */
 UpdateWorker::~UpdateWorker() {
     requestInterruption();
@@ -23,7 +23,7 @@ UpdateWorker::~UpdateWorker() {
 }
 
 /**
- * @brief TODO
+ * @brief Main execution loop for the update worker thread.
  */
 void UpdateWorker::run() {
     check();
