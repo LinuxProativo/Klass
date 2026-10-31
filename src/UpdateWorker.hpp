@@ -1,34 +1,33 @@
 /**
  * @file UpdateWorker.hpp
- * @brief Header for run UpdateWorker in thread.
+ * @brief Header for asynchronous background update checking thread.
  */
 
 #ifndef UPDATEWORKER_HPP
 #define UPDATEWORKER_HPP
 
-#include <QTimer>
+#include <QThread>
 
 /**
  * @class UpdateWorker
- * @brief Periodically checks whether the package database requires an update in a dedicated thread.
+ * @brief Dedicated background thread for periodic package database update checking.
  */
-class UpdateWorker final : public QObject {
+class UpdateWorker final : public QThread {
     Q_OBJECT
 
 public:
-    UpdateWorker() = default;
+    explicit UpdateWorker(QObject *parent = nullptr);
 
-    ~UpdateWorker() override = default;
-
-    void start();
+    ~UpdateWorker() override;
 
 signals:
     void updateAvailable();
 
+protected:
+    void run() override;
+
 private:
     void check();
-
-    QTimer *updateTimer{};
 };
 
 #endif
