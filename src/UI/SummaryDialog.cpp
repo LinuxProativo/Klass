@@ -1,10 +1,10 @@
 /**
  * @file SummaryDialog.cpp
- * @brief Implementation of the TransactionSummaryDialog interface for reviewing package changes.
+ * @brief Implementation of SummaryDialog using TreeWidget with QStandardItemModel.
  */
 
 #include <QHash>
-#include <QTreeWidgetItem>
+#include <QHeaderView>
 
 #include <SummaryDialog.hpp>
 
@@ -22,8 +22,7 @@ namespace {
     }
 
     /**
-     * @brief Groups packages by repo name, preserving first-seen repo order, so each category
-     *        branch lists its repos as sub-branches instead of repeating the repo per package.
+     * @brief Groups packages by repo name, preserving first-seen repo order.
      * @param pkgs The packages to group.
      * @return Ordered list of (repoName, packages) groups.
      */
@@ -59,10 +58,12 @@ SummaryDialog::SummaryDialog(QWidget *parent) : Dialog(parent, Qt::ApplicationMo
     headerLabel = new QLabel(tr("The following package changes are ready to be processed:"), this);
     headerLabel->setWordWrap(true);
 
+    summaryModel = new QStandardItemModel(this);
     summaryTree = new TreeWidget(this);
-    summaryTree->setColumnCount(1);
+    summaryTree->setModel(summaryModel);
     summaryTree->setHeaderHidden(true);
     summaryTree->setAnimated(true);
+    summaryTree->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(headerLabel);
@@ -87,28 +88,24 @@ SummaryDialog::SummaryDialog(QWidget *parent) : Dialog(parent, Qt::ApplicationMo
 }
 
 /**
- * @brief Destructor releasing summary tree widget items and dependency graphs.
+ * @brief Destructor releasing summary model items.
  */
 SummaryDialog::~SummaryDialog() {
-    if (summaryTree)
-        summaryTree->clear();
+    if (summaryModel)
+        summaryModel->clear();
 }
 
 /**
- * @brief Rebuilds the summary tree from the current pending queues and updates the operation count.
- * @param installs Packages queued for a fresh installation.
- * @param updates Packages queued for an upgrade.
- * @param reinstalls Packages queued for a reinstall.
- * @param removes Packages queued for removal.
+ * @brief Rebuilds the summary tree from the current pending queues.
  */
 void SummaryDialog::loadTransaction(const QList<PendingPkg> &installs, const QList<PendingPkg> &updates,
-                                    const QList<PendingPkg> &reinstalls, const QList<PendingPkg> &removes) {
-    summaryTree->clear();
+                                    const QList<PendingPkg> &reinstalls, const QList<PendingPkg> &removes) const {
+    summaryModel->clear();
 
-    const int installCount = addInstallGroup(summaryTree, tr("To Install"), installs);
-    const int updateCount = addGroup(upgradeGroup, summaryTree, tr("To Upgrade"), updates);
-    const int reinstallCount = addGroup(reinstallGroup, summaryTree, tr("To Reinstall"), reinstalls);
-    const int removeCount = addGroup(removeGroup, summaryTree, tr("To Remove"), removes);
+    const int installCount = addInstallGroup(tr("To Install"), installs);
+    const int updateCount = addGroup(tr("To Upgrade"), updates);
+    const int reinstallCount = addGroup(tr("To Reinstall"), reinstalls);
+    const int removeCount = addGroup(tr("To Remove"), removes);
 
     summaryTree->expandAll();
 
@@ -118,27 +115,27 @@ void SummaryDialog::loadTransaction(const QList<PendingPkg> &installs, const QLi
 }
 
 /**
- * @brief Populates a tree widget with installation packages, resolving dependency hierarchies.
- * @param tree Target tree widget container.
- * @param title Group header title.
- * @param pkgs List of installation packages with potential dependency attributes.
- * @return Total count of added packages.
+ * @brief Populates the tree model with installation packages, resolving dependency hierarchies.
  */
-int SummaryDialog::addInstallGroup(QTreeWidget *tree, const QString &title, const QList<PendingPkg> &pkgs) {
+int SummaryDialog::addInstallGroup(const QString &title, const QList<PendingPkg> &pkgs) const {
     if (pkgs.isEmpty())
         return 0;
 
-    installGroup = new QTreeWidgetItem(tree, {title});
+    auto *groupItem = new QStandardItem(title); // NOLINT
+    summaryModel->appendRow(groupItem);
 
     for (const auto &[repoName, repoPkgs]: groupByRepo(pkgs)) {
-        auto *repoBranch = new QTreeWidgetItem(installGroup, {repoName}); // NOLINT
+        auto *repoBranch = new QStandardItem(repoName); // NOLINT
+        groupItem->appendRow(repoBranch);
 
-        QHash<QString, QTreeWidgetItem *> itemsByName;
+        QHash<QString, QStandardItem *> itemsByName;
         QList<PendingPkg> remaining;
 
         for (const auto &pkg: repoPkgs) {
             if (pkg.dependencyOf.isEmpty()) {
-                itemsByName.insert(pkg.name, new QTreeWidgetItem(repoBranch, {formatPackageLabel(pkg)}));
+                auto *pkgItem = new QStandardItem(formatPackageLabel(pkg)); // NOLINT
+                repoBranch->appendRow(pkgItem);
+                itemsByName.insert(pkg.name, pkgItem);
             } else {
                 remaining.append(pkg);
             }
@@ -150,42 +147,40 @@ int SummaryDialog::addInstallGroup(QTreeWidget *tree, const QString &title, cons
             for (int i = static_cast<int>(remaining.size()) - 1; i >= 0; --i) {
                 const PendingPkg &pkg = remaining.at(i);
                 if (auto *parentItem = itemsByName.value(pkg.dependencyOf, nullptr)) {
-                    itemsByName.insert(pkg.name, new QTreeWidgetItem(parentItem, {formatPackageLabel(pkg)}));
+                    auto *depItem = new QStandardItem(formatPackageLabel(pkg)); // NOLINT
+                    parentItem->appendRow(depItem);
+                    itemsByName.insert(pkg.name, depItem);
                     remaining.removeAt(i);
                     progress = true;
                 }
             }
         }
 
-        for (const auto &pkg: remaining)
-            new QTreeWidgetItem(repoBranch, {formatPackageLabel(pkg) + QStringLiteral(" — ") + tr("dependency")});
+        for (const auto &pkg: remaining) {
+            repoBranch->appendRow(new QStandardItem(formatPackageLabel(pkg) + QStringLiteral(" — ") + tr("dependency")));
+        }
     }
 
     return static_cast<int>(pkgs.size()); // NOLINT
 }
 
 /**
- * @brief Populates a tree widget with a package group, branching first by repo, then listing
- *        each repo's own packages underneath.
- * @param g Reference to the class member pointer that will hold the root group item.
- * @param tree Target tree widget container.
- * @param t Group header title.
- * @param p List of packages for this category.
- * @return Total count of added packages.
+ * @brief Populates the tree model with a categorized package group.
  */
-int SummaryDialog::addGroup(QTreeWidgetItem *&g, QTreeWidget *tree, const QString &t, const QList<PendingPkg> &p) {
-    if (p.isEmpty()) {
-        g = nullptr;
+int SummaryDialog::addGroup(const QString &title, const QList<PendingPkg> &pkgs) const {
+    if (pkgs.isEmpty())
         return 0;
-    }
 
-    g = new QTreeWidgetItem(tree, {t});
+    auto *groupItem = new QStandardItem(title); // NOLINT
+    summaryModel->appendRow(groupItem);
 
-    for (const auto &[repoName, repoPkgs]: groupByRepo(p)) {
-        auto *repoBranch = new QTreeWidgetItem(g, {repoName}); // NOLINT
+    for (const auto &[repoName, repoPkgs]: groupByRepo(pkgs)) {
+        auto *repoBranch = new QStandardItem(repoName); // NOLINT
+        groupItem->appendRow(repoBranch);
+
         for (const auto &pkg: repoPkgs)
-            new QTreeWidgetItem(repoBranch, {formatPackageLabel(pkg)});
+            repoBranch->appendRow(new QStandardItem(formatPackageLabel(pkg)));
     }
 
-    return static_cast<int>(p.size()); // NOLINT
+    return static_cast<int>(pkgs.size()); // NOLINT
 }

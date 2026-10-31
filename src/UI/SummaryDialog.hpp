@@ -1,6 +1,6 @@
 /**
- * @file SummaryDialog.hpp
- * @brief Header for summary of packages actions.
+* @file SummaryDialog.hpp
+ * @brief Header for summary of packages actions using TreeWidget (QTreeView based).
  */
 
 #ifndef SUMMARYDIALOG_HPP
@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QStandardItemModel>
 #include <QVBoxLayout>
 
 #include <Dialog.hpp>
@@ -28,12 +29,12 @@ public:
     ~SummaryDialog() override;
 
     void loadTransaction(const QList<PendingPkg> &installs, const QList<PendingPkg> &updates,
-                         const QList<PendingPkg> &reinstalls, const QList<PendingPkg> &removes);
+                         const QList<PendingPkg> &reinstalls, const QList<PendingPkg> &removes) const;
 
 private:
-    int addInstallGroup(QTreeWidget *tree, const QString &title, const QList<PendingPkg> &pkgs);
+    int addInstallGroup(const QString &title, const QList<PendingPkg> &pkgs) const;
 
-    static int addGroup(QTreeWidgetItem *&g, QTreeWidget *tree, const QString &t, const QList<PendingPkg> &p);
+    int addGroup(const QString &title, const QList<PendingPkg> &pkgs) const;
 
     void onConfirmClicked() { this->accept(); }
 
@@ -42,10 +43,10 @@ private:
     QHBoxLayout *buttonLayout{};
     QLabel *totalStatsLabel{}, *headerLabel{};
     QPushButton *confirmBtn{}, *cancelBtn{};
-    QTreeWidgetItem *installGroup{}, *upgradeGroup{}, *reinstallGroup{}, *removeGroup{};
     QVBoxLayout *mainLayout{};
 
     TreeWidget *summaryTree{};
+    QStandardItemModel *summaryModel{};
 };
 
 #endif
