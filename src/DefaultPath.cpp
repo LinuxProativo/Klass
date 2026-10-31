@@ -6,9 +6,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QHash>
-#include <QRegularExpression>
 
-#include <Debug.hpp>
 #include <DefaultPath.hpp>
 
 namespace {
@@ -22,8 +20,8 @@ namespace {
         PathContext() {
             dir = QCoreApplication::applicationDirPath();
             oldDir = dir;
-            static const QRegularExpression regex(R"(\/(?:.(?!\/))+$)");
-            oldDir.remove(regex);
+            if (const qsizetype idx = oldDir.lastIndexOf('/'); idx != -1)
+                oldDir.truncate(idx);
         }
     };
 
@@ -59,11 +57,9 @@ QString DefaultPath::defaultPath(const QString &str) {
         return it.value();
 
     if (auto defDir = findPath(str); QFileInfo::exists(defDir)) {
-        Debug::msg(QString("Directory for %1").arg(str), "DefaultPath", {defDir, DColor::Violet, DColor::Orange});
         ctx.cache.insert(str, defDir);
         return defDir;
     }
 
-    Debug::msg(QString("No directory defined for %1").arg(str), "DefaultPath", {DColor::LightRed});
     return {};
 }
