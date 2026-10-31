@@ -10,10 +10,11 @@
 #include <QHash>
 #include <QMultiHash>
 #include <QSplitter>
+#include <QStandardItemModel>
+#include <QStringListModel>
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QTimer>
-#include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -109,11 +110,11 @@ private:
 
     void onVersionChanged(const QModelIndex &pIndex, int vIndex);
 
-    void appendFileBatch();
+    void updateFileList();
 
     void showContextMenu(const QPoint &pos);
 
-    void onCategoryItemClicked(const QTreeWidgetItem *item) const;
+    void onCategoryClicked(const QModelIndex &index) const;
 
     void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
@@ -142,31 +143,29 @@ private:
     QAction *installAction{}, *upgradeAction{}, *reinstallAction{}, *rollbackAction{};
     QAction *removeAction{}, *lockAction{}, *priorityAct{}, *unselectAct{};
     QSplitter *splitter{};
-    PackageTableModel *packageModel{};
-    CategoryFilterProxyModel *proxyModel{};
     QTabWidget *detailsTab{};
     QTextEdit *infoText{};
-    QTreeWidgetItem *root{};
-    TreeWidget *fileList{};
+    QStandardItemModel *catModel{};
+    QStringListModel *fileModel{};
     QVBoxLayout *layout{}, *repoLayout{};
     QWidget *detailsPanel{};
 
+    CategoryFilterProxyModel *proxyModel{};
     Packages *packagesManager{};
+    PackageTableModel *packageModel{};
     TableView *packageTable{};
-    TreeWidget *catList{};
+    TreeWidget *catList{}, *fileList{};
     VersionComboBoxDelegate *versionDelegate{};
 
+    QString activeFileSignature{}, selectedPkgName{}, selectedPkgVersion{};
     QHash<PkgKey, RuleSt> ruleStatuses{};
     const QHash<QString, QList<const PkgInfo *> > *globalByName{nullptr};
     QMap<QString, QString> mirrorMap{};
     QMultiHash<QString, int> nameRowIndex{};
     QTextBlockFormat depMidFormat{}, depLastFormat{}, descFormat{}, fieldFormat{};
     QTextCharFormat boldFormat{}, normalFormat{};
-    QStringList pendingFiles{};
-    QString currentLoadSignature{};
-
-    int pendingFileIndex{0}, pendingMaxWidth{0};
     bool showCategories{false};
+    bool selectedPkgInstalled{false};
 };
 
 #endif

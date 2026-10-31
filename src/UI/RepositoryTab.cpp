@@ -25,11 +25,14 @@ RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *pa
     packagesManager(packagesManager), showCategories(isvisible) {
     this->setAttribute(Qt::WA_StaticContents);
 
-    catList = new TreeWidget();
-    catList->setHeaderLabel(tr("Categories"));
+    catModel = new QStandardItemModel(this);
+    catModel->setHorizontalHeaderLabels({tr("Categories")});
+    catList = new TreeWidget(this);
+    catList->setModel(catModel);
     catList->setMaximumWidth(300);
     catList->setVisible(isvisible);
-    connect(catList, &TreeWidget::itemClicked, this, &RepositoryTab::onCategoryItemClicked);
+    catList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    connect(catList, &TreeWidget::clicked, this, &RepositoryTab::onCategoryClicked);
 
     packageModel = new PackageTableModel(this);
     proxyModel = new CategoryFilterProxyModel(this);
@@ -98,13 +101,24 @@ RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *pa
     infoText->setReadOnly(true);
     infoText->setLineWrapMode(QTextEdit::NoWrap);
 
-    fileList = new TreeWidget();
-    fileList->setHeaderLabel(tr("File List"));
+    fileModel = new QStringListModel(this);
+    fileList = new TreeWidget(this);
+    fileList->setModel(fileModel);
+    fileList->setRootIsDecorated(false);
+    fileList->setHeaderHidden(true);
+    fileList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    fileList->header()->setStretchLastSection(false);
+    fileList->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    fileList->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
     detailsTab = new QTabWidget();
     detailsTab->addTab(infoText, tr("Info"));
     detailsTab->addTab(fileList, tr("Files"));
     detailsTab->setMinimumWidth(250);
+
+    connect(detailsTab, &QTabWidget::currentChanged, this, [this](const int index) {
+        if (index == 1) updateFileList();
+    });
 
     splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(catList);
@@ -132,22 +146,18 @@ RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *pa
  * @brief Destructor releasing internal model structures immediately.
  */
 RepositoryTab::~RepositoryTab() {
-    currentLoadSignature.clear();
     nameRowIndex.clear();
-    pendingFiles.clear();
-    pendingFiles.squeeze();
 }
 
 /**
  * @brief Filters the package table rows based on the selected category item.
- * @param item The tree widget item that was clicked, containing the category text.
+ * @param index The tree widget item that was clicked, containing the category text.
  */
-void RepositoryTab::onCategoryItemClicked(const QTreeWidgetItem *item) const {
-    if (!item) return;
-    if (item == root || item->parent() == nullptr) {
+void RepositoryTab::onCategoryClicked(const QModelIndex &index) const {
+    if (!index.isValid() || !index.parent().isValid()) {
         proxyModel->setCategoryFilter(QString{});
     } else {
-        proxyModel->setCategoryFilter(item->text(0));
+        proxyModel->setCategoryFilter(index.data(Qt::DisplayRole).toString());
     }
 }
 
@@ -240,57 +250,24 @@ void RepositoryTab::onVersionChanged(const QModelIndex &pIndex, const int vIndex
 }
 
 /**
- * @brief Appends pending package files to the tree view in asynchronous chunks.
+ * @brief Lazily loads installed files into the TreeWidget file view.
  */
-void RepositoryTab::appendFileBatch() {
-    if (currentLoadSignature.isEmpty()) return;
-    const QString localSignature = currentLoadSignature;
-    constexpr int BatchSize = 500;
-    Debug::msg("Processing file batch for signature", "RepositoryTab", {DColor::Blue, localSignature});
-
-    QList<QTreeWidgetItem *> items;
-    items.reserve(BatchSize);
-
-    const QFontMetrics metric(fileList->font());
-    const int startIdx = pendingFileIndex;
-    const int end = static_cast<int>(qMin(startIdx + BatchSize, pendingFiles.size()));
-
-    pendingFileIndex = end;
-
-    for (int i = startIdx; i < end; ++i) {
-        if (localSignature != currentLoadSignature) {
-            qDeleteAll(items);
-            return;
-        }
-
-        const QString &file = pendingFiles.at(i);
-        items.append(new QTreeWidgetItem(QStringList{file}));
-
-        if (const int size = metric.horizontalAdvance(file); size > pendingMaxWidth)
-            pendingMaxWidth = size;
-    }
-
-    if (localSignature != currentLoadSignature) {
-        qDeleteAll(items);
+void RepositoryTab::updateFileList() {
+    if (!selectedPkgInstalled || selectedPkgName.isEmpty()) {
+        fileModel->setStringList({});
+        detailsTab->setTabText(1, tr("Files"));
+        activeFileSignature.clear();
         return;
     }
 
-    fileList->addTopLevelItems(items);
-
-    if (pendingFileIndex < pendingFiles.size()) {
-        QTimer::singleShot(0, this, [this, localSignature] {
-            if (localSignature == currentLoadSignature)
-                appendFileBatch();
-        });
+    const QString signature = selectedPkgName + u'-' + selectedPkgVersion;
+    if (activeFileSignature == signature)
         return;
-    }
 
-    if (pendingMaxWidth + 10 > fileList->viewport()->width()) {
-        fileList->header()->setStretchLastSection(false);
-        fileList->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-        fileList->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    }
-    Debug::msg("Batch processing completed for signature", "RepositoryTab", {DColor::LightGreen, localSignature});
+    activeFileSignature = signature;
+    const QStringList files = Packages::listPackageFiles(selectedPkgName, selectedPkgVersion);
+    fileModel->setStringList(files);
+    detailsTab->setTabText(1, tr("Files") + QStringLiteral(" (%1)").arg(files.size()));
 }
 
 /**
@@ -402,23 +379,18 @@ void RepositoryTab::onSelectionChanged(const QItemSelection &selected, const QIt
         cursor.insertText(flatDesc);
     }
 
-    currentLoadSignature = QStringLiteral("%1|%2|%3|%4")
-            .arg(this->property("repoName").toString(), name, version, QString::number(row));
-    fileList->header()->setSectionResizeMode(QHeaderView::Interactive);
-    fileList->header()->setStretchLastSection(true);
-    fileList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    fileList->clear();
+    selectedPkgName = name;
+    selectedPkgVersion = version;
+    selectedPkgInstalled = isInstalled;
 
-    if (isInstalled) {
-        pendingFiles.clear();
-        pendingFiles.squeeze();
-        pendingFiles = Packages::listPackageFiles(name, version);
+    if (activeFileSignature != (name + u'-' + version))
+        activeFileSignature.clear();
 
-        if (!pendingFiles.isEmpty()) {
-            pendingFileIndex = 0;
-            pendingMaxWidth = 0;
-            QTimer::singleShot(0, this, &RepositoryTab::appendFileBatch);
-        }
+    if (detailsTab->currentIndex() == 1) {
+        updateFileList();
+    } else {
+        fileModel->setStringList({});
+        detailsTab->setTabText(1, tr("Files"));
     }
 }
 
@@ -491,9 +463,8 @@ void RepositoryTab::fillTable(const QList<const PkgInfo *> &pkgs) {
     packageTable->block();
 
     if (showCategories) {
-        catList->clear();
-        root = new QTreeWidgetItem(catList, QStringList(tr("Overview")));
-        root->setExpanded(true);
+        catModel->clear();
+        catModel->setHorizontalHeaderLabels({tr("Categories")});
     }
 
     const QString curRepo = this->property("repoName").toString();
@@ -579,15 +550,18 @@ void RepositoryTab::fillTable(const QList<const PkgInfo *> &pkgs) {
 
         rows.append(std::move(row));
 
-        if (showCategories)
+        if (showCategories && !categorySource.isEmpty())
             categories.insert(categorySource);
     }
 
     if (showCategories) {
+        auto *root = new QStandardItem(tr("Overview")); //NOLINT
         QStringList sortedCats = categories.values();
         sortedCats.sort();
         for (const QString &cat: sortedCats)
-            new QTreeWidgetItem(root, QStringList{cat});
+            root->appendRow(new QStandardItem(cat));
+        catModel->appendRow(root);
+        catList->expandAll();
     }
 
     packageModel->setRows(std::move(rows));
