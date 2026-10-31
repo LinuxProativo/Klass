@@ -9,7 +9,6 @@
 #include <QLocalServer>
 #include <QObject>
 #include <QStandardPaths>
-#include <QTimer>
 
 #include <HelperUtils.hpp>
 
@@ -28,8 +27,6 @@ private:
 
     QLocalServer *server{};
     QLocalSocket *clientSocket{};
-    QTimer *idleTimer{};
-
     HelperUtils *helperUtils{};
 };
 

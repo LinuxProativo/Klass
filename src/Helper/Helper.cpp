@@ -40,11 +40,6 @@ Helper::Helper(QObject *parent) : QObject(parent) {
     if (!server->listen(SOCKET_PATH))
         QTextStream(stdout) << server->errorString();
 
-    idleTimer = new QTimer(this);
-    idleTimer->setInterval(30000);
-    idleTimer->setSingleShot(true);
-    connect(idleTimer, &QTimer::timeout, qApp, &QCoreApplication::quit);
-
     connect(server, &QLocalServer::newConnection, this, [this] {
         if (clientSocket) {
             auto *socket = server->nextPendingConnection();
@@ -71,11 +66,7 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                 const QByteArray raw = rawCmd.trimmed();
                 if (raw.isEmpty()) continue;
 
-                if (raw == "IDLE") {
-                    idleTimer->start();
-                } else if (raw == "ACTIVE") {
-                    idleTimer->stop();
-                } else if (raw == "CANCEL") {
+                if (raw == "CANCEL") {
                     QTextStream(stdout) << "Cancel Process";
                     task->cancelCommand();
                 } else if (raw == "QUIT") {
