@@ -54,18 +54,29 @@ void TableView::paintEvent(QPaintEvent *event) {
         return;
 
     QPainter painter(viewport());
-
-    QColor gridColor = palette().color(QPalette::Mid);
-    gridColor.setAlpha(80);
-
+    QColor gridColor = palette().color(QPalette::Text);
+    gridColor.setAlpha(20);
     painter.setPen(gridColor);
 
-    const int rows = model()->rowCount();
     const int tableWidth = viewport()->width();
+    const int viewportHeight = viewport()->height();
+    const int totalRows = model()->rowCount();
 
-    for (int row = 0; row < rows; ++row) {
-        const int y = rowViewportPosition(row) + rowHeight(row);
-        painter.drawLine(0, y, tableWidth, y);
+    int visualRow = verticalHeader()->visualIndexAt(0);
+    if (visualRow < 0)
+        visualRow = 0;
+
+    while (visualRow < totalRows) {
+        const int logicalRow = verticalHeader()->logicalIndex(visualRow);
+        const int y = rowViewportPosition(logicalRow) + rowHeight(logicalRow) - 1;
+
+        if (y >= 0)
+            painter.drawLine(0, y, tableWidth, y);
+
+        if (y >= viewportHeight)
+            break;
+
+        ++visualRow;
     }
 }
 
