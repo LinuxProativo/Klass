@@ -1,18 +1,17 @@
 /**
  * @file SysTray.hpp
- * @brief Header for display SysTray.
+ * @brief Header for display SysTray decoupled from main window.
  */
 
 #ifndef SYSTRAY_HPP
 #define SYSTRAY_HPP
 
-#include <QLocalSocket>
+#include <QIcon>
 #include <QMenu>
 #include <QObject>
 #include <QSystemTrayIcon>
 
 #include <DefaultPath.hpp>
-#include <SettingsManager.hpp>
 
 #undef signals
 #include <libnotify/notify.h>
@@ -35,20 +34,27 @@ inline void notify_send(const char *title, const char *msg, const char *ico) {
 
 /**
  * @class SysTray
- * @brief Handles the application's presence in the system tray.
+ * @brief Handles application presence in the system tray independently of the main window.
  */
 class SysTray : public QObject {
     Q_OBJECT
 
 public:
-    explicit SysTray(QWidget *parent = {}, QLocalSocket *helperSocket = {}, SettingsManager *settingsManager = {});
+    explicit SysTray(QObject *parent = nullptr);
 
     [[nodiscard]] QSystemTrayIcon *getTray() const { return trayIcon; }
 
-    void resetIcon() const { trayIcon->setIcon(trayicon); }
-private:
-    QIcon trayicon = QIcon(DefaultPath::defaultPath("icons/tray.svg"));
+    void resetIcon() const;
 
+    void setUpdateAvailable(bool available) const;
+
+signals:
+    void openRequested();
+
+    void quitRequested();
+
+private:
+    QIcon defaultIcon = QIcon(DefaultPath::defaultPath("icons/tray.svg"));
     QSystemTrayIcon *trayIcon{};
     QMenu *trayMenu{};
 };
