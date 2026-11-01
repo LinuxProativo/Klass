@@ -52,6 +52,7 @@ include_directories(
         src/Helper
         src/Models
         src/PackageUtils
+        src/RepositoryTab
         src/Style
         src/UI
         src/UI/MirrorManager
@@ -65,6 +66,7 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
         src/Helper/*
         src/Models/*
         src/PackageUtils/*
+        src/RepositoryTab/*
         src/Style/*
         src/UI/*
         src/UI/MirrorManager/*
