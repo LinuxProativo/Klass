@@ -668,25 +668,6 @@ void Klass::handleRepoVerificationChanged(const RepoVerificationEntry &entry) {
  * @brief Cleans up databases of disabled official branches and refreshes repository tabs when the mirror manager closes.
  */
 void Klass::onMirrorManagerClosed() {
-    const auto branches = Mirrors::loadOfficialBranches();
-
-    bool needHelper = false;
-    auto checkAndClean = [&](const QString &repoName, const bool isEnabled) {
-        if (!isEnabled && QDir(KLASS_DATABASE + repoName).exists()) {
-            if (!QDir(KLASS_DATABASE + repoName).removeRecursively())
-                needHelper = true;
-        }
-    };
-
-    checkAndClean(SLACK_PASTURE, branches.pasture);
-    checkAndClean(SLACK_TESTING, branches.testing);
-    checkAndClean(SLACK_EXTRA, branches.extra);
-
-    if (needHelper) {
-        pendingOfficialBranches = branches;
-        helper->setupHelper(PendingAction::SetOfficialBranches);
-    }
-
     packagesManager->reload();
     loadRepositoryTabs();
 }
