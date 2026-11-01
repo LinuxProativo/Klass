@@ -19,8 +19,8 @@ namespace Icon {
      * @brief Maps an internal enum identifier to its filesystem name and Qt fallback style.
      */
     struct IconMapping {
-        QStringView fileName;
-        QStyle::StandardPixmap fallback;
+        QStringView fileName{};
+        QStyle::StandardPixmap fallback{};
     };
 
     /**
@@ -57,7 +57,7 @@ namespace Icon {
      * @param max The expansion size used for hover effects.
      */
     IconManager::IconManager(const int size, const int max) : num(size), maxsize(max) {
-        baseIconPath = DefaultPath().defaultPath("icons");
+        baseIconPath = DefaultPath::defaultPath("icons");
     }
 
     /**
@@ -69,10 +69,15 @@ namespace Icon {
         if (baseIconPath.isEmpty()) return {};
         const auto idx = static_cast<size_t>(iconId);
 
-        if (const QString ico = QStringLiteral("%1/%2.svg").arg(baseIconPath, iconTable[idx].fileName);
+        static std::array<QString, static_cast<size_t>(Id::Count)> pathCache{};
+        if (!pathCache[idx].isEmpty())
+            return pathCache[idx];
+
+        if (QString ico = QStringLiteral("%1/%2.svg").arg(baseIconPath, iconTable[idx].fileName);
             QFileInfo::exists(ico)) {
             Debug::msg("Select Icon", "Icon", {ico, DColor::Cyan});
-            return ico;
+            pathCache[idx] = std::move(ico);
+            return pathCache[idx];
         }
 
         return {};
@@ -98,7 +103,7 @@ namespace Icon {
         painter.fillRect(themed_pixmap.rect(), color);
         painter.end();
 
-        return QIcon(themed_pixmap);
+        return QIcon{themed_pixmap};
     }
 
     /**
@@ -111,6 +116,7 @@ namespace Icon {
         const QString ico = selectIconPath(iconId);
 
         if (ico.isEmpty()) {
+            Debug::msg("Select Default Icon", "Icon", {ico, DColor::Orange, DColor::Blue});
             const auto idx = static_cast<size_t>(iconId);
             return QApplication::style()->standardIcon(iconTable[idx].fallback);
         }
