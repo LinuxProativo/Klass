@@ -3,8 +3,8 @@
  * @brief Implementation of static helpers for the RepositoryTab.
  */
 
+#include <QVersionNumber>
 #include <RepositoryTabUtils.hpp>
-#include <Utils.hpp>
 
 namespace RepositoryTabUtils {
     /**
@@ -34,6 +34,20 @@ namespace RepositoryTabUtils {
         item->setData(static_cast<int>(status), PackageStatusRole);
         item->setIcon(StatusIcons::statusIcon(status));
         item->setText(QString{});
+    }
+
+    /**
+     * @brief Compares two version strings to determine whether the first is newer than the second.
+     * @param v1 The candidate version string.
+     * @param v2 The baseline version string.
+     * @return True if v1 is newer than v2, false otherwise.
+     */
+    bool isVersionNewer(const QString &v1, const QString &v2) {
+        const QVersionNumber ver1 = QVersionNumber::fromString(v1);
+        const QVersionNumber ver2 = QVersionNumber::fromString(v2); //NOLINT
+        if (!ver1.isNull() && !ver2.isNull())
+            return QVersionNumber::compare(ver1, ver2) > 0;
+        return v1 > v2;
     }
 
     /**
@@ -94,7 +108,7 @@ namespace RepositoryTabUtils {
                 maxPriority = priority;
                 bestAvailable = p;
             } else if (priority == maxPriority && bestAvailable) {
-                if (Utils::isVersionNewer(p->version, bestAvailable->version))
+                if (isVersionNewer(p->version, bestAvailable->version))
                     bestAvailable = p;
             }
         }
@@ -106,7 +120,7 @@ namespace RepositoryTabUtils {
 
             if (maxPriority == installedPriority) {
                 if (bestAvailable->version != installedCandidate->version &&
-                    Utils::isVersionNewer(bestAvailable->version, installedCandidate->version)) {
+                    isVersionNewer(bestAvailable->version, installedCandidate->version)) {
                     return true;
                 }
             }

@@ -30,10 +30,7 @@ namespace RepositoryTabUtils {
         return r.compare(SLACK_OFICIAL) == 0 || r.contains(SLACK_PATCHES) || r.contains(SLACK_TESTING);
     }
 
-    inline bool isOfficialRepo(const QString &r) {
-        return r == SLACK_OFICIAL || r == SLACK_PATCHES || r == SLACK_EXTRA ||
-               r == SLACK_TESTING || r == SLACK_PASTURE;
-    }
+    bool isVersionNewer(const QString &v1, const QString &v2);
 
     int repoPriority(const QString &repo, bool attachTesting, bool rowIsTestingOnly);
 
