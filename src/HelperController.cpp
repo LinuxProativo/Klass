@@ -41,6 +41,26 @@ HelperController::HelperController(Terminal *dialog, QObject *parent) : QObject(
 }
 
 /**
+ * @brief Destructor for HelperController.
+ */
+HelperController::~HelperController() {
+    if (helperSocket) {
+        if (helperSocket->state() == QLocalSocket::ConnectedState) {
+            helperSocket->write(QByteArray("QUIT") + SEP);
+            helperSocket->waitForBytesWritten(300);
+            helperSocket->disconnectFromServer();
+        }
+    }
+
+    if (proc && proc->state() == QProcess::Running) {
+        proc->terminate();
+        if (!proc->waitForFinished(500)) {
+            proc->kill();
+        }
+    }
+}
+
+/**
  * @brief Starts or connects to the helper process.
  * @param pending Pending helper action.
  */

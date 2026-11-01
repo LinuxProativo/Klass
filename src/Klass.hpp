@@ -21,7 +21,6 @@
 #include <RulesManagerDialog.hpp>
 #include <SettingsManager.hpp>
 #include <StatusBar.hpp>
-#include <SysTray.hpp>
 #include <Terminal.hpp>
 
 /**
@@ -39,6 +38,9 @@ public:
     void onUpdateAvailable();
 
     void setCheckingStatus(bool checking) const;
+
+signals:
+    void databaseUpdateFinished();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -121,13 +123,10 @@ private:
     Packages *packagesManager{};
     SettingsManager *settingsManager{};
     StatusBar *statusBar{};
-    SysTray *tray{};
     Terminal *terminalDialog{};
 
     QPointer<MirrorManager> mirrorManager{nullptr};
     QPointer<RulesManagerDialog> rulesManagerDialog{nullptr};
-
-    std::string pathIcon{DefaultPath::defaultPath("icons/available.svg").toStdString()};
     RuleEntry rule{}, edit{};
 
     QHash<QString, QList<const PkgInfo *> > globalByName;

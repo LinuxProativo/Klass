@@ -38,7 +38,6 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     connect(helper, &HelperController::transactionFinished, this, &Klass::onTransactionFinished);
 
     settingsManager = new SettingsManager(this);
-    tray = new SysTray(this, helper->socket(), settingsManager);
     packagesManager = new Packages(this);
 
     searchBar = new QLineEdit(this);
@@ -607,8 +606,7 @@ void Klass::onUpdateFinished() {
         mirrorManager->pendingUpdate(false);
 
     updateNotificationShown = false;
-    tray->resetIcon();
-    tray->getTray()->setToolTip(tr("Klass Package Manager"));
+    emit databaseUpdateFinished();
     packagesManager->reload();
     loadRepositoryTabs();
 }
@@ -864,21 +862,12 @@ void Klass::onHelperReady() {
 }
 
 /**
- * @brief Displays a desktop notification when a package database update is available.
+ * @brief Displays an indicator on the status bar when an update is available.
  */
 void Klass::onUpdateAvailable() {
-    if (updateNotificationShown || !tray) return;
-
+    if (updateNotificationShown) return;
     updateNotificationShown = true;
-    const auto title = tr("Database Update Available").toStdString();
-    const auto text = tr("A newer Slackware package database is available.").toStdString();
-
-    const auto getTray = tray->getTray();
-    getTray->setIcon(QIcon(DefaultPath::defaultPath("icons/available.svg")));
-    getTray->setToolTip(tr("Klass Package Manager - Database Updates are Available") + "!");
-
     statusBar->setStatus(StatusState::DatabaseAvailable);
-    notify_send(title.c_str(), text.c_str(), pathIcon.c_str());
 }
 
 /**
@@ -886,20 +875,10 @@ void Klass::onUpdateAvailable() {
  * @param event The QCloseEvent instance.
  */
 void Klass::closeEvent(QCloseEvent *event) {
-    if (!this->isMaximized()) // Se tiver maximizado dá zica
+    if (!this->isMaximized())
         settingsManager->windowGeometry(this->geometry());
 
-    if (tray->getTray()->isVisible()) {
-        if (helper->socket()->state() == QLocalSocket::ConnectedState) {
-            helper->setHelperShutdownRequested();
-            helper->socket()->write(QByteArray("IDLE") + SEP);
-        }
-        this->hide();
-        Utils::releaseFreeMemory();
-        event->ignore();
-    } else {
-        event->accept();
-    }
+    event->accept();
 }
 
 /**
@@ -930,13 +909,8 @@ void Klass::changeEvent(QEvent *event) {
  */
 void Klass::showEvent(QShowEvent *event) {
     if (!started) {
-        QTimer::singleShot(1, this, [this] { loadRepositoryTabs(); }); // Respiro para iniciar a interface primeiro
+        QTimer::singleShot(1, this, [this] { loadRepositoryTabs(); });
         started = true;
     }
-
-    if (helper->socket()->state() == QLocalSocket::ConnectedState)
-        helper->socket()->write(QByteArray("ACTIVE") + SEP);
-
-    helper->onHelperConnected();
     QWidget::showEvent(event);
 }

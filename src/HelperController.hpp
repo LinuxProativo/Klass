@@ -38,6 +38,8 @@ class HelperController final : public QObject {
 public:
     explicit HelperController(Terminal *dialog, QObject *parent = nullptr);
 
+    ~HelperController() override;
+
     void setupHelper(PendingAction pending);
 
     [[nodiscard]] QLocalSocket *socket() const { return helperSocket; }
@@ -45,8 +47,6 @@ public:
     [[nodiscard]] PendingAction pendingAct() const { return pendingAction; }
 
     void setPendingAct(const PendingAction act) { pendingAction = act; }
-
-    void setHelperShutdownRequested() { helperShutdownRequested = true; }
 
     void onHelperConnected();
 

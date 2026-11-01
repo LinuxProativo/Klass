@@ -19,8 +19,10 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QLibraryInfo>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QLoggingCategory>
-#include <QThread>
+#include <QProcess>
 #include <QTranslator>
 
 #include <SingleApplication>
@@ -31,9 +33,13 @@
 #include <MessageReceiver.hpp>
 #include <SettingsManager.hpp>
 #include <StatusIcons.hpp>
+#include <SysTray.hpp>
 #include <Theme.hpp>
 #include <UpdateWorker.hpp>
+#include <Utils.hpp>
 #include <Version.hpp>
+
+inline const auto TRAY_IPC_SERVER = QStringLiteral("klass_tray_ipc");
 
 int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
@@ -45,19 +51,15 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    QApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
     QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings, true);
     QApplication::setAttribute(Qt::AA_CompressHighFrequencyEvents, true);
 
     SingleApplication app(argc, argv, true, SingleApplication::Mode::SecondaryNotification);
-    const MessageReceiver msg;
-    bool autostart = false;
 
     QApplication::setApplicationName("Klass");
     QApplication::setOrganizationName(QApplication::applicationName());
     QApplication::setApplicationDisplayName(QApplication::applicationName());
     QApplication::setApplicationVersion(VERSION);
-    Theme::applyTheme();
 
     Debug::msg("Program version", "Main", {QApplication::applicationVersion()});
     Debug::msg("Program pid", "Main", {QString::number(QApplication::applicationPid())});
@@ -73,66 +75,150 @@ int main(int argc, char *argv[]) {
     parser.addVersionOption();
     parser.process(app);
 
-    if (app.isSecondary()) {
-        Debug::msg("New instance, passing the arguments", "Main");
-        if (parser.value(packageOption).isEmpty() == false) {
-            QString pkg = parser.value(packageOption);
-            Debug::msg("Processing package from secondary instance", "Main", {pkg});
-            app.sendMessage(pkg.toUtf8());
-        }
-        return 0;
-    }
-
     QTranslator qtTranslator;
     if (qtTranslator.load(QLocale::system(), QStringLiteral("qtbase"), QStringLiteral("_"),
                           QLibraryInfo::path(QLibraryInfo::TranslationsPath))) {
         SingleApplication::installTranslator(&qtTranslator);
-    }
+                          }
 
     QTranslator translator;
     const auto lang = QLocale::system().name();
-
     if (auto trFile = DefaultPath::defaultPath(QString("lang/klass_%1.qm").arg(lang));
         translator.load(trFile)) {
         Debug::msg("Loading translation", "Translator", {trFile, DColor::LightGreen});
         SingleApplication::installTranslator(&translator);
-    } else {
-        Debug::msg("Translation not available", "Translator", {DColor::LightRed});
-    }
+        } else {
+            Debug::msg("Translation not available", "Translator", {DColor::LightRed});
+        }
 
-    StatusIcons::init(); // Antes do Klass, senão dá ruim.
-    Klass klass;
-    QThread thread;
-    auto *checker = new UpdateWorker();
-    checker->moveToThread(&thread);
+    if (app.isSecondary()) {
+        Debug::msg("Secondary instance: Opening Klass GUI directly", "Main");
+        Theme::applyTheme();
+        StatusIcons::init();
+        Klass klass;
 
-    if (parser.isSet(packageOption)) {
-        autostart = true;
-        const auto pkg = parser.value(packageOption);
-        Debug::msg("Processing package from command line", "Main", {pkg});
-        klass.handlePackage(pkg);
-    }
+        QLocalSocket ipcSocket;
+        ipcSocket.connectToServer(TRAY_IPC_SERVER);
 
-    QObject::connect(&app, &SingleApplication::receivedMessage, &msg, &MessageReceiver::receivedMessage);
-    QObject::connect(&msg, &MessageReceiver::arg, &klass, &Klass::handlePackage);
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, &thread, &QThread::quit);
-    QObject::connect(&thread, &QThread::finished, checker, &QObject::deleteLater);
-    QObject::connect(&thread, &QThread::started, checker, &UpdateWorker::start);
-    QObject::connect(checker, &UpdateWorker::updateAvailable, &klass, &Klass::onUpdateAvailable);
-    thread.start();
+        QObject::connect(&ipcSocket, &QLocalSocket::readyRead, [&] {
+            if (const QByteArray msg = ipcSocket.readAll(); msg.contains("UPDATE"))
+                klass.onUpdateAvailable();
+        });
 
-    if (const SettingsManager sm; autostart || parser.isSet(autoStartOption) || sm.startMinimized()) {
-        klass.hide();
-    } else {
-        if (sm.startMaximized() || sm.windowMaximize())
+        QObject::connect(&klass, &Klass::databaseUpdateFinished, [&] {
+            if (ipcSocket.state() == QLocalSocket::ConnectedState)
+                ipcSocket.write("UPDATE_DONE\n");
+        });
+
+        if (parser.isSet(packageOption)) {
+            const auto pkg = parser.value(packageOption);
+            Debug::msg("Processing package from command line", "Main", {pkg});
+            klass.handlePackage(pkg);
+        }
+
+        if (const SettingsManager sm; sm.startMaximized() || sm.windowMaximize())
             klass.showMaximized();
         else
             klass.show();
+
+        klass.raise();
+        klass.activateWindow();
+
+        return SingleApplication::exec();
+    }
+
+    SysTray tray(&app);
+    const SettingsManager sm;
+
+    bool hasUpdate = false;
+    QProcess guiProcess;
+    QPointer<QLocalSocket> guiSocket;
+
+    QLocalServer ipcServer(&app);
+    QLocalServer::removeServer(TRAY_IPC_SERVER);
+    ipcServer.listen(TRAY_IPC_SERVER);
+
+    QObject::connect(&ipcServer, &QLocalServer::newConnection, [&] {
+        guiSocket = ipcServer.nextPendingConnection();
+
+        if (hasUpdate && guiSocket)
+            guiSocket->write("UPDATE\n");
+
+        QObject::connect(guiSocket, &QLocalSocket::readyRead, [&] {
+            if (guiSocket && guiSocket->readAll().contains("UPDATE_DONE")) {
+                hasUpdate = false;
+                tray.setUpdateAvailable(false);
+            }
+        });
+    });
+
+    auto toggleGui = [&](const QStringList &args = {}) {
+        if (guiProcess.state() == QProcess::NotRunning) {
+            QStringList runArgs;
+            if (parser.isSet(packageOption) && args.isEmpty())
+                runArgs << "-p" << parser.value(packageOption);
+            else
+                runArgs << args;
+
+            guiProcess.start(QCoreApplication::applicationFilePath(), runArgs);
+        } else {
+            guiProcess.terminate();
+        }
+    };
+
+    QObject::connect(&tray, &SysTray::openRequested, [&] {
+        toggleGui();
+    });
+
+    QObject::connect(&tray, &SysTray::quitRequested, [&] {
+        if (guiProcess.state() != QProcess::NotRunning) {
+            guiProcess.terminate();
+            guiProcess.waitForFinished(1000);
+        }
+        QCoreApplication::quit();
+    });
+
+    const MessageReceiver msg;
+    QObject::connect(&app, &SingleApplication::receivedMessage, &msg, &MessageReceiver::receivedMessage);
+    QObject::connect(&msg, &MessageReceiver::arg, [&](const QString &arg) {
+        if (arg == "__OPEN__") {
+            if (guiProcess.state() == QProcess::NotRunning)
+                toggleGui();
+        } else if (!arg.isEmpty()) {
+            if (guiProcess.state() != QProcess::NotRunning) {
+                guiProcess.terminate();
+                guiProcess.waitForFinished(500);
+            }
+            toggleGui({"-p", arg});
+        }
+    });
+
+    UpdateWorker checker(&app);
+
+    QObject::connect(&checker, &UpdateWorker::updateAvailable, &app, [&] {
+        hasUpdate = true;
+        tray.setUpdateAvailable(true);
+
+        if (guiSocket && guiSocket->state() == QLocalSocket::ConnectedState)
+            guiSocket->write("UPDATE\n");
+    });
+
+    checker.start();
+    Utils::releaseFreeMemory();
+
+    const bool isBackground = parser.isSet(autoStartOption) || sm.startMinimized();
+    if (parser.isSet(packageOption)) {
+        toggleGui({"-p", parser.value(packageOption)});
+    } else if (!isBackground) {
+        toggleGui();
     }
 
     const int ret = SingleApplication::exec();
 
-    thread.quit();
-    thread.wait();
+    if (guiProcess.state() != QProcess::NotRunning) {
+        guiProcess.terminate();
+        guiProcess.waitForFinished(1000);
+    }
+
     return ret;
 }

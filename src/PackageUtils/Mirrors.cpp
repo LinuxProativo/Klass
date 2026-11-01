@@ -318,25 +318,18 @@ Mirrors::Channel Mirrors::detectChannel() {
 bool Mirrors::isUpdateRequired() {
     QList<MirrorPlusEntry> repos;
 
-    if (const auto [url, country] = activeOne(); !url.isEmpty()) {
+    if (const auto [url, country] = activeOne(); !url.isEmpty())
         repos.append({SLACK_OFICIAL, url});
-
-        const auto branches = loadOfficialBranches();
-        if (branches.pasture)
-            repos.append({SLACK_PASTURE, url + "pasture/"});
-        if (branches.extra)
-            repos.append({SLACK_EXTRA, url + "extra/"});
-        if (branches.testing)
-            repos.append({SLACK_TESTING, url + "testing/"});
-    }
     repos.append(listActive());
 
     for (const auto &[name, url]: repos) {
-        auto str = "";
-        if (url.contains("multilib")) str = "../";
-        else if (url.contains("alien")) str = "../../";
+        const QStringView modifier = url.contains(u"multilib") ? u"../" : url.contains(u"alien") ? u"../../" : u"";
 
-        const QUrl remoteUrl(url + (url.endsWith('/') ? "" : "/") + str + "ChangeLog.txt");
+        QString fullUrl = url;
+        if (!fullUrl.endsWith(u'/'))
+            fullUrl.append(u'/');
+        fullUrl.append(modifier).append(u"ChangeLog.txt");
+        const QUrl remoteUrl(fullUrl);
 
         const auto res = Utils::download(remoteUrl, {}, "bytes=0-255");
         if (!res.success || res.data.isEmpty())
@@ -435,7 +428,7 @@ bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
  * @return The trimmed timestamp line, or an empty QString if none found.
  */
 QString Mirrors::extractTimestamp(const QString &text) {
-    for (const auto lines = qTokenize(text, u'\n'); QStringView line : lines) {
+    for (const auto lines = qTokenize(text, u'\n'); QStringView line: lines) {
         const QStringView trimmed = line.trimmed();
         if (!trimmed.isEmpty() && !trimmed.startsWith(u'+') && !trimmed.startsWith(u'='))
             return trimmed.toString();
