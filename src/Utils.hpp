@@ -12,7 +12,10 @@
 #include <QNetworkRequest>
 #include <QStringView>
 #include <QUrl>
+
 #include <functional>
+
+#include <SlackwareDefines.hpp>
 
 // Declaração de Estrutura
 struct PendingPkg;
@@ -30,27 +33,27 @@ struct DownloadResult {
 };
 
 /**
- * @class Utils
+ * @namespace Utils
  * @brief Utility class providing static network and application helper methods.
  */
-class Utils {
-public:
-    static DownloadResult download(const QUrl &url, const QString &destinationPath = {},
-                                   const QByteArray &range = {}, const std::function<bool()> &cancelCheck = nullptr);
+namespace Utils {
+    DownloadResult download(const QUrl &url, const QString &destinationPath = {},
+                            const QByteArray &range = {}, const std::function<bool()> &cancelCheck = nullptr);
 
-    static QString normalizeSpaces(QStringView raw);
+    QString readGzipFile(const QString &filePath);
 
-    static QString readGzipFile(const QString &filePath);
+    void setAutostart(bool enable);
 
-    static void setAutostart(bool enable);
+    QString extractBuildTag(QStringView version);
 
-    static QString extractBuildTag(QStringView version);
+    QString serializePendingList(const QList<PendingPkg> &list);
 
-    static bool isVersionNewer(const QString &v1, const QString &v2);
+    void releaseFreeMemory();
 
-    static QString serializePendingList(const QList<PendingPkg> &list);
-
-    static void releaseFreeMemory();
+    inline bool isOfficialRepo(const QString &r) {
+        return r == SLACK_OFICIAL || r == SLACK_PATCHES || r == SLACK_EXTRA ||
+               r == SLACK_TESTING || r == SLACK_PASTURE;
+    }
 };
 
 #endif

@@ -8,10 +8,8 @@
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QTimer>
-#include <QVersionNumber>
 
 #include <RepositoryTab.hpp>
-#include <SlackwareDefines.hpp>
 #include <Utils.hpp>
 #include <zlib.h>
 
@@ -19,262 +17,223 @@
 #include <malloc.h>
 #endif
 
-/**
- * @brief Synchronously downloads data from a specified URL.
- * @param url The target endpoint to fetch.
- * @param destinationPath Optional filesystem destination path to write streamed data directly.
- * @param range Optional HTTP Range header (e.g., "bytes=0-255").
- * @param cancelCheck Optional callback executed periodically to query whether to abort.
- * @return DownloadResult Containing execution status, HTTP status code, on-the-fly MD5, and payload.
- */
-DownloadResult Utils::download(const QUrl &url, const QString &destinationPath,
-                               const QByteArray &range, const std::function<bool()> &cancelCheck) {
-    DownloadResult result;
-    QNetworkRequest request(url);
-    request.setMaximumRedirectsAllowed(20);
-    request.setHeader(QNetworkRequest::UserAgentHeader, "Wget/1.21.4");
-    request.setRawHeader("Accept", "*/*");
-    request.setRawHeader("Accept-Encoding", "identity");
-    request.setRawHeader("Connection", "keep-alive");
+namespace Utils {
+    /**
+     * @brief Synchronously downloads data from a specified URL.
+     * @param url The target endpoint to fetch.
+     * @param destinationPath Optional filesystem destination path to write streamed data directly.
+     * @param range Optional HTTP Range header (e.g., "bytes=0-255").
+     * @param cancelCheck Optional callback executed periodically to query whether to abort.
+     * @return DownloadResult Containing execution status, HTTP status code, on-the-fly MD5, and payload.
+     */
+    DownloadResult download(const QUrl &url, const QString &destinationPath,
+                            const QByteArray &range, const std::function<bool()> &cancelCheck) {
+        DownloadResult result;
+        QNetworkRequest request(url);
+        request.setMaximumRedirectsAllowed(20);
+        request.setHeader(QNetworkRequest::UserAgentHeader, "Wget/1.21.4");
+        request.setRawHeader("Accept", "*/*");
+        request.setRawHeader("Accept-Encoding", "identity");
+        request.setRawHeader("Connection", "keep-alive");
 
-    if (!range.isEmpty())
-        request.setRawHeader("Range", range);
+        if (!range.isEmpty())
+            request.setRawHeader("Range", range);
 
-    const bool toFile = !destinationPath.isEmpty();
-    const QString tempPath = destinationPath + QStringLiteral(".part");
-    QFile file;
-    QCryptographicHash md5(QCryptographicHash::Md5);
-    QByteArray inMemoryBuffer;
-
-    if (toFile) {
-        const QFileInfo fileInfo(destinationPath);
-        if (const QDir dir = fileInfo.dir(); !dir.exists())
-            dir.mkpath(QStringLiteral("."));
-
-        file.setFileName(tempPath);
-        if (!file.open(QIODevice::WriteOnly)) {
-            result.success = false;
-            return result;
-        }
-    }
-
-    QEventLoop loop;
-    QNetworkAccessManager nam;
-    QNetworkReply *reply = nam.get(request);
-
-    QObject::connect(reply, &QNetworkReply::readyRead, [&] {
-        const QByteArray chunk = reply->readAll();
-        if (chunk.isEmpty()) return;
+        const bool toFile = !destinationPath.isEmpty();
+        const QString tempPath = destinationPath + QStringLiteral(".part");
+        QFile file;
+        QCryptographicHash md5(QCryptographicHash::Md5);
+        QByteArray inMemoryBuffer;
 
         if (toFile) {
-            file.write(chunk);
-            md5.addData(chunk);
-        } else {
-            inMemoryBuffer.append(chunk);
+            const QFileInfo fileInfo(destinationPath);
+            if (const QDir dir = fileInfo.dir(); !dir.exists())
+                dir.mkpath(QStringLiteral("."));
+
+            file.setFileName(tempPath);
+            if (!file.open(QIODevice::WriteOnly)) {
+                result.success = false;
+                return result;
+            }
         }
-    });
 
-    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        QEventLoop loop;
+        QNetworkAccessManager nam;
+        QNetworkReply *reply = nam.get(request);
 
-    QTimer timer;
-    if (cancelCheck) {
-        QObject::connect(&timer, &QTimer::timeout, [&] {
-            if (reply->isRunning() && cancelCheck()) {
-                reply->abort();
-                loop.quit();
+        QObject::connect(reply, &QNetworkReply::readyRead, [&] {
+            const QByteArray chunk = reply->readAll();
+            if (chunk.isEmpty()) return;
+
+            if (toFile) {
+                file.write(chunk);
+                md5.addData(chunk);
+            } else {
+                inMemoryBuffer.append(chunk);
             }
         });
-        timer.start(100);
-    }
 
-    loop.exec();
-    timer.stop();
+        QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
 
-    result.statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    result.error = reply->error();
-
-    if (toFile) {
-        if (reply->bytesAvailable() > 0) {
-            const QByteArray remaining = reply->readAll();
-            file.write(remaining);
-            md5.addData(remaining);
+        QTimer timer;
+        if (cancelCheck) {
+            QObject::connect(&timer, &QTimer::timeout, [&] {
+                if (reply->isRunning() && cancelCheck()) {
+                    reply->abort();
+                    loop.quit();
+                }
+            });
+            timer.start(100);
         }
-        file.close();
-    } else {
-        if (reply->bytesAvailable() > 0)
-            inMemoryBuffer.append(reply->readAll());
-    }
 
-    if (result.error == QNetworkReply::NoError && result.statusCode >= 200 && result.statusCode < 300) {
-        result.success = true;
+        loop.exec();
+        timer.stop();
+
+        result.statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        result.error = reply->error();
+
         if (toFile) {
-            result.computedMd5 = QString::fromLatin1(md5.result().toHex());
-            QFile::remove(destinationPath);
-            if (!file.rename(destinationPath)) {
-                result.success = false;
+            if (reply->bytesAvailable() > 0) {
+                const QByteArray remaining = reply->readAll();
+                file.write(remaining);
+                md5.addData(remaining);
+            }
+            file.close();
+        } else {
+            if (reply->bytesAvailable() > 0)
+                inMemoryBuffer.append(reply->readAll());
+        }
+
+        if (result.error == QNetworkReply::NoError && result.statusCode >= 200 && result.statusCode < 300) {
+            result.success = true;
+            if (toFile) {
+                result.computedMd5 = QString::fromLatin1(md5.result().toHex());
+                QFile::remove(destinationPath);
+                if (!file.rename(destinationPath)) {
+                    result.success = false;
+                    QFile::remove(tempPath);
+                }
+            } else {
+                result.data = inMemoryBuffer;
+            }
+        } else {
+            result.success = false;
+            if (toFile)
                 QFile::remove(tempPath);
-            }
-        } else {
-            result.data = inMemoryBuffer;
         }
-    } else {
-        result.success = false;
-        if (toFile)
-            QFile::remove(tempPath);
+
+        reply->deleteLater();
+        return result;
     }
 
-    reply->deleteLater();
-    return result;
-}
+    /**
+     * @brief Decompresses a targeted Gzip archive data stream directly into a memory buffer.
+     * @param filePath The exact source target address pointing to the archived tracking manifest on disk.
+     * @return The fully inflated plain text document string, or a null-initialized fallback container.
+     */
+    QString readGzipFile(const QString &filePath) {
+        const auto file = gzopen(filePath.toLocal8Bit().constData(), "rb");
+        if (!file)
+            return {};
 
-/**
- * @brief Collapses runs of consecutive spaces into a single space and drops one leading space.
- * @param raw View over the raw text to normalize.
- * @return A newly built string with normalized internal whitespace.
- */
-QString Utils::normalizeSpaces(const QStringView raw) {
-    if (raw.startsWith(u' '))
-        return normalizeSpaces(raw.mid(1));
+        QByteArray uncompressedData;
+        char buffer[16384];
+        int bytesRead = 0;
 
-    QString normalized;
-    normalized.reserve(raw.size());
-    bool lastWasSpace = false;
+        if (const QFile f(filePath); f.exists())
+            uncompressedData.reserve(static_cast<int>(f.size() * 5));
 
-    for (const QChar ch: raw) {
-        if (ch == u' ') {
-            if (!lastWasSpace) {
-                normalized.append(ch);
-                lastWasSpace = true;
-            }
-        } else {
-            normalized.append(ch);
-            lastWasSpace = false;
+        while ((bytesRead = gzread(file, buffer, sizeof(buffer))) > 0)
+            uncompressedData.append(buffer, bytesRead);
+
+        gzclose(file);
+        return QString::fromUtf8(uncompressedData);
+    }
+
+    /**
+     * @brief Enables or disables the XDG autostart entry for the application.
+     * @param enable True to create the autostart entry, false to remove it.
+     */
+    void setAutostart(const bool enable) {
+        const QDir autostartDir(AUTOSTART_CONFIG);
+
+        if (!autostartDir.exists()) {
+            if (!autostartDir.mkpath(QStringLiteral(".")))
+                return;
         }
-    }
-    return normalized;
-}
 
-/**
- * @brief Decompresses a targeted Gzip archive data stream directly into a memory buffer.
- * @param filePath The exact source target address pointing to the archived tracking manifest on disk.
- * @return The fully inflated plain text document string, or a null-initialized fallback container.
- */
-QString Utils::readGzipFile(const QString &filePath) {
-    const auto file = gzopen(filePath.toLocal8Bit().constData(), "rb");
-    if (!file)
-        return {};
+        const QString desktopFilePath = autostartDir.absoluteFilePath(DESKTOP_FILE);
 
-    QByteArray uncompressedData;
-    char buffer[16384];
-    int bytesRead = 0;
+        if (enable) {
+            QFile file(desktopFilePath);
+            if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+                return;
 
-    if (const QFile f(filePath); f.exists())
-        uncompressedData.reserve(static_cast<int>(f.size() * 5));
+            QTextStream out(&file);
+            out << "[Desktop Entry]\n"
+                    << "Type=Application\n"
+                    << "Name=Klass Package Manager\n"
+                    << "Comment=Starts the Klass Package Manager in the background\n"
+                    << "Exec=klass --autostart\n"
+                    << "Icon=klass\n"
+                    << "Terminal=false\n"
+                    << "Categories=System;Utility;\n"
+                    << "X-GNOME-Autostart-enabled=true\n"
+                    << "X-KDE-autostart-after=panel\n";
 
-    while ((bytesRead = gzread(file, buffer, sizeof(buffer))) > 0)
-        uncompressedData.append(buffer, bytesRead);
-
-    gzclose(file);
-    return QString::fromUtf8(uncompressedData);
-}
-
-/**
- * @brief Enables or disables the XDG autostart entry for the application.
- * @param enable True to create the autostart entry, false to remove it.
- */
-void Utils::setAutostart(const bool enable) {
-    const QDir autostartDir(AUTOSTART_CONFIG);
-
-    if (!autostartDir.exists()) {
-        if (!autostartDir.mkpath(QStringLiteral(".")))
+            file.close();
             return;
+        }
+
+        if (QFile::exists(desktopFilePath))
+            QFile::remove(desktopFilePath);
     }
 
-    const QString desktopFilePath = autostartDir.absoluteFilePath(DESKTOP_FILE);
+    /**
+     * @brief Extracts the Slackware build tag from a package version string.
+     * @param version The version string view to inspect.
+     * @return The extracted build tag or an empty string if none is found.
+     */
+    QString extractBuildTag(const QStringView version) {
+        const int buildPos = static_cast<int>(version.lastIndexOf(u'-'));
+        const QStringView build = (buildPos >= 0) ? version.mid(buildPos + 1) : version;
 
-    if (enable) {
-        QFile file(desktopFilePath);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-            return;
+        int tagPos = 0;
+        while (tagPos < build.length() && build.at(tagPos).isDigit())
+            ++tagPos;
 
-        QTextStream out(&file);
-        out << "[Desktop Entry]\n"
-                << "Type=Application\n"
-                << "Name=Klass Package Manager\n"
-                << "Comment=Starts the Klass Package Manager in the background\n"
-                << "Exec=klass --autostart\n"
-                << "Icon=klass\n"
-                << "Terminal=false\n"
-                << "Categories=System;Utility;\n"
-                << "X-GNOME-Autostart-enabled=true\n"
-                << "X-KDE-autostart-after=panel\n";
-
-        file.close();
-        return;
+        return tagPos < build.length() ? build.mid(tagPos).toString() : QString{};
     }
 
-    if (QFile::exists(desktopFilePath))
-        QFile::remove(desktopFilePath);
-}
+    /**
+     * @brief Serializes a list of pending packages into a comma-delimited string payload for helper execution.
+     * @param list The list of pending packages to serialize.
+     * @return The formatted payload string.
+     */
+    QString serializePendingList(const QList<PendingPkg> &list) {
+        QStringList formatted;
+        formatted.reserve(list.size());
+        for (const auto &p: list) {
+            QString entry;
+            entry.reserve(
+                p.name.size() + p.version.size() + p.repoName.size() + p.category.size() + p.fullDownloadUrl.size()
+                + p.ascUrl.size() + p.md5sum.size() + p.ascMd5sum.size() + 8);
 
-/**
- * @brief Extracts the Slackware build tag from a package version string.
- * @param version The version string view to inspect.
- * @return The extracted build tag or an empty string if none is found.
- */
-QString Utils::extractBuildTag(const QStringView version) {
-    const int buildPos = static_cast<int>(version.lastIndexOf(u'-'));
-    const QStringView build = (buildPos >= 0) ? version.mid(buildPos + 1) : version;
+            entry += p.name + u'|' + p.version + u'|' + p.repoName + u'|';
+            entry += p.category + u'|' + p.fullDownloadUrl + u'|' + p.ascUrl + u'|';
+            entry += p.md5sum + u'|' + p.ascMd5sum;
 
-    int tagPos = 0;
-    while (tagPos < build.length() && build.at(tagPos).isDigit())
-        ++tagPos;
-
-    return tagPos < build.length() ? build.mid(tagPos).toString() : QString{};
-}
-
-/**
- * @brief Compares two version strings to determine whether the first is newer than the second.
- * @param v1 The candidate version string.
- * @param v2 The baseline version string.
- * @return True if v1 is newer than v2, false otherwise.
- */
-bool Utils::isVersionNewer(const QString &v1, const QString &v2) {
-    const QVersionNumber ver1 = QVersionNumber::fromString(v1);
-    const QVersionNumber ver2 = QVersionNumber::fromString(v2); //NOLINT
-    if (!ver1.isNull() && !ver2.isNull())
-        return QVersionNumber::compare(ver1, ver2) > 0;
-    return v1 > v2;
-}
-
-/**
- * @brief Serializes a list of pending packages into a comma-delimited string payload for helper execution.
- * @param list The list of pending packages to serialize.
- * @return The formatted payload string.
- */
-QString Utils::serializePendingList(const QList<PendingPkg> &list) {
-    QStringList formatted;
-    formatted.reserve(list.size());
-    for (const auto &p: list) {
-        QString entry;
-        entry.reserve(
-            p.name.size() + p.version.size() + p.repoName.size() + p.category.size() + p.fullDownloadUrl.size()
-            + p.ascUrl.size() + p.md5sum.size() + p.ascMd5sum.size() + 8);
-
-        entry += p.name + u'|' + p.version + u'|' + p.repoName + u'|';
-        entry += p.category + u'|' + p.fullDownloadUrl + u'|' + p.ascUrl + u'|';
-        entry += p.md5sum + u'|' + p.ascMd5sum;
-
-        formatted.append(std::move(entry));
+            formatted.append(std::move(entry));
+        }
+        return formatted.join(u',');
     }
-    return formatted.join(u',');
-}
 
-/**
- * @brief Forces the glibc allocator to release cached, unused heap memory back to the operating system kernel.
- */
-void Utils::releaseFreeMemory() {
-#if defined(__linux__) && defined(__GLIBC__)
-    malloc_trim(0);
-#endif
+    /**
+     * @brief Forces the glibc allocator to release cached, unused heap memory back to the operating system kernel.
+     */
+    void releaseFreeMemory() {
+    #if defined(__linux__) && defined(__GLIBC__)
+        malloc_trim(0);
+    #endif
+    }
 }
