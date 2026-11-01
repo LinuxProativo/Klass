@@ -22,6 +22,8 @@ inline const auto EMPTY = QStringLiteral("");
  * @brief Utilities for Manages the configuration file for software repositories and others functions.
  */
 namespace RepoUtils {
+    QString detectArch();
+
     QString normalizeSpaces(QStringView raw);
 
     QStringList readConf();

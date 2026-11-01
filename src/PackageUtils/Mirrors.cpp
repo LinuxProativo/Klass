@@ -282,15 +282,6 @@ bool Mirrors::disable(const QString &name) {
 }
 
 /**
- * @brief Returns the machine architecture as used in mirror paths.
- * @return "x86_64", "x86", or an empty QString when undetermined.
- */
-QString Mirrors::detectArch() {
-    QString arch = QSysInfo::buildCpuArchitecture();
-    return arch == u"i686" || arch == u"i586" || arch == u"i486" || arch == u"i386" ? "x86" : arch;
-}
-
-/**
  * @brief Detects whether the system is running -current or a stable release.
  * @return Channel::Current, Channel::Stable or Channel::Unknown.
  */

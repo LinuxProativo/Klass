@@ -11,6 +11,15 @@
 
 namespace RepoUtils {
     /**
+     * @brief Returns the machine architecture as used in mirror paths.
+     * @return "x86_64", "x86", or an empty QString when undetermined.
+     */
+    QString detectArch() {
+        QString arch = QSysInfo::buildCpuArchitecture();
+        return arch == u"i686" || arch == u"i586" || arch == u"i486" || arch == u"i386" ? "x86" : arch;
+    }
+
+    /**
      * @brief Collapses runs of consecutive spaces into a single space and drops one leading space.
      * @param raw View over the raw text to normalize.
      * @return A newly built string with normalized internal whitespace.
@@ -122,5 +131,4 @@ namespace RepoUtils {
 
         return writeLines(CONFIG_PATH, lines);
     }
-
 }

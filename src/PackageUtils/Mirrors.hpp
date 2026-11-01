@@ -73,8 +73,6 @@ public:
     static bool setOfficialBranches(const OfficialBranches &branches);
 
 private:
-    static QString detectArch();
-
     static Channel detectChannel();
 
     static bool parseMirrorLine(const QString &raw, QString &outUrl);
