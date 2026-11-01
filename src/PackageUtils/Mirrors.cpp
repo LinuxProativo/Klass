@@ -287,11 +287,7 @@ bool Mirrors::disable(const QString &name) {
  */
 QString Mirrors::detectArch() {
     QString arch = QSysInfo::buildCpuArchitecture();
-
-    if (arch == "i686" || arch == "i586" || arch == "i486" || arch == "i386")
-        return "x86";
-
-    return arch;
+    return arch == u"i686" || arch == u"i586" || arch == u"i486" || arch == u"i386" ? "x86" : arch;
 }
 
 /**
@@ -429,9 +425,8 @@ bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
  */
 QString Mirrors::extractTimestamp(const QString &text) {
     for (const auto lines = qTokenize(text, u'\n'); QStringView line: lines) {
-        const QStringView trimmed = line.trimmed();
-        if (!trimmed.isEmpty() && !trimmed.startsWith(u'+') && !trimmed.startsWith(u'='))
-            return trimmed.toString();
+        if (const QStringView l = line.trimmed(); !l.isEmpty() && !l.startsWith(u'+') && !l.startsWith(u'='))
+            return l.toString();
     }
     return {};
 }
