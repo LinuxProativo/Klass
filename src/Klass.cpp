@@ -14,8 +14,6 @@
 #include <InstallPackage.hpp>
 #include <Klass.hpp>
 #include <Packages.hpp>
-#include <RepositoryTab.hpp>
-#include <RepositoryTabUtils.hpp>
 #include <SettingsDialog.hpp>
 #include <SlackwareDefines.hpp>
 #include <SummaryDialog.hpp>
@@ -186,11 +184,11 @@ void Klass::onSelectUpdates() {
     for (int i = 0; i < tabWidget->count(); ++i) {
         if (const auto *tab = qobject_cast<RepositoryTab *>(tabWidget->widget(i))) {
             const QString repoName = tab->property("repoName").toString();
-            if (officialOnly && repoName != ALL_REPOSITORIES && !RepositoryTabUtils::isOfficialRepo(repoName))
+            if (officialOnly && repoName != ALL_REPOSITORIES && !Utils::isOfficialRepo(repoName))
                 continue;
 
             for (const auto &update: tab->collectAvailableUpdates()) {
-                if (officialOnly && !RepositoryTabUtils::isOfficialRepo(update.repoName))
+                if (officialOnly && !Utils::isOfficialRepo(update.repoName))
                     continue;
 
                 if (!seenUpdates.contains(update.name)) {
@@ -199,7 +197,7 @@ void Klass::onSelectUpdates() {
                 }
             }
             for (const auto &install: tab->collectNewInstalls()) {
-                if (officialOnly && !RepositoryTabUtils::isOfficialRepo(install.repoName))
+                if (officialOnly && !Utils::isOfficialRepo(install.repoName))
                     continue;
 
                 if (!seenInstalls.contains(install.name)) {

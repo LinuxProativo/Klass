@@ -5,7 +5,7 @@
 
 #include <QRegularExpression>
 
-#include <RepoManager.hpp>
+#include <RepoUtils.hpp>
 #include <RulesManager.hpp>
 #include <SlackwareDefines.hpp>
 
@@ -57,7 +57,7 @@ bool RulesManager::matchesCompiledRule(const CompiledRule &cRule, const QString 
  * @return List of parsed RuleEntry items.
  */
 QList<RuleEntry> RulesManager::loadRules() {
-    const QStringList lines = RepoManager::readConf();
+    const QStringList lines = RepoUtils::readConf();
     QList<RuleEntry> rules{};
 
     for (const QString &line: lines) {
@@ -78,7 +78,7 @@ QList<RuleEntry> RulesManager::loadRules() {
  * @brief Appends a single rule line under its section (# Exceptions or # Priorities).
  */
 bool RulesManager::addRule(const RuleEntry &rule) {
-    QStringList lines = RepoManager::readConf();
+    QStringList lines = RepoUtils::readConf();
     const QString targetLine = rule.toConfigLine();
 
     for (const QString &line: lines) {
@@ -94,14 +94,14 @@ bool RulesManager::addRule(const RuleEntry &rule) {
         lines.append(targetLine);
     }
 
-    return RepoManager::writeConf(lines);
+    return RepoUtils::writeConf(lines);
 }
 
 /**
  * @brief Remove a rules lines completely from klass.conf.
  */
 bool RulesManager::removeRules(const QList<RuleEntry> &rules) {
-    const QStringList currentLines = RepoManager::readConf();
+    const QStringList currentLines = RepoUtils::readConf();
 
     QSet<QString> targets;
     for (const RuleEntry &r: rules)
@@ -113,7 +113,7 @@ bool RulesManager::removeRules(const QList<RuleEntry> &rules) {
             updatedLines.append(line);
     }
 
-    return RepoManager::writeConf(updatedLines);
+    return RepoUtils::writeConf(updatedLines);
 }
 
 /**
@@ -123,7 +123,7 @@ bool RulesManager::removeRules(const QList<RuleEntry> &rules) {
  * @return True if the old line was found and the file was written successfully, or if the old line was already absent.
  */
 bool RulesManager::editRule(const RuleEntry &oldRule, const RuleEntry &newRule) {
-    QStringList lines = RepoManager::readConf();
+    QStringList lines = RepoUtils::readConf();
     const QString oldLine = oldRule.toConfigLine();
     const QString newLine = newRule.toConfigLine();
 
@@ -139,7 +139,7 @@ bool RulesManager::editRule(const RuleEntry &oldRule, const RuleEntry &newRule) 
     if (!found)
         return true;
 
-    return RepoManager::writeConf(lines);
+    return RepoUtils::writeConf(lines);
 }
 
 /**

@@ -9,7 +9,7 @@
 #include <QTimer>
 
 #include <ChangeLog.hpp>
-#include <RepoManager.hpp>
+#include <RepoUtils.hpp>
 
 /**
  * @brief Constructs the ChangeLog view, initializes the layout and populates tabs with repository log files.
@@ -20,7 +20,7 @@ ChangeLog::ChangeLog(QWidget *parent) : Dialog(parent, Qt::WindowModal) {
     this->setMinimumSize(672, 378);
     layout = new QVBoxLayout(this);
 
-    if (QStringList logs = RepoManager::fetchChangeLogs(); logs.isEmpty()) {
+    if (QStringList logs = RepoUtils::fetchChangeLogs(); logs.isEmpty()) {
         alertTriggered = true;
     } else {
         tabs = new QTabWidget(this);

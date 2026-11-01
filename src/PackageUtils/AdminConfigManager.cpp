@@ -4,7 +4,7 @@
  */
 
 #include <AdminConfigManager.hpp>
-#include <RepoManager.hpp>
+#include <RepoUtils.hpp>
 #include <SlackwareDefines.hpp>
 
 /**
@@ -60,7 +60,7 @@ QString AdminConfigManager::taskToKey(const PostInstallTask task) {
  * @brief Reads administrative parameters from /etc/klass/klass.conf.
  */
 void AdminConfigManager::load() {
-    const QStringList lines = RepoManager::readConf();
+    const QStringList lines = RepoUtils::readConf();
     bool inSection = false;
 
     for (const QString &line: lines) {
@@ -128,7 +128,7 @@ QString AdminConfigManager::serializePayload() const {
  * @return True on successful write and commit, false otherwise.
  */
 bool AdminConfigManager::savePayload(const QString &payload) {
-    QStringList lines = RepoManager::readConf();
+    QStringList lines = RepoUtils::readConf();
     int sectionStart = -1, sectionEnd = 0;
 
     for (int i = 0; i < lines.size(); ++i) {
@@ -159,5 +159,5 @@ bool AdminConfigManager::savePayload(const QString &payload) {
     adminBlock << QStringLiteral("");
 
     lines.append(adminBlock);
-    return RepoManager::writeConf(lines);
+    return RepoUtils::writeConf(lines);
 }

@@ -11,7 +11,7 @@
 #include <Debug.hpp>
 #include <DefaultPath.hpp>
 #include <Mirrors.hpp>
-#include <RepoManager.hpp>
+#include <RepoUtils.hpp>
 #include <SlackwareDefines.hpp>
 #include <Utils.hpp>
 
@@ -91,7 +91,7 @@ QList<Mirrors::MirrorEntry> Mirrors::listAll() {
  * @return The active mirror found in klass.conf or the system fallback.
  */
 Mirrors::MirrorEntry Mirrors::activeOne() {
-    for (QStringList activeLines = RepoManager::readConf(); const QString &line: activeLines) {
+    for (QStringList activeLines = RepoUtils::readConf(); const QString &line: activeLines) {
         if (line.startsWith(u"OFFICIAL_MIRROR=")) {
             const QString url = line.mid(16).trimmed();
             return {url, "GLOBAL"};
@@ -106,7 +106,7 @@ Mirrors::MirrorEntry Mirrors::activeOne() {
  * @return True on success, false on I/O error.
  */
 bool Mirrors::setActive(const QString &url) {
-    QStringList lines = RepoManager::readConf();
+    QStringList lines = RepoUtils::readConf();
 
     const QString targetLine = QStringLiteral("OFFICIAL_MIRROR=") + url;
     bool found = false;
@@ -127,7 +127,7 @@ bool Mirrors::setActive(const QString &url) {
         }
     }
 
-    return RepoManager::writeConf(lines);
+    return RepoUtils::writeConf(lines);
 }
 
 /**
@@ -209,7 +209,7 @@ QList<Mirrors::MirrorPlusEntry> Mirrors::catalogue() {
  * @return List of active third-party repositories.
  */
 QList<Mirrors::MirrorPlusEntry> Mirrors::listActive() {
-    QStringList lines = RepoManager::readConf();
+    QStringList lines = RepoUtils::readConf();
     QList<MirrorPlusEntry> result;
 
     static const QRegularExpression re(R"(^THIRDMIRROR\['([^']+)'\]\s*=\s*(.+)$)");
@@ -228,7 +228,7 @@ QList<Mirrors::MirrorPlusEntry> Mirrors::listActive() {
  * @return True on success.
  */
 bool Mirrors::enable(const MirrorPlusEntry &entry) {
-    QStringList lines = RepoManager::readConf();
+    QStringList lines = RepoUtils::readConf();
 
     const QString targetKey = QStringLiteral("THIRDMIRROR['") + entry.name + QStringLiteral("']");
     const QString activeLine = targetKey + QLatin1Char('=') + entry.url;
@@ -250,7 +250,7 @@ bool Mirrors::enable(const MirrorPlusEntry &entry) {
         }
     }
 
-    return RepoManager::writeConf(lines);
+    return RepoUtils::writeConf(lines);
 }
 
 /**
@@ -259,7 +259,7 @@ bool Mirrors::enable(const MirrorPlusEntry &entry) {
  * @return True on success.
  */
 bool Mirrors::disable(const QString &name) {
-    const QStringList lines = RepoManager::readConf();
+    const QStringList lines = RepoUtils::readConf();
 
     const QString targetKey = QStringLiteral("THIRDMIRROR['") + name + QStringLiteral("']");
     QStringList updatedLines;
@@ -273,7 +273,7 @@ bool Mirrors::disable(const QString &name) {
         updatedLines.append(line);
     }
 
-    if (!removed || !RepoManager::writeConf(updatedLines))
+    if (!removed || !RepoUtils::writeConf(updatedLines))
         return false;
 
     if (QDir repoDir(KLASS_DATABASE + name); repoDir.exists())
@@ -346,10 +346,10 @@ bool Mirrors::isUpdateRequired() {
             return true;
 
         if (remoteTimestamp != localTimestamp) {
-            Debug::msg("Update Available in " + name, "RepoManager", {remoteTimestamp, DColor::Yellow});
+            Debug::msg("Update Available in " + name, "RepoUtils", {remoteTimestamp, DColor::Yellow});
             return true;
         }
-        Debug::msg("Repository up to date: " + name, "RepoManager", {localTimestamp, DColor::Green});
+        Debug::msg("Repository up to date: " + name, "RepoUtils", {localTimestamp, DColor::Green});
     }
     return false;
 }
@@ -360,7 +360,7 @@ bool Mirrors::isUpdateRequired() {
  */
 Mirrors::OfficialBranches Mirrors::loadOfficialBranches() {
     OfficialBranches branches;
-    for (const QString &line: RepoManager::readConf()) {
+    for (const QString &line: RepoUtils::readConf()) {
         if (const QString trimmed = line.trimmed(); trimmed.startsWith(u"OFFICIAL_PASTURE="))
             branches.pasture = trimmed.mid(17).trimmed().compare(u"true", Qt::CaseInsensitive) == 0;
         else if (trimmed.startsWith(u"OFFICIAL_TESTING="))
@@ -377,7 +377,7 @@ Mirrors::OfficialBranches Mirrors::loadOfficialBranches() {
  * @return True if the configuration was successfully written to disk; false on I/O failure.
  */
 bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
-    QStringList lines = RepoManager::readConf();
+    QStringList lines = RepoUtils::readConf();
 
     auto updateOrInsert = [&](const QString &key, const bool val) {
         const QString targetLine = key + u'=' + (val ? QStringLiteral("true") : QStringLiteral("false"));
@@ -414,7 +414,7 @@ bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
             dir.removeRecursively();
     }
 
-    return RepoManager::writeConf(lines);
+    return RepoUtils::writeConf(lines);
 }
 
 /**

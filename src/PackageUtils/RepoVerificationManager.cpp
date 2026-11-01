@@ -5,7 +5,7 @@
 
 #include <QRegularExpression>
 
-#include <RepoManager.hpp>
+#include <RepoUtils.hpp>
 #include <RepoVerificationManager.hpp>
 
 static const QRegularExpression VERIF_REGEX(R"(^VERIFICATION\['([^']+)'\]\s*=\s*\(([^,]+),([^,]+),([^,]+),([^)]+)\)$)");
@@ -15,7 +15,7 @@ static const QRegularExpression VERIF_REGEX(R"(^VERIFICATION\['([^']+)'\]\s*=\s*
  * @return List of parsed verification entries.
  */
 QList<RepoVerificationEntry> RepoVerificationManager::loadVerifications() {
-    const QStringList lines = RepoManager::readConf();
+    const QStringList lines = RepoUtils::readConf();
     QList<RepoVerificationEntry> result;
 
     for (const QString &line: lines) {
@@ -54,7 +54,7 @@ RepoVerificationEntry RepoVerificationManager::getVerification(const QString &re
  * @return True on success.
  */
 bool RepoVerificationManager::saveVerification(const RepoVerificationEntry &entry) {
-    QStringList lines = RepoManager::readConf();
+    QStringList lines = RepoUtils::readConf();
     const QString targetPrefix = QStringLiteral("VERIFICATION['") + entry.repo + QStringLiteral("']");
     const QString newLine = entry.toConfigLine();
 
@@ -75,7 +75,7 @@ bool RepoVerificationManager::saveVerification(const RepoVerificationEntry &entr
         }
     }
 
-    return RepoManager::writeConf(lines);
+    return RepoUtils::writeConf(lines);
 }
 
 /**
@@ -84,7 +84,7 @@ bool RepoVerificationManager::saveVerification(const RepoVerificationEntry &entr
  * @return True on success.
  */
 bool RepoVerificationManager::removeVerification(const QString &repoName) {
-    const QStringList lines = RepoManager::readConf();
+    const QStringList lines = RepoUtils::readConf();
     const QString targetPrefix = QStringLiteral("VERIFICATION['") + repoName + QStringLiteral("']");
     QStringList updated;
     bool found = false;
@@ -97,5 +97,5 @@ bool RepoVerificationManager::removeVerification(const QString &repoName) {
         updated.append(line);
     }
 
-    return found ? RepoManager::writeConf(updated) : true;
+    return found ? RepoUtils::writeConf(updated) : true;
 }

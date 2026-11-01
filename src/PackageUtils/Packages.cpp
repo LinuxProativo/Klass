@@ -11,6 +11,7 @@
 #include <Debug.hpp>
 #include <Mirrors.hpp>
 #include <Packages.hpp>
+#include <RepoUtils.hpp>
 #include <SlackwareDefines.hpp>
 #include <Utils.hpp>
 
@@ -338,7 +339,7 @@ void Packages::loadInstalledPackages() {
                     capturandoDesc = true;
                 } else if (capturandoDesc) {
                     if (lineToken.startsWith(descPrefix, Qt::CaseInsensitive)) {
-                        const QString contentStr = Utils::normalizeSpaces(lineToken.mid(descPrefix.length()));
+                        const QString contentStr = RepoUtils::normalizeSpaces(lineToken.mid(descPrefix.length()));
 
                         if (pkg.description.isEmpty() && !contentStr.trimmed().isEmpty()) {
                             const QString trimmedContent = contentStr.trimmed();
@@ -456,7 +457,7 @@ void Packages::parsePackagesContent(const QString &content, QList<PkgInfo> &pack
             currentPkg.suggests = trimmedLine.mid(17).trimmed().toString();
         } else if (!capturandoDesc && !currentDescPrefix.isEmpty() && line.startsWith(
                        currentDescPrefix, Qt::CaseInsensitive)) {
-            const QString contentStr = Utils::normalizeSpaces(line.mid(currentDescPrefix.length()));
+            const QString contentStr = RepoUtils::normalizeSpaces(line.mid(currentDescPrefix.length()));
             const QString trimmedContent = contentStr.trimmed();
             const int openParen = static_cast<int>(trimmedContent.indexOf(u'('));
             const int closeParen = static_cast<int>(trimmedContent.lastIndexOf(u')'));
@@ -470,7 +471,7 @@ void Packages::parsePackagesContent(const QString &content, QList<PkgInfo> &pack
             capturandoDesc = true;
         } else if (capturandoDesc && !currentDescPrefix.isEmpty() && line.startsWith(
                        currentDescPrefix, Qt::CaseInsensitive)) {
-            if (const QString contentStr = Utils::normalizeSpaces(line.mid(currentDescPrefix.length())); !contentStr.
+            if (const QString contentStr = RepoUtils::normalizeSpaces(line.mid(currentDescPrefix.length())); !contentStr.
                 isEmpty()) {
                 currentPkg.detailedDesc += contentStr + u'\n';
             } else if (!currentPkg.detailedDesc.isEmpty() && !currentPkg.detailedDesc.endsWith(u"\n\n")) {
