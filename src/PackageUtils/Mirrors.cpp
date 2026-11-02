@@ -138,19 +138,19 @@ bool Mirrors::setActive(const QString &url) {
 bool Mirrors::accept(const QString &url) {
     const QString u = url.toLower();
     const bool hasCurrent = u.contains("current/") || u.contains("dev/");
-    const bool is64 = detectArch() == "x86_64";
+    const bool is64 = RepoUtils::detectArch() == "x86_64";
     const bool has64 = (u.contains("x86_64") || u.contains("slackware64") || u.contains("multilib"))
-                       && !u.contains("armv7hl");
+                       && !u.contains("armv7hl") && !u.contains("aarch64");
     const bool has32 = (u.contains("x86/") || u.contains("i486/") || u.contains("i586/") ||
                         u.contains("i686/")) && !u.contains("slackware64") &&
-                       !u.contains("multilib") && !u.contains("armv7hl");
+                       !u.contains("multilib") && !u.contains("armv7hl") && !u.contains("aarch64");
 
     if (detectChannel() == Channel::Current) {
         if (!hasCurrent)
             return false;
 
         if (is64)
-            return !has32 || has64;
+            return !has32 && has64;
 
         return !has64;
     }
@@ -292,10 +292,7 @@ Mirrors::Channel Mirrors::detectChannel() {
     if (value == "current")
         return Channel::Current;
 
-    if (value == "stable")
-        return Channel::Stable;
-
-    return Channel::Unknown;
+    return value == "stable" ? Channel::Stable : Channel::Unknown;
 }
 
 /**
