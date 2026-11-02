@@ -9,6 +9,7 @@
 #include <QHash>
 #include <QList>
 #include <QMap>
+#include <QSet>
 
 #include <Debug.hpp>
 
@@ -67,24 +68,22 @@ class Packages : QObject {
 public:
     explicit Packages(QObject *object);
 
-    void reload();
+    void loadPackages();
 
     [[nodiscard]] ChecksumEntry getChecksumEntry(const QString &repo, const QString &package,
                                                  const QString &version, FileFormat format = FileFormat::Package) const;
 
     [[nodiscard]] const QMap<QString, RepoData> &getAvailablePackages() const { return availableCache; }
 
-    [[nodiscard]] const QList<PkgInfo> &getInstalledPackages() const { return installedCache; }
+    [[nodiscard]] const QList<PkgInfo> &getOrphanPackages() const { return orphanCache; }
+
+    [[nodiscard]] const QSet<QString> &getInstalledNames() const { return installedNamesCache; }
 
     [[nodiscard]] PkgInfo getPackageInfo(const QString &repo, const QString &package, const QString &version) const;
 
     static QStringList listPackageFiles(const QString &name, const QString &version);
 
 private:
-    void loadAvailablePackages();
-
-    void loadInstalledPackages();
-
     static void parsePackagesContent(const QString &content, QList<PkgInfo> &packageList);
 
     static QHash<QString, ChecksumEntry> parseRepoChecksums(const QString &repoPath);
@@ -92,8 +91,9 @@ private:
     static bool splitPackageParts(QStringView rawName, QString &outName, QString &outVersion);
 
     QHash<QString, QHash<QString, ChecksumEntry> > checksumCache{};
-    QList<PkgInfo> installedCache{};
     QMap<QString, RepoData> availableCache{};
+    QList<PkgInfo> orphanCache{};
+    QSet<QString> installedNamesCache{};
 };
 
 #endif

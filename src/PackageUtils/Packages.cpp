@@ -19,15 +19,7 @@
  * @brief Dynamic Structured Constructor.
  */
 Packages::Packages(QObject *object) : QObject(object) {
-    reload();
-}
-
-/**
- * @brief Reloads all package databases, checksums, and local installation states into RAM.
- */
-void Packages::reload() {
-    loadInstalledPackages();
-    loadAvailablePackages();
+    loadPackages();
 }
 
 /**
@@ -162,14 +154,23 @@ ChecksumEntry Packages::getChecksumEntry(const QString &repo, const QString &pac
  * @return Structure containing metadata or empty fields if not matched.
  */
 PkgInfo Packages::getPackageInfo(const QString &repo, const QString &package, const QString &version) const {
-    if (repo.contains(SLACK_OTHERS) || repo.isEmpty()) {
-        for (const auto &pkg: installedCache) {
-            if (pkg.name == package && pkg.version == version)
-                return pkg;
-        }
-    } else {
+    if (!repo.isEmpty() && repo != SLACK_OTHERS) {
         if (availableCache.contains(repo)) {
             for (const auto &pkg: availableCache.value(repo).packages) {
+                if (pkg.name == package && pkg.version == version)
+                    return pkg;
+            }
+        }
+    }
+
+    for (const auto &pkg: orphanCache) {
+        if (pkg.name == package && pkg.version == version)
+            return pkg;
+    }
+
+    if (repo.isEmpty()) {
+        for (const auto &repoData: availableCache) {
+            for (const auto &pkg: repoData.packages) {
                 if (pkg.name == package && pkg.version == version)
                     return pkg;
             }
@@ -179,135 +180,124 @@ PkgInfo Packages::getPackageInfo(const QString &repo, const QString &package, co
 }
 
 /**
- * @brief Scans and retrieves available packages from all repositories found inside the database directory.
+ * @brief Scans and retrieves available packages from local and all repositories found inside the database directory.
  */
-void Packages::loadAvailablePackages() {
+void Packages::loadPackages() {
     availableCache.clear();
     checksumCache.clear();
+    orphanCache.clear();
+    installedNamesCache.clear();
 
-    if (!QDir(KLASS_DATABASE).exists()) {
-        Debug::msg("Base Directory not Found", "Packages", {KLASS_DATABASE, DColor::LightRed});
-        return;
-    }
-
-    const Mirrors::MirrorEntry official = Mirrors::activeOne();
-    const QList<Mirrors::MirrorPlusEntry> thirdPartyList = Mirrors::listActive();
-
-    QMap<QString, QString> thirdPartyMap;
-    for (const auto &entry: thirdPartyList)
-        thirdPartyMap.insert(entry.name, entry.url);
-
-    const auto branches = Mirrors::loadOfficialBranches();
-
-    QSet<QString> activeRepos;
-    if (!official.url.isEmpty()) {
-        activeRepos.insert(SLACK_OFICIAL);
-        activeRepos.insert(SLACK_PATCHES);
-        if (branches.extra)
-            activeRepos.insert(SLACK_EXTRA);
-        if (branches.testing)
-            activeRepos.insert(SLACK_TESTING);
-        if (branches.pasture)
-            activeRepos.insert(SLACK_PASTURE);
-    }
-    for (const auto &entry: thirdPartyList)
-        activeRepos.insert(entry.name);
-
-    QSet<std::pair<QString, QString> > installedSet;
-    installedSet.reserve(installedCache.size());
-
-    for (const auto &pkg: installedCache)
-        installedSet.insert({pkg.name, pkg.version});
-
-    QDirIterator it(KLASS_DATABASE, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::NoIteratorFlags);
-
-    while (it.hasNext()) {
-        it.next();
-        const QString repoName = it.fileName();
-
-        if (!activeRepos.contains(repoName))
-            continue;
-
-        const QString repoPath = it.filePath() + u'/';
-
-        if (auto checksums = parseRepoChecksums(repoPath); !checksums.isEmpty())
-            checksumCache.insert(repoName, checksums);
-
-        const QString txtPath = repoPath + QStringLiteral("PACKAGES.TXT");
-        const QString gzPath = repoPath + QStringLiteral("PACKAGES.TXT.gz");
-
-        QString fileContent;
-        if (QFile::exists(gzPath)) {
-            fileContent = Utils::readGzipFile(gzPath);
-        } else if (QFile::exists(txtPath)) {
-            if (QFile file(txtPath); file.open(QIODevice::ReadOnly))
-                fileContent = QString::fromUtf8(file.readAll());
-        }
-
-        if (fileContent.isEmpty())
-            continue;
-
-        QList<PkgInfo> packageList;
-        parsePackagesContent(fileContent, packageList);
-
-        for (PkgInfo &pkg: packageList) {
-            pkg.repoName = repoName;
-            if (installedSet.contains({pkg.name, pkg.version}))
-                pkg.isInstalled = true;
-        }
-
-        bool hasCats = false;
-        for (const auto &pkg: packageList) {
-            if (!pkg.category.isEmpty()) {
-                hasCats = true;
-                break;
+    QHash<QString, QString> localPkgVersions, localPkgPaths;
+    if (QDir(SLACK_PACKAGES).exists()) {
+        QDirIterator itLocal(SLACK_PACKAGES, QDir::Files, QDirIterator::NoIteratorFlags);
+        while (itLocal.hasNext()) {
+            itLocal.next();
+            QString pkgName, pkgVer;
+            if (splitPackageParts(itLocal.fileName(), pkgName, pkgVer)) {
+                localPkgVersions.insert(pkgName, pkgVer);
+                localPkgPaths.insert(pkgName, itLocal.filePath());
+                installedNamesCache.insert(pkgName);
             }
         }
-
-        QString resolvedUrl;
-        if (repoName == SLACK_OFICIAL)
-            resolvedUrl = official.url;
-        else if (repoName == SLACK_PATCHES)
-            resolvedUrl = official.url + QStringLiteral("patches/");
-        else if (repoName == SLACK_EXTRA)
-            resolvedUrl = official.url + QStringLiteral("extra/");
-        else if (repoName == SLACK_TESTING)
-            resolvedUrl = official.url + QStringLiteral("testing/");
-        else if (repoName == SLACK_PASTURE)
-            resolvedUrl = official.url + QStringLiteral("pasture/");
-        else
-            resolvedUrl = thirdPartyMap.value(repoName, QString{});
-
-        Debug::msg("Category Found in " + repoName, "Packages", {hasCats ? "true" : "false"});
-        availableCache.insert(repoName, {hasCats, resolvedUrl, std::move(packageList)});
-    }
-}
-
-/**
- * @brief Lists all packages currently installed on the local system, including their short descriptions.
- */
-void Packages::loadInstalledPackages() {
-    installedCache.clear();
-
-    if (const QDir dir(SLACK_PACKAGES); !dir.exists()) {
+    } else {
         Debug::msg("PkgTools Directory not Found", "Packages", {SLACK_PACKAGES, DColor::LightRed});
-        return;
     }
 
-    QDirIterator it(SLACK_PACKAGES, QDir::Files, QDirIterator::NoIteratorFlags);
-    installedCache.reserve(2000);
+    QSet<QString> packagesFoundInRepos;
 
-    while (it.hasNext()) {
-        it.next();
-        const QString pkgFileName = it.fileName();
+    if (QDir(KLASS_DATABASE).exists()) {
+        const Mirrors::MirrorEntry official = Mirrors::activeOne();
+        const QList<Mirrors::MirrorPlusEntry> thirdPartyList = Mirrors::listActive();
+        const auto branches = Mirrors::loadOfficialBranches();
+
+        QMap<QString, QString> thirdPartyMap;
+        for (const auto &entry: thirdPartyList)
+            thirdPartyMap.insert(entry.name, entry.url);
+
+        QSet<QString> activeRepos;
+        if (!official.url.isEmpty()) {
+            activeRepos.insert(SLACK_OFICIAL);
+            activeRepos.insert(SLACK_PATCHES);
+            if (branches.extra)
+                activeRepos.insert(SLACK_EXTRA);
+            if (branches.testing)
+                activeRepos.insert(SLACK_TESTING);
+            if (branches.pasture)
+                activeRepos.insert(SLACK_PASTURE);
+        }
+        for (const auto &entry: thirdPartyList)
+            activeRepos.insert(entry.name);
+
+        QDirIterator itRepo(KLASS_DATABASE, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::NoIteratorFlags);
+
+        while (itRepo.hasNext()) {
+            itRepo.next();
+            const QString repoName = itRepo.fileName();
+            if (!activeRepos.contains(repoName))
+                continue;
+
+            const QString repoPath = itRepo.filePath() + u'/';
+            if (auto checksums = parseRepoChecksums(repoPath); !checksums.isEmpty())
+                checksumCache.insert(repoName, checksums);
+
+            const QString txtPath = repoPath + QStringLiteral("PACKAGES.TXT");
+            const QString gzPath = repoPath + QStringLiteral("PACKAGES.TXT.gz");
+
+            QString fileContent;
+            if (QFile::exists(gzPath))
+                fileContent = Utils::readGzipFile(gzPath);
+            else if (QFile::exists(txtPath)) {
+                if (QFile file(txtPath); file.open(QIODevice::ReadOnly))
+                    fileContent = QString::fromUtf8(file.readAll());
+            }
+
+            if (fileContent.isEmpty())
+                continue;
+
+            QList<PkgInfo> packageList;
+            parsePackagesContent(fileContent, packageList);
+
+            bool hasCats = false;
+            for (PkgInfo &pkg: packageList) {
+                pkg.repoName = repoName;
+                if (!pkg.category.isEmpty())
+                    hasCats = true;
+
+                if (localPkgVersions.value(pkg.name) == pkg.version) {
+                    pkg.isInstalled = true;
+                    packagesFoundInRepos.insert(pkg.name);
+                }
+            }
+
+            QString resolvedUrl;
+            if (repoName == SLACK_OFICIAL) resolvedUrl = official.url;
+            else if (repoName == SLACK_PATCHES) resolvedUrl = official.url + QStringLiteral("patches/");
+            else if (repoName == SLACK_EXTRA) resolvedUrl = official.url + QStringLiteral("extra/");
+            else if (repoName == SLACK_TESTING) resolvedUrl = official.url + QStringLiteral("testing/");
+            else if (repoName == SLACK_PASTURE) resolvedUrl = official.url + QStringLiteral("pasture/");
+            else resolvedUrl = thirdPartyMap.value(repoName, QString{});
+
+            availableCache.insert(repoName, {hasCats, resolvedUrl, std::move(packageList)});
+        }
+    } else {
+        Debug::msg("Base Directory not Found", "Packages", {KLASS_DATABASE, DColor::LightRed});
+    }
+
+    orphanCache.reserve(localPkgPaths.size() - packagesFoundInRepos.size());
+    for (auto it = localPkgPaths.constBegin(); it != localPkgPaths.constEnd(); ++it) {
+        const QString &pkgName = it.key();
+
+        if (packagesFoundInRepos.contains(pkgName))
+            continue;
 
         PkgInfo pkg;
         pkg.isInstalled = true;
+        pkg.name = pkgName;
+        pkg.version = localPkgVersions.value(pkgName);
+        pkg.repoName = SLACK_OTHERS;
 
-        if (!splitPackageParts(pkgFileName, pkg.name, pkg.version))
-            continue;
-
-        if (QFile file(it.filePath()); file.open(QIODevice::ReadOnly)) {
+        if (QFile file(it.value()); file.open(QIODevice::ReadOnly)) {
             const QString fileContent = QString::fromUtf8(file.readAll());
             file.close();
 
@@ -365,7 +355,7 @@ void Packages::loadInstalledPackages() {
             if (!pkg.detailedDesc.isEmpty())
                 pkg.detailedDesc = pkg.detailedDesc.trimmed();
         }
-        installedCache.append(std::move(pkg));
+        orphanCache.append(std::move(pkg));
     }
 }
 
@@ -469,10 +459,10 @@ void Packages::parsePackagesContent(const QString &content, QList<PkgInfo> &pack
 
             currentPkg.detailedDesc = contentStr + u'\n';
             capturandoDesc = true;
-        } else if (capturandoDesc && !currentDescPrefix.isEmpty() && line.startsWith(
-                       currentDescPrefix, Qt::CaseInsensitive)) {
-            if (const QString contentStr = RepoUtils::normalizeSpaces(line.mid(currentDescPrefix.length())); !contentStr.
-                isEmpty()) {
+        } else if (capturandoDesc && !currentDescPrefix.isEmpty() &&
+                   line.startsWith(currentDescPrefix, Qt::CaseInsensitive)) {
+            if (const QString contentStr = RepoUtils::normalizeSpaces(line.mid(currentDescPrefix.length()));
+                !contentStr.isEmpty()) {
                 currentPkg.detailedDesc += contentStr + u'\n';
             } else if (!currentPkg.detailedDesc.isEmpty() && !currentPkg.detailedDesc.endsWith(u"\n\n")) {
                 currentPkg.detailedDesc += u'\n';

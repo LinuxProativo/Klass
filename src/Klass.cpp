@@ -349,7 +349,7 @@ void Klass::loadRepositoryTabs() {
     orphanAndExtraPackages.squeeze();
 
     const QList<RuleEntry> currentRules = RulesManager::loadRules();
-    const auto &allInstalled = packagesManager->getInstalledPackages();
+    const auto &allOrphans = packagesManager->getOrphanPackages();
     const auto &repoMap = packagesManager->getAvailablePackages();
 
     QMap<QString, QString> mMap;
@@ -358,7 +358,6 @@ void Klass::loadRepositoryTabs() {
     repoTagsCache.reserve(repoMap.size());
 
     QHash<QString, QStringList> pkgNameToRepos;
-    pkgNameToRepos.reserve(totalRepoPackages);
 
     for (auto [repoName, repoData]: repoMap.asKeyValueRange()) {
         totalRepoPackages += static_cast<int>(repoData.packages.size());
@@ -371,15 +370,11 @@ void Klass::loadRepositoryTabs() {
         }
     }
 
-    allPackages.reserve(totalRepoPackages + allInstalled.size());
-    QSet<std::pair<QString, QString> > existingPackages;
-    existingPackages.reserve(totalRepoPackages);
+    allPackages.reserve(totalRepoPackages + allOrphans.size());
 
     for (const auto &[repoName, repoData]: repoMap.asKeyValueRange()) {
-        for (const auto &pkg: repoData.packages) {
+        for (const auto &pkg: repoData.packages)
             allPackages.append(&pkg);
-            existingPackages.insert({pkg.name, pkg.version});
-        }
     }
 
     QStringList sortedRepos = repoMap.keys();
@@ -416,12 +411,8 @@ void Klass::loadRepositoryTabs() {
         }
     }
 
-    orphanAndExtraPackages.reserve(allInstalled.size());
-
-    for (const auto &inst: allInstalled) {
-        if (existingPackages.contains({inst.name, inst.version}))
-            continue;
-
+    orphanAndExtraPackages.reserve(allOrphans.size());
+    for (const auto &inst: allOrphans) {
         QString resolvedRepo;
         const QString installedTag = Utils::extractBuildTag(inst.version);
 
@@ -605,7 +596,7 @@ void Klass::onUpdateFinished() {
 
     updateNotificationShown = false;
     emit databaseUpdateFinished();
-    packagesManager->reload();
+    packagesManager->loadPackages();
     loadRepositoryTabs();
 }
 
@@ -613,7 +604,7 @@ void Klass::onUpdateFinished() {
  * @brief Handles transaction completion.
  */
 void Klass::onTransactionFinished() {
-    packagesManager->reload();
+    packagesManager->loadPackages();
     loadRepositoryTabs();
 }
 
@@ -666,7 +657,7 @@ void Klass::handleRepoVerificationChanged(const RepoVerificationEntry &entry) {
  * @brief Cleans up databases of disabled official branches and refreshes repository tabs when the mirror manager closes.
  */
 void Klass::onMirrorManagerClosed() {
-    packagesManager->reload();
+    packagesManager->loadPackages();
     loadRepositoryTabs();
 }
 
