@@ -793,12 +793,7 @@ QList<PendingPkg> RepositoryTab::collectNewInstalls() const {
     if (!globalByName)
         return installs;
 
-    QSet<QString> installedNames;
-    const auto &installed = packagesManager->getInstalledPackages();
-    installedNames.reserve(installed.size());
-    for (const auto &pkg: installed)
-        installedNames.insert(pkg.name);
-
+    const QSet<QString> &installedNames = packagesManager->getInstalledNames();
     const bool attachTestingEnabled = this->property("attachTesting").toBool();
 
     for (auto [pkgName, pkgList]: std::as_const(*globalByName).asKeyValueRange()) {
@@ -1098,16 +1093,38 @@ void RepositoryTab::refreshTable() const {
  * @return A PkgInfo object containing the package details if found, or an empty PkgInfo object otherwise.
  */
 PkgInfo RepositoryTab::findDependencyCandidate(const QString &depName, const QString &parentRepoName) const {
-    for (const auto &pkg: packagesManager->getInstalledPackages()) {
-        if (pkg.name == depName)
-            return pkg;
-    }
+    if (globalByName) {
+        if (const auto it = globalByName->find(depName); it != globalByName->end()) {
+            const QList<const PkgInfo *> &candidates = it.value();
 
-    const auto &available = packagesManager->getAvailablePackages();
-    if (const auto it = available.find(parentRepoName); it != available.end()) {
-        for (const auto &pkg: it.value().packages) {
-            if (pkg.name == depName)
-                return pkg;
+            for (const auto *pkg : candidates) {
+                if (pkg->isInstalled)
+                    return *pkg;
+            }
+
+            for (const auto *pkg : candidates) {
+                if (pkg->repoName == parentRepoName)
+                    return *pkg;
+            }
+        }
+    } else {
+        if (packagesManager->getInstalledNames().contains(depName)) {
+            for (const auto &repoData : packagesManager->getAvailablePackages()) {
+                for (const auto &pkg : repoData.packages) {
+                    if (pkg.name == depName && pkg.isInstalled) return pkg;
+                }
+            }
+            for (const auto &pkg : packagesManager->getOrphanPackages()) {
+                if (pkg.name == depName) return pkg;
+            }
+        }
+
+        const auto &available = packagesManager->getAvailablePackages();
+        if (const auto it = available.find(parentRepoName); it != available.end()) {
+            for (const auto &pkg: it.value().packages) {
+                if (pkg.name == depName)
+                    return pkg;
+            }
         }
     }
 
