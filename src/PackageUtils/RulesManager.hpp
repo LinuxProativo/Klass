@@ -1,6 +1,6 @@
 /**
  * @file RulesManager.hpp
- * @brief Header for RulesManager.
+ * @brief Header for managing priority and exception rules.
  */
 
 #ifndef RULESMANAGER_HPP
@@ -8,8 +8,8 @@
 
 #include <QHash>
 #include <QList>
-#include <QStringList>
 #include <QRegularExpression>
+#include <QStringList>
 
 #include <Packages.hpp>
 
@@ -33,7 +33,7 @@ struct RuleEntry {
      * @brief Converts entry to formatted configuration line.
      */
     [[nodiscard]] QString toConfigLine() const {
-        return QString("RULES['%1']=(%2,%3,%4)").arg(type, repo, scope, rule);
+        return QStringLiteral("RULES['%1']=(%2,%3,%4)").arg(type, repo, scope, rule);
     }
 };
 
@@ -61,8 +61,7 @@ enum class RuleSt {
 
 /**
  * @struct PkgKey
- * @brief Memory-efficient composite key used for hash map lookups.
- * Eliminates heavy string concatenations.
+ * @brief Composite key used for hash map lookups.
  */
 struct PkgKey {
     QString name;
@@ -76,9 +75,9 @@ struct PkgKey {
 
 /**
  * @brief Generates a hash value for a PkgKey object.
- * @param key The PkgKey instance to be hashed, containing name, version, and repo.
- * @param seed An optional seed value to initialize the hash calculation.
- * @return A size_t hash value combining the seed and the key's fields.
+ * @param key PkgKey instance containing name, version, and repo.
+ * @param seed Optional seed value.
+ * @return Hash value.
  */
 inline size_t qHash(const PkgKey &key, const size_t seed = 0) {
     return qHashMulti(seed, key.name, key.version, key.repo);
@@ -86,7 +85,7 @@ inline size_t qHash(const PkgKey &key, const size_t seed = 0) {
 
 /**
  * @class RulesManager
- * @brief Handles reading, writing, and parsing rules in /var/lib/klass/klass.conf.
+ * @brief Handles reading, writing, and parsing rules in /etc/klass/klass.conf.
  */
 class RulesManager {
 public:

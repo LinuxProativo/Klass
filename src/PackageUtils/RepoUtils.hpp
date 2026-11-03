@@ -19,12 +19,23 @@ inline const auto EMPTY = QStringLiteral("");
 
 /**
  * @namespace RepoUtils
- * @brief Utilities for Manages the configuration file for software repositories and others functions.
+ * @brief Utilities for managing configuration files, package strings, and filesystem operations.
  */
 namespace RepoUtils {
     QString detectArch();
 
     QString normalizeSpaces(QStringView raw);
+
+    bool parseBool(QStringView value, bool defaultValue = false);
+
+    bool isPackageArchive(QStringView fileName);
+
+    inline QStringView stripPackageExtension(const QStringView fileName){
+        return isPackageArchive(fileName) ? fileName.chopped(4) : fileName;
+    }
+
+    void appendPackageDescription(QStringView rawLine, QStringView prefix,
+                                  QString &outShortDesc, QString &outDetailedDesc);
 
     QStringList readConf();
 
@@ -33,6 +44,20 @@ namespace RepoUtils {
     bool writeConf(const QStringList &lines);
 
     bool writeLines(const QString &path, const QStringList &lines);
+
+    QString readConfigValue(const QString &keyPrefix);
+
+    bool setConfigValue(const QString &sectionHeader, const QString &keyPrefix, const QString &newLine);
+
+    bool removeConfigValue(const QString &keyPrefix);
+
+    bool removeConfigLines(const QSet<QString> &targets);
+
+    bool appendConfigLine(const QString &sectionHeader, const QString &newLine);
+
+    bool replaceConfigLine(const QString &oldLine, const QString &newLine);
+
+    bool replaceConfigSection(const QString &sectionHeader, const QStringList &newSectionLines);
 }
 
 #endif

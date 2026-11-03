@@ -91,6 +91,8 @@ void AdminConfigManager::load() {
             checkChecksum = RepoUtils::parseBool(val, true);
         } else if (key == QStringLiteral("PREFERRED_CHECKSUM")) {
             preferChecksum = val;
+        } else if (key == QStringLiteral("KEEP_CACHE")) {
+            keepCacheEnabled = RepoUtils::parseBool(val, false);
         } else {
             for (auto it = postInstallTasks.begin(); it != postInstallTasks.end(); ++it) {
                 if (key == taskToKey(it.key())) {
@@ -114,6 +116,7 @@ QString AdminConfigManager::serializePayload() const {
     items << QStringLiteral("VERIFY_SIGNATURE=") + (checkSignature ? QStringLiteral("true") : QStringLiteral("false"));
     items << QStringLiteral("VERIFY_CHECKSUM=") + (checkChecksum ? QStringLiteral("true") : QStringLiteral("false"));
     items << QStringLiteral("PREFERRED_CHECKSUM=") + preferChecksum;
+    items << QStringLiteral("KEEP_CACHE=") + (keepCacheEnabled ? QStringLiteral("true") : QStringLiteral("false"));
 
     for (auto it = postInstallTasks.cbegin(); it != postInstallTasks.cend(); ++it) {
         items << taskToKey(it.key()) + QStringLiteral("=") + (it.value()

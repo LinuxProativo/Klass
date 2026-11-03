@@ -1,6 +1,6 @@
 /**
  * @file Mirrors.cpp
- * @brief Class responsible for managing and parsing repository mirror file.
+ * @brief Class responsible for managing and parsing repository mirror files and URLs.
  */
 
 #include <QDir>
@@ -14,6 +14,26 @@
 #include <RepoUtils.hpp>
 #include <SlackwareDefines.hpp>
 #include <Utils.hpp>
+
+/**
+ * @brief Appends appropriate branch path modifiers to the official base URL.
+ * @param baseUrl Official base repository URL.
+ * @param branchName Branch identifier (e.g. SLACK_PATCHES, SLACK_EXTRA, etc.).
+ * @return Resolved URL with trailing slash.
+ */
+QString Mirrors::branchUrl(const QString &baseUrl, const QString &branchName) {
+    if (branchName == SLACK_OFICIAL)
+        return baseUrl;
+
+    QString base = baseUrl.endsWith(u'/') ? baseUrl : baseUrl + u'/';
+
+    if (branchName == SLACK_PATCHES) return base + QStringLiteral("patches/");
+    if (branchName == SLACK_EXTRA) return base + QStringLiteral("extra/");
+    if (branchName == SLACK_TESTING) return base + QStringLiteral("testing/");
+    if (branchName == SLACK_PASTURE) return base + QStringLiteral("pasture/");
+
+    return baseUrl;
+}
 
 /**
  * @brief Parses a line from the mirrors file.
@@ -45,7 +65,7 @@ QList<Mirrors::MirrorEntry> Mirrors::listAll() {
     if (!file.open(QIODevice::ReadOnly))
         return {};
 
-    QString fileContent = QString::fromUtf8(file.readAll());
+    const QString fileContent = QString::fromUtf8(file.readAll());
     file.close();
 
     QList<MirrorEntry> result;
@@ -61,7 +81,7 @@ QList<Mirrors::MirrorEntry> Mirrors::listAll() {
             continue;
 
         if (trimmed.startsWith(u'#') && !trimmed.contains(u"://")) {
-            QString commentStr = trimmed.toString();
+            const QString commentStr = trimmed.toString();
             if (const auto m = re.match(commentStr); m.hasMatch())
                 currentCountry = m.captured(1);
             continue;
@@ -87,16 +107,13 @@ QList<Mirrors::MirrorEntry> Mirrors::listAll() {
 }
 
 /**
- * @brief Returns the active mirror, now querying klass.conf.
- * @return The active mirror found in klass.conf or the system fallback.
+ * @brief Returns the active mirror querying klass.conf.
+ * @return The active mirror found in klass.conf or an empty entry.
  */
 Mirrors::MirrorEntry Mirrors::activeOne() {
-    for (QStringList activeLines = RepoUtils::readConf(); const QString &line: activeLines) {
-        if (line.startsWith(u"OFFICIAL_MIRROR=")) {
-            const QString url = line.mid(16).trimmed();
-            return {url, "GLOBAL"};
-        }
-    }
+    const QString url = RepoUtils::readConfigValue(QStringLiteral("OFFICIAL_MIRROR="));
+    if (!url.isEmpty())
+        return {url, QStringLiteral("GLOBAL")};
     return {};
 }
 
@@ -106,28 +123,8 @@ Mirrors::MirrorEntry Mirrors::activeOne() {
  * @return True on success, false on I/O error.
  */
 bool Mirrors::setActive(const QString &url) {
-    QStringList lines = RepoUtils::readConf();
-
     const QString targetLine = QStringLiteral("OFFICIAL_MIRROR=") + url;
-    bool found = false;
-
-    for (QString &line: lines) {
-        if (line.trimmed().startsWith(u"OFFICIAL_MIRROR=")) {
-            line = targetLine;
-            found = true;
-            break;
-        }
-    }
-
-    if (!found) {
-        if (const int idx = static_cast<int>(lines.indexOf(OFFICIAL_HEADER)); idx != -1) {
-            lines.insert(idx + 1, targetLine);
-        } else {
-            lines.prepend(targetLine);
-        }
-    }
-
-    return RepoUtils::writeConf(lines);
+    return RepoUtils::setConfigValue(OFFICIAL_HEADER, QStringLiteral("OFFICIAL_MIRROR="), targetLine);
 }
 
 /**
@@ -137,13 +134,15 @@ bool Mirrors::setActive(const QString &url) {
  */
 bool Mirrors::accept(const QString &url) {
     const QString u = url.toLower();
-    const bool hasCurrent = u.contains("current/") || u.contains("dev/");
-    const bool is64 = RepoUtils::detectArch() == "x86_64";
-    const bool has64 = (u.contains("x86_64") || u.contains("slackware64") || u.contains("multilib"))
-                       && !u.contains("armv7hl") && !u.contains("aarch64");
-    const bool has32 = (u.contains("x86/") || u.contains("i486/") || u.contains("i586/") ||
-                        u.contains("i686/")) && !u.contains("slackware64") &&
-                       !u.contains("multilib") && !u.contains("armv7hl") && !u.contains("aarch64");
+    const bool hasCurrent = u.contains(QStringLiteral("current/")) || u.contains(QStringLiteral("dev/"));
+    const bool is64 = RepoUtils::detectArch() == QStringLiteral("x86_64");
+    const bool has64 = (u.contains(QStringLiteral("x86_64")) || u.contains(QStringLiteral("slackware64")) ||
+                        u.contains(QStringLiteral("multilib"))) && !u.contains(QStringLiteral("armv7hl")) &&
+                       !u.contains(QStringLiteral("aarch64"));
+    const bool has32 = (u.contains(QStringLiteral("x86/")) || u.contains(QStringLiteral("i486/")) ||
+                        u.contains(QStringLiteral("i586/")) || u.contains(QStringLiteral("i686/"))) &&
+                       !u.contains(QStringLiteral("slackware64")) && !u.contains(QStringLiteral("multilib")) &&
+                       !u.contains(QStringLiteral("armv7hl")) && !u.contains(QStringLiteral("aarch64"));
 
     if (detectChannel() == Channel::Current) {
         if (!hasCurrent)
@@ -166,7 +165,7 @@ bool Mirrors::accept(const QString &url) {
             return false;
     }
 
-    const QStringList parts = QSysInfo::productVersion().split('.');
+    const QStringList parts = QSysInfo::productVersion().split(u'.');
     if (const QString &systemVer = parts.first(); !u.contains(systemVer))
         return false;
 
@@ -174,7 +173,7 @@ bool Mirrors::accept(const QString &url) {
 }
 
 /**
- * @brief Parses the "Supported Repositories" block from slackpkgplus.conf.
+ * @brief Parses valid third-party mirrors cataloged in the local directory.
  * @return Compatible repositories with fully-resolved URLs.
  */
 QList<Mirrors::MirrorPlusEntry> Mirrors::catalogue() {
@@ -185,21 +184,19 @@ QList<Mirrors::MirrorPlusEntry> Mirrors::catalogue() {
 
     QTextStream in(&file);
     while (!in.atEnd()) {
-        QString line = in.readLine().trimmed();
+        const QString line = in.readLine().trimmed();
         if (line.isEmpty())
             continue;
 
-        QStringList parts = line.split(QLatin1String(" : "));
+        const QStringList parts = line.split(QLatin1String(" : "));
         if (parts.size() < 2)
             continue;
 
         const QString name = parts[0].trimmed();
         const QString url = parts[1].trimmed();
 
-        if (!accept(url))
-            continue;
-
-        result.append({name, url});
+        if (accept(url))
+            result.append({name, url});
     }
     return result;
 }
@@ -209,7 +206,7 @@ QList<Mirrors::MirrorPlusEntry> Mirrors::catalogue() {
  * @return List of active third-party repositories.
  */
 QList<Mirrors::MirrorPlusEntry> Mirrors::listActive() {
-    QStringList lines = RepoUtils::readConf();
+    const QStringList lines = RepoUtils::readConf();
     QList<MirrorPlusEntry> result;
 
     static const QRegularExpression re(R"(^THIRDMIRROR\['([^']+)'\]\s*=\s*(.+)$)");
@@ -228,56 +225,24 @@ QList<Mirrors::MirrorPlusEntry> Mirrors::listActive() {
  * @return True on success.
  */
 bool Mirrors::enable(const MirrorPlusEntry &entry) {
-    QStringList lines = RepoUtils::readConf();
-
     const QString targetKey = QStringLiteral("THIRDMIRROR['") + entry.name + QStringLiteral("']");
     const QString activeLine = targetKey + QLatin1Char('=') + entry.url;
-
-    bool updated = false;
-    for (QString &line: lines) {
-        if (line.trimmed().startsWith(targetKey)) {
-            line = activeLine;
-            updated = true;
-            break;
-        }
-    }
-
-    if (!updated) {
-        if (const int idx = static_cast<int>(lines.indexOf(THIRD_HEADER)); idx != -1) {
-            lines.insert(idx + 1, activeLine);
-        } else {
-            lines.append(activeLine);
-        }
-    }
-
-    return RepoUtils::writeConf(lines);
+    return RepoUtils::setConfigValue(THIRD_HEADER, targetKey, activeLine);
 }
 
 /**
- * @brief Disables a repository by removing its entry completely from klass.conf.
+ * @brief Disables a repository by removing its entry completely from klass.conf and removing its cached files.
  * @param name Repository name to remove.
  * @return True on success.
  */
 bool Mirrors::disable(const QString &name) {
-    const QStringList lines = RepoUtils::readConf();
-
     const QString targetKey = QStringLiteral("THIRDMIRROR['") + name + QStringLiteral("']");
-    QStringList updatedLines;
-    bool removed = false;
-
-    for (const QString &line: lines) {
-        if (line.trimmed().startsWith(targetKey)) {
-            removed = true;
-            continue;
-        }
-        updatedLines.append(line);
-    }
-
-    if (!removed || !RepoUtils::writeConf(updatedLines))
+    if (!RepoUtils::removeConfigValue(targetKey))
         return false;
 
     if (QDir repoDir(KLASS_DATABASE + name); repoDir.exists())
         return repoDir.removeRecursively();
+
     return true;
 }
 
@@ -286,18 +251,18 @@ bool Mirrors::disable(const QString &name) {
  * @return Channel::Current, Channel::Stable or Channel::Unknown.
  */
 Mirrors::Channel Mirrors::detectChannel() {
-    const QSettings osRelease("/etc/os-release", QSettings::IniFormat);
-    const QString value = osRelease.value("VERSION_CODENAME").toString().toLower();
+    const QSettings osRelease(QStringLiteral("/etc/os-release"), QSettings::IniFormat);
+    const QString value = osRelease.value(QStringLiteral("VERSION_CODENAME")).toString().toLower();
 
-    if (value == "current")
+    if (value == QStringLiteral("current"))
         return Channel::Current;
 
-    return value == "stable" ? Channel::Stable : Channel::Unknown;
+    return value == QStringLiteral("stable") ? Channel::Stable : Channel::Unknown;
 }
 
 /**
  * @brief Checks online if any active repository has metadata updates available.
- * @return true if any remote repository log is newer than the local cache, false otherwise.
+ * @return True if any remote repository log is newer than the local cache, false otherwise.
  */
 bool Mirrors::isUpdateRequired() {
     QList<MirrorPlusEntry> repos;
@@ -312,10 +277,9 @@ bool Mirrors::isUpdateRequired() {
         QString fullUrl = url;
         if (!fullUrl.endsWith(u'/'))
             fullUrl.append(u'/');
-        fullUrl.append(modifier).append(u"ChangeLog.txt");
-        const QUrl remoteUrl(fullUrl);
+        fullUrl.append(modifier).append(QStringLiteral("ChangeLog.txt"));
 
-        const auto res = Utils::download(remoteUrl, {}, "bytes=0-255");
+        const auto res = Utils::download(QUrl(fullUrl), {}, "bytes=0-255");
         if (!res.success || res.data.isEmpty())
             continue;
 
@@ -323,17 +287,14 @@ bool Mirrors::isUpdateRequired() {
         if (remoteTimestamp.isEmpty())
             continue;
 
-        QFile local(KLASS_DATABASE + name + "/ChangeLog.txt");
+        QFile local(KLASS_DATABASE + name + QStringLiteral("/ChangeLog.txt"));
         if (!local.open(QIODevice::ReadOnly | QIODevice::Text))
             return true;
 
         const QString localTimestamp = extractTimestamp(QString::fromUtf8(local.read(1024)));
         local.close();
 
-        if (localTimestamp.isEmpty())
-            return true;
-
-        if (remoteTimestamp != localTimestamp) {
+        if (localTimestamp.isEmpty() || remoteTimestamp != localTimestamp) {
             Debug::msg("Update Available in " + name, "RepoUtils", {remoteTimestamp, DColor::Yellow});
             return true;
         }
@@ -344,70 +305,41 @@ bool Mirrors::isUpdateRequired() {
 
 /**
  * @brief Loads the active state for official sub-branches (Pasture, Testing, Extra) from klass.conf.
- * @return An OfficialBranches struct representing the enabled/disabled state of each official sub-branch.
+ * @return An OfficialBranches struct representing the enabled state of each sub-branch.
  */
 Mirrors::OfficialBranches Mirrors::loadOfficialBranches() {
     OfficialBranches branches;
-    for (const QString &line: RepoUtils::readConf()) {
-        if (const QString trimmed = line.trimmed(); trimmed.startsWith(u"OFFICIAL_PASTURE="))
-            branches.pasture = trimmed.mid(17).trimmed().compare(u"true", Qt::CaseInsensitive) == 0;
-        else if (trimmed.startsWith(u"OFFICIAL_TESTING="))
-            branches.testing = trimmed.mid(17).trimmed().compare(u"true", Qt::CaseInsensitive) == 0;
-        else if (trimmed.startsWith(u"OFFICIAL_EXTRA="))
-            branches.extra = trimmed.mid(15).trimmed().compare(u"true", Qt::CaseInsensitive) == 0;
-    }
+    branches.pasture = RepoUtils::parseBool(RepoUtils::readConfigValue(QStringLiteral("OFFICIAL_PASTURE=")));
+    branches.testing = RepoUtils::parseBool(RepoUtils::readConfigValue(QStringLiteral("OFFICIAL_TESTING=")));
+    branches.extra = RepoUtils::parseBool(RepoUtils::readConfigValue(QStringLiteral("OFFICIAL_EXTRA=")));
     return branches;
 }
 
 /**
- * @brief Writes the official branches state under '# Official Repo' in klass.conf and cleans disabled repo directories.
- * @param branches An OfficialBranches struct containing the updated state for each official branch.
- * @return True if the configuration was successfully written to disk; false on I/O failure.
+ * @brief Writes official branches state under '# Official Repo' in klass.conf and cleans disabled repo directories.
+ * @param branches An OfficialBranches struct containing the updated state.
+ * @return True on success.
  */
 bool Mirrors::setOfficialBranches(const OfficialBranches &branches) {
-    QStringList lines = RepoUtils::readConf();
+    auto saveBranch = [](const QString &key, const bool enabled, const QString &dirName) {
+        const QString targetLine = key + u'=' + (enabled ? QStringLiteral("true") : QStringLiteral("false"));
+        RepoUtils::setConfigValue(OFFICIAL_HEADER, key + u'=', targetLine);
 
-    auto updateOrInsert = [&](const QString &key, const bool val) {
-        const QString targetLine = key + u'=' + (val ? QStringLiteral("true") : QStringLiteral("false"));
-        bool updated = false;
-        for (QString &line: lines) {
-            if (line.trimmed().startsWith(key + u'=')) {
-                line = targetLine;
-                updated = true;
-                break;
-            }
-        }
-        if (!updated) {
-            if (const int idx = static_cast<int>(lines.indexOf(OFFICIAL_HEADER)); idx != -1)
-                lines.insert(idx + 1, targetLine);
-            else
-                lines.prepend(targetLine);
+        if (!enabled) {
+            if (QDir dir(KLASS_DATABASE + dirName); dir.exists())
+                dir.removeRecursively();
         }
     };
 
-    updateOrInsert(QStringLiteral("OFFICIAL_PASTURE"), branches.pasture);
-    updateOrInsert(QStringLiteral("OFFICIAL_TESTING"), branches.testing);
-    updateOrInsert(QStringLiteral("OFFICIAL_EXTRA"), branches.extra);
+    saveBranch(QStringLiteral("OFFICIAL_PASTURE"), branches.pasture, SLACK_PASTURE);
+    saveBranch(QStringLiteral("OFFICIAL_TESTING"), branches.testing, SLACK_TESTING);
+    saveBranch(QStringLiteral("OFFICIAL_EXTRA"), branches.extra, SLACK_EXTRA);
 
-    if (!branches.pasture) {
-        if (QDir dir(KLASS_DATABASE + SLACK_PASTURE); dir.exists())
-            dir.removeRecursively();
-    }
-    if (!branches.testing) {
-        if (QDir dir(KLASS_DATABASE + SLACK_TESTING); dir.exists())
-            dir.removeRecursively();
-    }
-    if (!branches.extra) {
-        if (QDir dir(KLASS_DATABASE + SLACK_EXTRA); dir.exists())
-            dir.removeRecursively();
-    }
-
-    return RepoUtils::writeConf(lines);
+    return true;
 }
 
 /**
- * @brief Extracts the first non-decorative, non-empty timestamp line from a ChangeLog buffer.
- * @details Skips decorative frame lines (such as '+---' or '===') and empty lines to obtain the real date entry.
+ * @brief Extracts the first non-decorative timestamp line from a ChangeLog buffer.
  * @param text Raw ChangeLog content.
  * @return The trimmed timestamp line, or an empty QString if none found.
  */

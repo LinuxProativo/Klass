@@ -141,6 +141,14 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     verificationLayout->addWidget(verifyChecksumCB);
     verificationLayout->addLayout(checksumSelectLayout);
 
+    cacheGroup = new QGroupBox(tr("Package Cache Options"), adminTab);
+    keepCacheCB = new QCheckBox(tr("Keep downloaded package files (.txz) in cache"), cacheGroup);
+    keepCacheCB->setChecked(adminConfigManager->keepCache());
+    connect(keepCacheCB, &QCheckBox::toggled, this, &SettingsDialog::onKeepCacheToggled);
+
+    cacheLayout = new QVBoxLayout(cacheGroup);
+    cacheLayout->addWidget(keepCacheCB);
+
     postInstallGroup = new QGroupBox(tr("Post-Installation Tasks"), adminTab);
     postInstallList = new QListWidget(postInstallGroup);
     postInstallList->setSelectionMode(QAbstractItemView::NoSelection);
@@ -163,6 +171,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
 
     adminLayout = new QVBoxLayout(adminTab);
     adminLayout->addWidget(verificationGroup);
+    adminLayout->addWidget(cacheGroup);
     adminLayout->addWidget(postInstallGroup);
     adminLayout->addStretch();
 
@@ -308,6 +317,15 @@ void SettingsDialog::onVerifyChecksumToggled(const bool checked) {
  */
 void SettingsDialog::onPreferredChecksumChanged(const QString &checksum) {
     adminConfigManager->setPreferredChecksum(checksum);
+    emit adminConfigSaveRequested(adminConfigManager->serializePayload());
+}
+
+/**
+ * @brief Slot triggered when keeping downloaded package cache option is toggled.
+ * @param checked True if cache should be preserved, false if cache should be cleaned after installation.
+ */
+void SettingsDialog::onKeepCacheToggled(const bool checked) {
+    adminConfigManager->setKeepCache(checked);
     emit adminConfigSaveRequested(adminConfigManager->serializePayload());
 }
 

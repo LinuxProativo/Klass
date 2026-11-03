@@ -379,6 +379,17 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         runTask("/sbin/upgradepkg", args);
     }
 
+    if (!installList.isEmpty() || !reinstallList.isEmpty()) {
+        if (!adminConfig.keepCache()) {
+            socket->write(OUTPUT + QByteArray("\nCleaning downloaded packages cache...") + SEP);
+            if (QDir cacheDir(KLASS_PACKAGES); cacheDir.exists()) {
+                cacheDir.removeRecursively();
+                (void) QDir().mkpath(KLASS_PACKAGES);
+            }
+            socket->write(OUTPUT + QByteArray("    --> Package cache cleaned.\n") + SEP);
+        }
+    }
+
     if (!installList.isEmpty() || !reinstallList.isEmpty() || !removeList.isEmpty()) {
         socket->write(OUTPUT + QByteArray("\n==================================================") + SEP);
         socket->write(OUTPUT + QByteArray("Running System Post-Configuration ...") + SEP);

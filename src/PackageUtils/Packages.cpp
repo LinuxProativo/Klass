@@ -16,7 +16,8 @@
 #include <Utils.hpp>
 
 /**
- * @brief Dynamic Structured Constructor.
+ * @brief Constructs the Packages manager and triggers initial catalog load.
+ * @param object Parent QObject.
  */
 Packages::Packages(QObject *object) : QObject(object) {
     loadPackages();
@@ -24,11 +25,11 @@ Packages::Packages(QObject *object) : QObject(object) {
 
 /**
  * @brief Fast O(1) package name and version splitter from a canonical Slackware package string.
- * @details Format expected: name-version-arch-build (e.g., "aaa_base-15.0-x86_64-1").
- * @param rawName The raw package filename or identifier string view without archive extensions.
- * @param outName Output reference that receives the extracted package base name.
- * @param outVersion Output reference that receives the reconstructed version string (version-arch-build).
- * @return True if the string contains the expected delimiters and was successfully split, false otherwise.
+ * @details Format expected: name-version-arch-build (e.g. "aaa_base-15.0-x86_64-1").
+ * @param rawName The raw package filename without archive extensions.
+ * @param outName Output reference receiving the extracted base package name.
+ * @param outVersion Output reference receiving the version string (version-arch-build).
+ * @return True if the string matches Slackware delimiter formatting.
  */
 bool Packages::splitPackageParts(const QStringView rawName, QString &outName, QString &outVersion) {
     const int lastDash = static_cast<int>(rawName.lastIndexOf(u'-'));
@@ -49,9 +50,9 @@ bool Packages::splitPackageParts(const QStringView rawName, QString &outName, QS
 }
 
 /**
- * @brief Parses compressed or plain CHECKSUMS.md5 files without temporary allocations.
+ * @brief Parses compressed or plain CHECKSUMS.md5 files.
  * @param repoPath Absolute filesystem path of the repository containing checksum files.
- * @return A QHash mapping relative package file keys to their ChecksumEntry records.
+ * @return A QHash mapping relative package filenames to their ChecksumEntry records.
  */
 QHash<QString, ChecksumEntry> Packages::parseRepoChecksums(const QString &repoPath) {
     const QString gzPath = repoPath + QStringLiteral("CHECKSUMS.md5.gz");
@@ -72,7 +73,7 @@ QHash<QString, ChecksumEntry> Packages::parseRepoChecksums(const QString &repoPa
     result.reserve(4000);
 
     for (const auto lines = qTokenize(content, u'\n'); QStringView line: lines) {
-        QStringView trimmed = line.trimmed();
+        const QStringView trimmed = line.trimmed();
         if (trimmed.size() < 35 || trimmed.at(32) != u' ')
             continue;
 
@@ -87,15 +88,14 @@ QHash<QString, ChecksumEntry> Packages::parseRepoChecksums(const QString &repoPa
         if (pathView.startsWith(QLatin1String("./")))
             pathView = pathView.mid(2);
 
-        const bool isPkg = pathView.endsWith(u".txz") || pathView.endsWith(u".tgz") ||
-                           pathView.endsWith(u".tbz") || pathView.endsWith(u".tlz");
+        const bool isPkg = RepoUtils::isPackageArchive(pathView);
         const bool isAsc = pathView.endsWith(u".asc");
 
         if (!isPkg && !isAsc)
             continue;
 
         const int lastSlash = static_cast<int>(pathView.lastIndexOf(u'/'));
-        const QStringView keyView = lastSlash != -1 ? pathView.mid(lastSlash + 1) : pathView;
+        const QStringView keyView = (lastSlash != -1) ? pathView.mid(lastSlash + 1) : pathView;
 
         result.insert(keyView.toString(), {trimmed.left(32).toString(), pathView.toString()});
     }
@@ -105,12 +105,12 @@ QHash<QString, ChecksumEntry> Packages::parseRepoChecksums(const QString &repoPa
 }
 
 /**
- * @brief Instantly retrieves both the MD5 and the original relative path of a package from RAM.
+ * @brief Instantly retrieves the MD5 and relative path of a package from RAM.
  * @param repo Name of the repository directory.
- * @param package Name of the package (e.g., "aspell-ar").
- * @param version Complete version string (e.g., "1.2_0-x86_64-1").
- * @param format The requested file format extension to search for.
- * @return Structure containing the MD5 and the path. Returns empty strings if not found.
+ * @param package Name of the package.
+ * @param version Complete version string.
+ * @param format Requested file format extension to find.
+ * @return Structure containing the MD5 and path.
  */
 ChecksumEntry Packages::getChecksumEntry(const QString &repo, const QString &package,
                                          const QString &version, const FileFormat format) const {
@@ -121,36 +121,28 @@ ChecksumEntry Packages::getChecksumEntry(const QString &repo, const QString &pac
     const auto &repoCache = repoIt.value();
     const QString baseKey = package + u'-' + version;
 
-    if (format == FileFormat::Package) {
-        static const std::array packageExtensions = {
-            QStringLiteral(".txz"), QStringLiteral(".tgz"), QStringLiteral(".tlz"), QStringLiteral(".tbz")
-        };
-
-        for (const QString &ext: packageExtensions) {
-            if (const auto it = repoCache.find(baseKey + ext); it != repoCache.end())
+    auto findChecksum = [&](const std::initializer_list<const char *> &extensions) -> ChecksumEntry {
+        for (const char *ext: extensions) {
+            if (const auto it = repoCache.find(baseKey + QString::fromLatin1(ext)); it != repoCache.end())
                 return it.value();
         }
-    } else if (format == FileFormat::Asc) {
-        if (const auto it = repoCache.find(baseKey + QStringLiteral(".txz.asc")); it != repoCache.end())
-            return it.value();
+        return ChecksumEntry{};
+    };
 
-        static const std::array otherAscExtensions = {
-            QStringLiteral(".tgz.asc"), QStringLiteral(".tlz.asc"), QStringLiteral(".tbz.asc")
-        };
-        for (const QString &ext: otherAscExtensions) {
-            if (const auto it2 = repoCache.find(baseKey + ext); it2 != repoCache.end())
-                return it2.value();
-        }
-    }
+    if (format == FileFormat::Package)
+        return findChecksum({".txz", ".tgz", ".tlz", ".tbz"});
+
+    if (format == FileFormat::Asc)
+        return findChecksum({".txz.asc", ".tgz.asc", ".tlz.asc", ".tbz.asc"});
 
     return ChecksumEntry{};
 }
 
 /**
- * @brief Instantly accesses metadata for a specific package from RAM, matching its repository, name, and version.
- * @param repo Name of the repository directory (use "Local" for local packages).
- * @param package Name of the package (e.g., "aspell-ar").
- * @param version Complete version string (e.g., "1.2_0-x86_64-1").
+ * @brief Instantly accesses metadata for a specific package from RAM.
+ * @param repo Name of the repository directory.
+ * @param package Name of the package.
+ * @param version Complete version string.
  * @return Structure containing metadata or empty fields if not matched.
  */
 PkgInfo Packages::getPackageInfo(const QString &repo, const QString &package, const QString &version) const {
@@ -180,7 +172,7 @@ PkgInfo Packages::getPackageInfo(const QString &repo, const QString &package, co
 }
 
 /**
- * @brief Scans and retrieves available packages from local and all repositories found inside the database directory.
+ * @brief Scans and retrieves available packages from local system and active repositories.
  */
 void Packages::loadPackages() {
     availableCache.clear();
@@ -271,12 +263,10 @@ void Packages::loadPackages() {
             }
 
             QString resolvedUrl;
-            if (repoName == SLACK_OFICIAL) resolvedUrl = official.url;
-            else if (repoName == SLACK_PATCHES) resolvedUrl = official.url + QStringLiteral("patches/");
-            else if (repoName == SLACK_EXTRA) resolvedUrl = official.url + QStringLiteral("extra/");
-            else if (repoName == SLACK_TESTING) resolvedUrl = official.url + QStringLiteral("testing/");
-            else if (repoName == SLACK_PASTURE) resolvedUrl = official.url + QStringLiteral("pasture/");
-            else resolvedUrl = thirdPartyMap.value(repoName, QString{});
+            if (Utils::isOfficialRepo(repoName))
+                resolvedUrl = Mirrors::branchUrl(official.url, repoName);
+            else
+                resolvedUrl = thirdPartyMap.value(repoName, QString{});
 
             availableCache.insert(repoName, {hasCats, resolvedUrl, std::move(packageList)});
         }
@@ -305,20 +295,14 @@ void Packages::loadPackages() {
             bool capturandoDesc = false;
 
             for (auto lines = qTokenize(fileContent, u'\n'); QStringView lineToken: lines) {
-                if (QStringView line = lineToken.trimmed(); line.startsWith(u"PACKAGE LOCATION:")) {
-                    QStringView loc = line.mid(17).trimmed();
-
-                    if (loc.endsWith(u".txz") || loc.endsWith(u".tgz") ||
-                        loc.endsWith(u".tbz") || loc.endsWith(u".tlz")) {
-                        const int lastSlash = static_cast<int>(loc.lastIndexOf(u'/'));
-                        loc = (lastSlash != -1) ? loc.left(lastSlash) : QStringView{};
-                    }
-
+                const QStringView line = lineToken.trimmed();
+                if (line.startsWith(u"PACKAGE LOCATION:")) {
+                    QStringView loc = RepoUtils::stripPackageExtension(line.mid(17).trimmed());
                     while (loc.endsWith(u'/'))
                         loc = loc.chopped(1);
 
                     const int lastSlash = static_cast<int>(loc.lastIndexOf(u'/'));
-                    const QStringView folder = lastSlash != -1 ? loc.mid(lastSlash + 1) : loc;
+                    const QStringView folder = (lastSlash != -1) ? loc.mid(lastSlash + 1) : loc;
                     if (!folder.isEmpty() && folder != u"." && folder != u".." && !folder.contains(pkg.name))
                         pkg.category = folder.toString();
                 } else if (line.startsWith(u"COMPRESSED PACKAGE SIZE:")) {
@@ -329,24 +313,7 @@ void Packages::loadPackages() {
                     capturandoDesc = true;
                 } else if (capturandoDesc) {
                     if (lineToken.startsWith(descPrefix, Qt::CaseInsensitive)) {
-                        const QString contentStr = RepoUtils::normalizeSpaces(lineToken.mid(descPrefix.length()));
-
-                        if (pkg.description.isEmpty() && !contentStr.trimmed().isEmpty()) {
-                            const QString trimmedContent = contentStr.trimmed();
-                            const int openParen = static_cast<int>(trimmedContent.indexOf(u'('));
-                            const int closeParen = static_cast<int>(trimmedContent.indexOf(u')'));
-                            if (openParen != -1 && closeParen > openParen) {
-                                pkg.description = trimmedContent.mid(openParen + 1, closeParen - openParen - 1);
-                            } else {
-                                pkg.description = trimmedContent;
-                            }
-                        }
-
-                        if (!contentStr.isEmpty()) {
-                            pkg.detailedDesc += contentStr + u'\n';
-                        } else if (!pkg.detailedDesc.isEmpty() && !pkg.detailedDesc.endsWith(u"\n\n")) {
-                            pkg.detailedDesc += u'\n';
-                        }
+                        RepoUtils::appendPackageDescription(lineToken, descPrefix, pkg.description, pkg.detailedDesc);
                     } else if (line.isEmpty() && !pkg.detailedDesc.isEmpty()) {
                         capturandoDesc = false;
                     }
@@ -362,8 +329,8 @@ void Packages::loadPackages() {
 /**
  * @brief Parses the installation log of a package and returns its installed files.
  * @param name The name of the package.
- * @param version The complete version string (e.g., "1.0.0-x86_64-1").
- * @return QStringList containing the paths of the installed files.
+ * @param version The complete version string.
+ * @return QStringList containing paths of installed files.
  */
 QStringList Packages::listPackageFiles(const QString &name, const QString &version) {
     QStringList files;
@@ -392,9 +359,9 @@ QStringList Packages::listPackageFiles(const QString &name, const QString &versi
 }
 
 /**
- * @brief Parses raw text buffer contents, filters package identity tags, and extracts short descriptions.
- * @param content The raw, plain text string payload containing package descriptors.
- * @param packageList Target memory sequence pointer reference to hold appended discoveries.
+ * @brief Parses raw PACKAGES.TXT content, extracts package metadata, and builds package lists.
+ * @param content The plain text document containing package descriptors.
+ * @param packageList Target container receiving parsed package structures.
  */
 void Packages::parsePackagesContent(const QString &content, QList<PkgInfo> &packageList) {
     if (content.isEmpty())
@@ -406,7 +373,7 @@ void Packages::parsePackagesContent(const QString &content, QList<PkgInfo> &pack
     bool processandoPacote = false, capturandoDesc = false;
 
     for (auto lines = qTokenize(content, u'\n'); QStringView line: lines) {
-        QStringView trimmedLine = line.trimmed();
+        const QStringView trimmedLine = line.trimmed();
 
         if (trimmedLine.startsWith(u"PACKAGE NAME:")) {
             if (processandoPacote && !currentPkg.name.isEmpty()) {
@@ -418,11 +385,7 @@ void Packages::parsePackagesContent(const QString &content, QList<PkgInfo> &pack
             processandoPacote = true;
             capturandoDesc = false;
 
-            QStringView rawName = trimmedLine.mid(13).trimmed();
-            if (rawName.endsWith(u".txz") || rawName.endsWith(u".tgz") ||
-                rawName.endsWith(u".tbz") || rawName.endsWith(u".tlz"))
-                rawName = rawName.chopped(4);
-
+            const QStringView rawName = RepoUtils::stripPackageExtension(trimmedLine.mid(13).trimmed());
             if (splitPackageParts(rawName, currentPkg.name, currentPkg.version))
                 currentDescPrefix = currentPkg.name + u':';
             continue;
@@ -445,28 +408,10 @@ void Packages::parsePackagesContent(const QString &content, QList<PkgInfo> &pack
             currentPkg.conflicts = trimmedLine.mid(18).trimmed().toString();
         } else if (trimmedLine.startsWith(u"PACKAGE SUGGESTS:")) {
             currentPkg.suggests = trimmedLine.mid(17).trimmed().toString();
-        } else if (!capturandoDesc && !currentDescPrefix.isEmpty() && line.startsWith(
-                       currentDescPrefix, Qt::CaseInsensitive)) {
-            const QString contentStr = RepoUtils::normalizeSpaces(line.mid(currentDescPrefix.length()));
-            const QString trimmedContent = contentStr.trimmed();
-            const int openParen = static_cast<int>(trimmedContent.indexOf(u'('));
-            const int closeParen = static_cast<int>(trimmedContent.lastIndexOf(u')'));
-            if (openParen != -1 && closeParen > openParen) {
-                currentPkg.description = trimmedContent.mid(openParen + 1, closeParen - openParen - 1);
-            } else {
-                currentPkg.description = trimmedContent;
-            }
-
-            currentPkg.detailedDesc = contentStr + u'\n';
+        } else if (!currentDescPrefix.isEmpty() && line.startsWith(currentDescPrefix, Qt::CaseInsensitive)) {
+            RepoUtils::appendPackageDescription(line, currentDescPrefix, currentPkg.description,
+                                                currentPkg.detailedDesc);
             capturandoDesc = true;
-        } else if (capturandoDesc && !currentDescPrefix.isEmpty() &&
-                   line.startsWith(currentDescPrefix, Qt::CaseInsensitive)) {
-            if (const QString contentStr = RepoUtils::normalizeSpaces(line.mid(currentDescPrefix.length()));
-                !contentStr.isEmpty()) {
-                currentPkg.detailedDesc += contentStr + u'\n';
-            } else if (!currentPkg.detailedDesc.isEmpty() && !currentPkg.detailedDesc.endsWith(u"\n\n")) {
-                currentPkg.detailedDesc += u'\n';
-            }
         } else if (capturandoDesc && trimmedLine.isEmpty()) {
             capturandoDesc = false;
         }

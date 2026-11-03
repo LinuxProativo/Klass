@@ -1,6 +1,6 @@
 /**
  * @file AdminConfigManager.hpp
- * @brief Header for managing administrative and verification configurations in klass.conf.
+ * @brief Header for managing administrative, verification, and cache configurations in klass.conf.
  */
 
 #ifndef ADMINCONFIGMANAGER_HPP
@@ -54,6 +54,10 @@ public:
 
     void setPreferredChecksum(const QString &algorithm) { preferChecksum = algorithm; }
 
+    [[nodiscard]] bool keepCache() const { return keepCacheEnabled; }
+
+    void setKeepCache(const bool enabled) { keepCacheEnabled = enabled; }
+
     [[nodiscard]] bool postInstallTask(const PostInstallTask task) const { return postInstallTasks.value(task, false); }
 
     void setPostInstallTask(const PostInstallTask task, const bool enabled) { postInstallTasks[task] = enabled; }
@@ -68,6 +72,7 @@ private:
     [[nodiscard]] static QString taskToKey(PostInstallTask task);
 
     bool checkSignature{true}, checkChecksum{true};
+    bool keepCacheEnabled{false};
     QString downloadCmd{QStringLiteral("Native")};
     QString downloadCmdParams{};
     QString preferChecksum{QStringLiteral("MD5")};

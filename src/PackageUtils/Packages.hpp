@@ -1,6 +1,6 @@
 /**
  * @file Packages.hpp
- * @brief Header for config packages.
+ * @brief Header for managing system packages, repository index parsing, and metadata retrieval.
  */
 
 #ifndef PACKAGES_HPP
@@ -15,7 +15,7 @@
 
 /**
  * @struct PkgInfo
- * @brief Holds metadata for a package available in remote repositories.
+ * @brief Holds metadata for a package available in remote repositories or installed locally.
  */
 struct PkgInfo {
     bool isInstalled = false;
@@ -53,7 +53,7 @@ struct ChecksumEntry {
 
 /**
  * @enum FileFormat
- * @brief Identifies the file extension category we want to search for in the repository.
+ * @brief Identifies the file extension category to search for in checksum caches.
  */
 enum class FileFormat {
     Package,
@@ -64,9 +64,11 @@ enum class FileFormat {
  * @class Packages
  * @brief Utility manager for scanning, parsing, and listing software packages in the Klass system.
  */
-class Packages : QObject {
+class Packages : public QObject {
+    Q_OBJECT
+
 public:
-    explicit Packages(QObject *object);
+    explicit Packages(QObject *object = nullptr);
 
     void loadPackages();
 

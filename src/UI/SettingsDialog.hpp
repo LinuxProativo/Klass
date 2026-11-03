@@ -1,6 +1,6 @@
 /**
  * @file SettingsDialog.hpp
- * @brief Header for config Settings.
+ * @brief Header for managing application preferences, commands, and administrative settings.
  */
 
 #ifndef SETTINGSDIALOG_HPP
@@ -64,22 +64,24 @@ private:
 
     void onPreferredChecksumChanged(const QString &checksum);
 
+    void onKeepCacheToggled(bool checked);
+
     void onPostInstallItemChanged(const QListWidgetItem *item);
 
     void addPostInstallTask(const QString &label, PostInstallTask task) const;
 
     QCheckBox *autostartCheckBox{}, *startMaximizedCB{}, *startMinimizedCB{};
     QCheckBox *confirmSelectUpdatesCB{}, *officialUpdatesOnlyCB{};
-    QCheckBox *attachPatchesCB{}, *attachTestingCB{}, *verifySignatureCB{}, *verifyChecksumCB{};
+    QCheckBox *attachPatchesCB{}, *attachTestingCB{}, *verifySignatureCB{}, *verifyChecksumCB{}, *keepCacheCB{};
     QComboBox *downloadMethodCombo{}, *checksumComboBox{};
-    QGroupBox *verificationGroup{}, *postInstallGroup{}, *startupGroup{};
+    QGroupBox *verificationGroup{}, *cacheGroup{}, *postInstallGroup{}, *startupGroup{};
     QGroupBox *updateOptionsGroup{}, *repoGroup{}, *downloadCommandsGroup{};
     QHBoxLayout *checksumSelectLayout{};
     QLabel *downloadMethodLabel{}, *extraParamsLabel{}, *preferredChecksumLabel{};
     QLineEdit *extraParamsEdit{};
     QListWidget *postInstallList{};
     QTabWidget *tabWidget{};
-    QVBoxLayout *adminLayout{}, *verificationLayout{}, *postInstallLayout{}, *mainLayout{};
+    QVBoxLayout *adminLayout{}, *verificationLayout{}, *cacheLayout{}, *postInstallLayout{}, *mainLayout{};
     QVBoxLayout *commandsLayout{}, *downloadCommandsLayout{}, *interfaceLayout{};
     QVBoxLayout *startupLayout{}, *updateOptionsLayout{}, *repoLayout{};
     QWidget *interfaceTab{}, *commandsTab{}, *adminTab{};

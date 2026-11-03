@@ -1,6 +1,6 @@
 /**
  * @file Mirrors.hpp
- * @brief Header for manages mirrors.
+ * @brief Header for managing mirrors and repository configurations.
  */
 
 #ifndef MIRRORS_HPP
@@ -71,6 +71,8 @@ public:
     static OfficialBranches loadOfficialBranches();
 
     static bool setOfficialBranches(const OfficialBranches &branches);
+
+    static QString branchUrl(const QString &baseUrl, const QString &branchName);
 
 private:
     static Channel detectChannel();

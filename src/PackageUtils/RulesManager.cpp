@@ -10,10 +10,10 @@
 #include <SlackwareDefines.hpp>
 
 /**
- * @brief Checks if a specific package, version, repository, and category match a compiled rule.
- * @param cRule The compiled rule containing evaluation flags, the raw rule entry, and the pre-compiled regex.
+ * @brief Checks if a package, version, repository, and category match a compiled rule.
+ * @param cRule The compiled rule containing evaluation flags and regular expressions.
  * @param pkg The name of the package to be evaluated.
- * @param ver The version of the package (can be empty).
+ * @param ver The version of the package.
  * @param cat The category or scope of the package.
  * @param repo The repository where the package originates.
  * @return True if the package details satisfy the rule criteria; otherwise false.
@@ -32,17 +32,15 @@ bool RulesManager::matchesCompiledRule(const CompiledRule &cRule, const QString 
         if (cat.compare(rule.rule, Qt::CaseInsensitive) == 0)
             return true;
 
-        if (cRule.isRegexValid && cRule.regex.match(cat).hasMatch())
-            return true;
-
-        return false;
+        return cRule.isRegexValid && cRule.regex.match(cat).hasMatch();
     }
 
     const QString fullPkgVersion = ver.isEmpty() ? pkg : QStringLiteral("%1-%2").arg(pkg, ver);
 
     if (rule.rule.compare(pkg, Qt::CaseInsensitive) == 0 ||
-        rule.rule.compare(fullPkgVersion, Qt::CaseInsensitive) == 0)
+        rule.rule.compare(fullPkgVersion, Qt::CaseInsensitive) == 0) {
         return true;
+    }
 
     if (cRule.isRegexValid) {
         if (cRule.regex.match(pkg).hasMatch() || cRule.regex.match(fullPkgVersion).hasMatch())
@@ -58,11 +56,10 @@ bool RulesManager::matchesCompiledRule(const CompiledRule &cRule, const QString 
  */
 QList<RuleEntry> RulesManager::loadRules() {
     const QStringList lines = RepoUtils::readConf();
-    QList<RuleEntry> rules{};
+    QList<RuleEntry> rules;
 
     for (const QString &line: lines) {
-        const QString trimmed = line.trimmed();
-        if (QRegularExpressionMatch match = RULE_REGEX.match(trimmed); match.hasMatch()) {
+        if (const QRegularExpressionMatch match = RULE_REGEX.match(line.trimmed()); match.hasMatch()) {
             RuleEntry entry;
             entry.type = match.captured(1);
             entry.repo = match.captured(2);
@@ -76,84 +73,52 @@ QList<RuleEntry> RulesManager::loadRules() {
 
 /**
  * @brief Appends a single rule line under its section (# Exceptions or # Priorities).
+ * @param rule RuleEntry to persist.
+ * @return True on success.
  */
 bool RulesManager::addRule(const RuleEntry &rule) {
-    QStringList lines = RepoUtils::readConf();
     const QString targetLine = rule.toConfigLine();
-
-    for (const QString &line: lines) {
-        if (line.trimmed() == targetLine)
-            return true;
-    }
-
-    const QString header = rule.type == EXCEPT ? EXCEPTION_HEADER : PRIORITY_HEADER;
-
-    if (const int index = static_cast<int>(lines.indexOf(header)); index != -1) {
-        lines.insert(index + 1, targetLine);
-    } else {
-        lines.append(targetLine);
-    }
-
-    return RepoUtils::writeConf(lines);
+    const QString header = (rule.type == EXCEPT) ? EXCEPTION_HEADER : PRIORITY_HEADER;
+    return RepoUtils::appendConfigLine(header, targetLine);
 }
 
 /**
- * @brief Remove a rules lines completely from klass.conf.
+ * @brief Removes rule lines completely from klass.conf.
+ * @param rules List of RuleEntry items to remove.
+ * @return True on success.
  */
 bool RulesManager::removeRules(const QList<RuleEntry> &rules) {
-    const QStringList currentLines = RepoUtils::readConf();
-
     QSet<QString> targets;
+    targets.reserve(rules.size());
     for (const RuleEntry &r: rules)
         targets.insert(r.toConfigLine());
 
-    QStringList updatedLines;
-    for (const QString &line: currentLines) {
-        if (!targets.contains(line.trimmed()))
-            updatedLines.append(line);
-    }
-
-    return RepoUtils::writeConf(updatedLines);
+    return RepoUtils::removeConfigLines(targets);
 }
 
 /**
- * @brief Replaces an existing rule line with a new one in a single read/write pass.
- * @param oldRule The rule as it currently exists in klass.conf, used to locate its line.
- * @param newRule The rule's new values, written in place of the old line.
- * @return True if the old line was found and the file was written successfully, or if the old line was already absent.
+ * @brief Replaces an existing rule line with a new one in place.
+ * @param oldRule The rule currently stored in klass.conf.
+ * @param newRule The rule's new replacement values.
+ * @return True on success.
  */
 bool RulesManager::editRule(const RuleEntry &oldRule, const RuleEntry &newRule) {
-    QStringList lines = RepoUtils::readConf();
-    const QString oldLine = oldRule.toConfigLine();
-    const QString newLine = newRule.toConfigLine();
-
-    bool found = false;
-    for (QString &line: lines) {
-        if (line.trimmed() == oldLine) {
-            line = newLine;
-            found = true;
-            break;
-        }
-    }
-
-    if (!found)
-        return true;
-
-    return RepoUtils::writeConf(lines);
+    return RepoUtils::replaceConfigLine(oldRule.toConfigLine(), newRule.toConfigLine());
 }
 
 /**
- * @brief Resolves exception and priority rules across the full cross-repository package universe at once.
- * @param allPkgs List of pointers to package metadata structures across all loaded repositories.
- * @param r List of user-defined exception and priority rules to evaluate.
- * @return A QHash mapping each composite package key (PkgKey) to its resolved RuleSt state.
+ * @brief Resolves exception and priority rules across the cross-repository package universe.
+ * @param allPkgs List of pointers to package metadata across all loaded repositories.
+ * @param r List of user-defined exception and priority rules.
+ * @return QHash mapping each composite package key to its resolved RuleSt status.
  */
 QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<const PkgInfo *> &allPkgs, const QList<RuleEntry> &r) {
     QHash<PkgKey, RuleSt> result;
     result.reserve(allPkgs.size());
 
-    QList<CompiledRule> compiledRules;
-    compiledRules.reserve(r.size());
+    QList<CompiledRule> exceptionRules;
+    QList<CompiledRule> priorityRules;
+
     for (const RuleEntry &rule: r) {
         CompiledRule cRule;
         cRule.entry = rule;
@@ -161,15 +126,19 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<const PkgInfo *>
         cRule.isAllRepo = (rule.repo == ALL_REPOSITORIES);
         cRule.regex = QRegularExpression(rule.rule, QRegularExpression::CaseInsensitiveOption);
         cRule.isRegexValid = cRule.regex.isValid() && !rule.rule.trimmed().isEmpty();
-        compiledRules.append(cRule);
+
+        if (rule.type == EXCEPT)
+            exceptionRules.append(cRule);
+        else if (rule.type == PRIORITY)
+            priorityRules.append(cRule);
     }
 
     for (const auto *pkg: allPkgs)
         result.insert({pkg->name, pkg->version, pkg->repoName}, RuleSt::Normal);
 
     QSet<QString> excludedGlobalNames;
-    for (const CompiledRule &cRule: compiledRules) {
-        if (cRule.entry.type != EXCEPT || !cRule.isPackageScope || !cRule.isAllRepo)
+    for (const CompiledRule &cRule: exceptionRules) {
+        if (!cRule.isPackageScope || !cRule.isAllRepo)
             continue;
 
         for (const auto *pkg: allPkgs) {
@@ -182,9 +151,8 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<const PkgInfo *>
         bool isExcluded = excludedGlobalNames.contains(pkg->name);
 
         if (!isExcluded) {
-            for (const CompiledRule &cRule: compiledRules) {
-                if (cRule.entry.type == EXCEPT &&
-                    matchesCompiledRule(cRule, pkg->name, pkg->version, pkg->category, pkg->repoName)) {
+            for (const CompiledRule &cRule: exceptionRules) {
+                if (matchesCompiledRule(cRule, pkg->name, pkg->version, pkg->category, pkg->repoName)) {
                     isExcluded = true;
                     break;
                 }
@@ -194,6 +162,9 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<const PkgInfo *>
         if (isExcluded)
             result[{pkg->name, pkg->version, pkg->repoName}] = RuleSt::Excluded;
     }
+
+    if (priorityRules.isEmpty())
+        return result;
 
     QHash<QString, QList<const PkgInfo *> > byName;
     byName.reserve(allPkgs.size());
@@ -205,9 +176,8 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<const PkgInfo *>
 
         const PkgInfo *winner = nullptr;
         for (const auto *inst: instances) {
-            for (const CompiledRule &cRule: compiledRules) {
-                if (cRule.entry.type == PRIORITY &&
-                    matchesCompiledRule(cRule, inst->name, inst->version, inst->category, inst->repoName)) {
+            for (const CompiledRule &cRule: priorityRules) {
+                if (matchesCompiledRule(cRule, inst->name, inst->version, inst->category, inst->repoName)) {
                     winner = inst;
                     break;
                 }
@@ -219,11 +189,10 @@ QHash<PkgKey, RuleSt> RulesManager::resolveStatuses(const QList<const PkgInfo *>
             continue;
 
         for (const auto *inst: instances) {
-            if (inst->repoName != winner->repoName) {
+            if (inst->repoName != winner->repoName)
                 result[{inst->name, inst->version, inst->repoName}] = RuleSt::Excluded;
-            } else if (inst == winner) {
+            else if (inst == winner)
                 result[{inst->name, inst->version, inst->repoName}] = RuleSt::Prioritized;
-            }
         }
     }
 

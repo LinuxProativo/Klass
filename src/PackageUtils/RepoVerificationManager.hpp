@@ -6,7 +6,6 @@
 #ifndef REPOVERIFICATIONMANAGER_HPP
 #define REPOVERIFICATIONMANAGER_HPP
 
-#include <QHash>
 #include <QList>
 
 /**
