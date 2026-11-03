@@ -67,7 +67,7 @@ void AdminConfigManager::load() {
         const QString trimmed = line.trimmed();
 
         if (trimmed.startsWith(u'#')) {
-            inSection = (trimmed.compare(ADMIN_HEADER, Qt::CaseInsensitive) == 0);
+            inSection = trimmed.compare(ADMIN_HEADER, Qt::CaseInsensitive) == 0;
             continue;
         }
 
@@ -86,15 +86,15 @@ void AdminConfigManager::load() {
         } else if (key == QStringLiteral("DOWNLOAD_EXTRA_PARAMS")) {
             downloadCmdParams = val;
         } else if (key == QStringLiteral("VERIFY_SIGNATURE")) {
-            checkSignature = val.compare(QStringLiteral("true")) == 0 || val == QStringLiteral("1");
+            checkSignature = RepoUtils::parseBool(val, true);
         } else if (key == QStringLiteral("VERIFY_CHECKSUM")) {
-            checkChecksum = val.compare(QStringLiteral("true")) == 0 || val == QStringLiteral("1");
+            checkChecksum = RepoUtils::parseBool(val, true);
         } else if (key == QStringLiteral("PREFERRED_CHECKSUM")) {
             preferChecksum = val;
         } else {
             for (auto it = postInstallTasks.begin(); it != postInstallTasks.end(); ++it) {
                 if (key == taskToKey(it.key())) {
-                    it.value() = val.compare(QStringLiteral("true")) == 0 || val == QStringLiteral("1");
+                    it.value() = RepoUtils::parseBool(val, false);
                     break;
                 }
             }
@@ -115,10 +115,11 @@ QString AdminConfigManager::serializePayload() const {
     items << QStringLiteral("VERIFY_CHECKSUM=") + (checkChecksum ? QStringLiteral("true") : QStringLiteral("false"));
     items << QStringLiteral("PREFERRED_CHECKSUM=") + preferChecksum;
 
-    for (auto it = postInstallTasks.cbegin(); it != postInstallTasks.cend(); ++it)
+    for (auto it = postInstallTasks.cbegin(); it != postInstallTasks.cend(); ++it) {
         items << taskToKey(it.key()) + QStringLiteral("=") + (it.value()
                                                                   ? QStringLiteral("true")
                                                                   : QStringLiteral("false"));
+    }
     return items.join(u';');
 }
 
@@ -128,36 +129,9 @@ QString AdminConfigManager::serializePayload() const {
  * @return True on successful write and commit, false otherwise.
  */
 bool AdminConfigManager::savePayload(const QString &payload) {
-    QStringList lines = RepoUtils::readConf();
-    int sectionStart = -1, sectionEnd = 0;
-
-    for (int i = 0; i < lines.size(); ++i) {
-        if (lines.at(i).trimmed().compare(ADMIN_HEADER, Qt::CaseInsensitive) == 0) {
-            sectionStart = i;
-            sectionEnd = static_cast<int>(lines.size());
-            for (int j = i + 1; j < lines.size(); ++j) {
-                if (lines.at(j).trimmed().startsWith(u'#')) {
-                    sectionEnd = j;
-                    break;
-                }
-            }
-            break;
-        }
-    }
-
-    if (sectionStart != -1) {
-        for (int i = sectionEnd - 1; i >= sectionStart; --i)
-            lines.removeAt(i);
-    }
-
     QStringList adminBlock;
-    adminBlock << ADMIN_HEADER;
-
     for (const QString &pair: payload.split(u';', Qt::SkipEmptyParts))
         adminBlock << pair.trimmed();
 
-    adminBlock << QStringLiteral("");
-
-    lines.append(adminBlock);
-    return RepoUtils::writeConf(lines);
+    return RepoUtils::replaceConfigSection(ADMIN_HEADER, adminBlock);
 }
