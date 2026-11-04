@@ -36,7 +36,7 @@ class HelperUtils : QObject {
     Q_OBJECT
 
 public:
-    explicit HelperUtils() = default;
+    explicit HelperUtils(QObject *parent = nullptr) : QObject(parent) {}
 
     void performUpdate(QLocalSocket *socket);
 

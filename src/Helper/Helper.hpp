@@ -22,6 +22,8 @@ class Helper final : public QObject {
 public:
     explicit Helper(QObject *parent = nullptr);
 
+    ~Helper() override;
+
 private:
     static bool validateClient(const QLocalSocket *socket);
 

@@ -31,9 +31,7 @@
  * @param parent Parent object.
  */
 Helper::Helper(QObject *parent) : QObject(parent) {
-    QTextStream(stdout) << "Initializing Klass Helper (Root)";
-
-    helperUtils = new HelperUtils();
+    helperUtils = new HelperUtils(this);
     server = new QLocalServer(this);
     server->setSocketOptions(QLocalServer::WorldAccessOption | QLocalServer::AbstractNamespaceOption);
 
@@ -58,7 +56,6 @@ Helper::Helper(QObject *parent) : QObject(parent) {
             return;
         }
 
-        QTextStream(stdout) << "Client Connected & Authenticated";
         auto *task = new TaskManager(clientSocket, clientSocket);
 
         connect(clientSocket, &QLocalSocket::readyRead, this, [task, this] {
@@ -67,16 +64,12 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                 if (raw.isEmpty()) continue;
 
                 if (raw == "CANCEL") {
-                    QTextStream(stdout) << "Cancel Process";
                     task->cancelCommand();
                 } else if (raw == "QUIT") {
-                    QTextStream(stdout) << "Quit Requested";
                     QCoreApplication::quit();
                 } else if (raw == "CANCEL_OPERATION") {
-                    QTextStream(stdout) << "Cancel Update/Operation";
                     helperUtils->setOperationCancelled(true);
                 } else if (raw == "UPDATE") {
-                    QTextStream(stdout) << "Update DataBase";
                     helperUtils->setOperationCancelled(false);
                     helperUtils->performUpdate(clientSocket);
                 } else if (raw.startsWith("SETMIRROR:")) {
@@ -190,19 +183,32 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                     clientSocket->write(WRITE(ok, "Admin config saved", "Failed to save admin config") + SEP);
                 } else if (raw.startsWith(INPUT_CHAR)) {
                     task->sendInput(raw.mid(INPUT_SIZE));
-                } else {
-                    QTextStream(stdout) << "Unknown Command: " << raw; // Só prevenção
                 }
             }
         });
 
         connect(clientSocket, &QLocalSocket::disconnected, qApp, [this] {
-            QTextStream(stdout) << "Quit Helper (Root)";
             clientSocket->deleteLater();
             clientSocket = nullptr;
             QCoreApplication::quit();
         });
     });
+}
+
+/**
+ * Destructor for Helper
+ */
+Helper::~Helper() {
+    if (helperUtils)
+        helperUtils->setOperationCancelled(true);
+
+    if (clientSocket) {
+        clientSocket->disconnectFromServer();
+        clientSocket->abort();
+    }
+
+    if (server)
+        server->close();
 }
 
 /**
@@ -216,10 +222,8 @@ bool Helper::validateClient(const QLocalSocket *socket) {
 
     const qintptr fd = socket->socketDescriptor();
 
-    if (fd < 0) {
-        QTextStream(stdout) << "Invalid socket descriptor";
+    if (fd < 0)
         return false;
-    }
 
     ucred cred{};
     socklen_t len = sizeof(cred);
@@ -229,18 +233,8 @@ bool Helper::validateClient(const QLocalSocket *socket) {
         return false;
     }
 
-    QTextStream(stdout) << "Client PID=" << cred.pid << " UID=" << cred.uid << " GID=" << cred.gid << " ";
-
-    if (cred.pid <= 0)
-        return false;
-
-    if (cred.uid == 0) {
-        QTextStream(stdout) << "Root client rejected";
-        return false;
-    }
-
-    if (geteuid() != 0) {
-        QTextStream(stdout) << "Helper is not running as root";
+    if (cred.pid <= 0 || cred.uid == 0 || geteuid() != 0) {
+        QTextStream(stdout) << "Client or Helper rejected";
         return false;
     }
 

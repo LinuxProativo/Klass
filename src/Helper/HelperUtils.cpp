@@ -6,17 +6,12 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QEventLoop>
-#include <QFile>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QProcess>
 #include <QRegularExpression>
-#include <QTimer>
 
 #include <AdminConfigManager.hpp>
 #include <HelperUtils.hpp>
 #include <Mirrors.hpp>
-#include <Packages.hpp>
 #include <RepoVerificationManager.hpp>
 #include <SlackwareDefines.hpp>
 #include <Utils.hpp>
