@@ -45,8 +45,14 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--helper") == 0) {
             qputenv("QT_QPA_PLATFORM", "minimal");
+            qputenv("QT_NODBUS", "1");
+            qputenv("QT_NO_GLIB", "1");
+            qputenv("QT_LOGGING_RULES", "*=false");
+
             QCoreApplication app(argc, argv);
             Helper h;
+
+            Utils::releaseFreeMemory();
             return QCoreApplication::exec();
         }
     }
