@@ -43,7 +43,7 @@ inline const auto TRAY_IPC_SERVER = QStringLiteral("klass_tray_ipc");
 
 int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
-        if (QString(argv[i]) == "--helper") {
+        if (std::strcmp(argv[i], "--helper") == 0) {
             qputenv("QT_QPA_PLATFORM", "minimal");
             QCoreApplication app(argc, argv);
             Helper h;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     if (qtTranslator.load(QLocale::system(), QStringLiteral("qtbase"), QStringLiteral("_"),
                           QLibraryInfo::path(QLibraryInfo::TranslationsPath))) {
         SingleApplication::installTranslator(&qtTranslator);
-                          }
+    }
 
     QTranslator translator;
     const auto lang = QLocale::system().name();
@@ -87,9 +87,9 @@ int main(int argc, char *argv[]) {
         translator.load(trFile)) {
         Debug::msg("Loading translation", "Translator", {trFile, DColor::LightGreen});
         SingleApplication::installTranslator(&translator);
-        } else {
-            Debug::msg("Translation not available", "Translator", {DColor::LightRed});
-        }
+    } else {
+        Debug::msg("Translation not available", "Translator", {DColor::LightRed});
+    }
 
     if (app.isSecondary()) {
         Debug::msg("Secondary instance: Opening Klass GUI directly", "Main");
