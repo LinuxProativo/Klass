@@ -8,6 +8,7 @@ Cinnamon https://slackware.uk/csb/
 Mate https://slackware.uk/msb/
 Slackel https://slackware.uk/slackel/
 Salix https://slackware.uk/salix/
+Salix https://download.salixos.org/
 SlackDCE https://slackware.halpanet.org/slackdce/packages/
 SlackPack https://ftp.sotirov-bg.net/pub/contrib/slackware/packages/
 Slackers https://slackers.it/repository/
