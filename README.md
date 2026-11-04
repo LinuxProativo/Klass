@@ -16,19 +16,18 @@
 
 ## 🔍 Visão Geral
 
-> VERSÃO RELEASE CANDIDATE 3 - AVISOS
+> VERSÃO RELEASE CANDIDATE 4 - AVISOS
 >
-> - RC4 será focado em otimizações de RAM e novos recursos.
+> - RC5 será focado em otimizações de Performance/Memória e adição de rotina para arquivos.new.
 > - Não há qualquer tentativa de autoreinstalação de modulos dkms — sem previsão.
 > - Não há verificações relacionadas ao uso de NVIDIA — sem previsão.
 > - Não há uma configuração de pós-instalação para o VMWare — sem previsão.
 >
 > Ajustes mapeados para a versão estável:
-> - EM BREVE: Rotina pós-instalação para mapear arquivos.new após upgrade. -> Implementação RC3/4.
+> - EM BREVE: Rotina pós-instalação para mapear arquivos.new após upgrade. -> Implementação RC5.
 > - Opção de proceder com a atualização do sistema logo após o update.
-> - Opção de limpeza de cache após a instalação. -> RC3/4.
 > - Rollback em caso de necessidade.
-> - Download paralelo opcional. -> Antes do Latest Release.
+> - Download paralelo opcional.
 > - Regras avançadas de controle manual.
 > - Menu para atualizar a base de dados sem abrir a interface.
 > - Atualização da lista de pacotes na interface, no hide/show, e via parametro --list-update.
@@ -36,23 +35,22 @@
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacote gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
-Ele foi desenvolvido com o objetivo de facilitar o gerenciamento de pacotes no
-**Slackware**, reduzir a possibilidade de quebrar o sistema e facilitar a manutenção
-de um sistema minimalista, melhorando o controle do usuário sobre o sistema e pacotes
-instalados.
+Ele foi desenvolvido visando facilitar o gerenciamento de pacotes no **Slackware**,
+reduzir a possibilidade de quebrar o sistema e facilitar a manutenção de um sistema
+minimalista, melhorando o controle do usuário sobre o sistema e pacotes instalados.
 
 No `Slackware Current`, ele ajuda o usuário a não esquecer de instalar novos pacotes
-adicionados em uma categoria específica, evitando possíveis problemas com falta
+adicionados em categorias específicas, evitando possíveis problemas com falta
 de dependência. Já no `Slackware Stable`, ele ajuda a visualizar pacotes disponíveis
 para atualização. E para o usuário que deseja usar a ramificação testing, é possível
-gerenciá-lo com muita facilidade, sem correr o risco de quebrar o sistema.
+gerenciá-lo com muita facilidade, ajudando a previnir quebras no sistema.
 
 O gerenciador tem suporte de exibição por categoria e o controle de atualização foi
-feito levando em conta uma lista de prioridades e bloqueio, e também as últimas
+feito para levar em conta uma lista de prioridades e bloqueio, e também as últimas
 atualizações por repositórios, e não as últimas atualizações de pacotes no geral,
 o que evita possíveis riscos de quebra do sistema e também reduz a probabilidade
 de quebra de pacotes de terceiros instalados no sistema porque misturou os pacotes
-de diferentes repositórios. Você também pode gerenciar as atualizações de
+de diferentes repositórios. Você também pode gerir as atualizações de
 repositórios individualmente se você quiser.
 
 ## 🪶 Filosofia
@@ -60,7 +58,7 @@ repositórios individualmente se você quiser.
 Como sabemos, a principal filosofia original do Slackware é o `KISS`
 (**K**eep **I**t **S**imple, **S**tupid) que, na prática, se traduz no famoso estilo
 `DIY` (**D**o **I**t **Y**ourself), ou seja, **faça você mesmo**. A distribuição
-geralmente evita interfaces gráficas de configuração e ferramentas de automatização
+geralmente evita utilitários gráficos de configuração e ferramentas de automatização
 complexas, exigindo que o usuário interaja diretamente com arquivos de texto e linhas
 de comando.
 
@@ -80,7 +78,7 @@ geral dos pacotes (instalação, atualização, etc) segue a mesma lógica.
   Verificação automática de atualizações da base de dados de todos os repositórios
   configurados. O usuário decide se vai atualizar a base de dados e o sistema. Não
   terá nenhuma opção para tentar automatizar esse processo, pois isso exigiria um
-  helper privilegiado em background desde a inicialização do sistema, além da
+  helper privilegiado em segundo plano desde a inicialização do sistema, além da
   dificuldade de depurar depois, qualquer possibilidade de quebra do sistema por 
   conta de uma regra mal definida, por exemplo.
 
@@ -104,8 +102,8 @@ geral dos pacotes (instalação, atualização, etc) segue a mesma lógica.
 
 - **📂 Suporte a Repositórios de Terceiros**  
   Foram testados uma série de repositórios de terceiros que podem ser selecionados
-  através de uma lista que vai mostrar as opções compatíveis com o seu sistema.
-  Não achei necessário implementar testes de latência nesse caso. Também será possível
+  usando uma lista que vai mostrar as opções compatíveis com o seu sistema. Não
+  achei necessário implementar testes de latência nesse caso. Também será possível
   adicionar repositórios adicionais manualmente.
 
 - **🔝 Gerenciamento de Prioridades e Excessões**  
@@ -122,15 +120,14 @@ geral dos pacotes (instalação, atualização, etc) segue a mesma lógica.
 
 - **📦 Gerenciamento de Pacotes Disponíveis até o Momento**
 
-  - **Instalação:** Suporte a instalação com busca de dependências adicionais, usa
+  - **Instalação:** Suporte a instalação com busca de dependências adicionais. Usa
     `upgradepkg --install-new` para instalar.
 
-  - **Atualização:** Suporte a atualização com busca de possíveis novas dependências,
-    usa `upgradepkg --install-new` para atualizar.
+  - **Atualização:** Suporte a atualização com busca de possíveis novas dependências.
+    Usa `upgradepkg --install-new` para atualizar.
 
-  - **Reinstalação:** Suporte e reinstalação de pacotes se disponível em cache ou se
-    disponível para download, usa `upgradepkg --install-new --reinstall` para
-    reinstalar.
+  - **Reinstalação:** Suporte e reinstalação de pacotes se disponível em cache ou
+    espelho oficial. Usa `upgradepkg --install-new --reinstall` para reinstalar.
 
   - **Desinstalação:** Suporte básico de pacotes, não tenta caçar pacotes desnecessários.
     Remover pacotes desnecessários é por conta do usuário. Usa `removepkg` para remover.
@@ -206,7 +203,7 @@ usuário e redução de curva de aprendizagem. Dentre os principais:
 - Ícone na área de notificação e opção de inicialização com o sistema.
 - Digita a senha de superusuário apenas uma vez quando é soliciado, isso inicia um
   helper privilegiado que só tem o seu privilégio revogado 30s aṕos fechar o programa
-  para a área de notificação. Assim, não fica precisando colocar senha um monte de vez. 
+  para a área de notificação. Assim, não precisa digitar a senha um monte de vez. 
 - As informações de pacotes nas tabs de `Informações` e `Arquivos` são copiáveis.
 - **EM BREVE:** Pacotes baixados manualmente pode ser instalados via interface usando klass.
 - **EM BREVE:** Pacotes deb e rpm poderão ser convertidos e instalados facilmente.
@@ -255,7 +252,7 @@ Executadas sempre que pacotes são adicionados, atualizados ou removidos:
 3. **Atualizar índice de páginas de manual (`mandb`)**
     - **Comando:** `/usr/bin/mandb -q`  
       Reconstrói o índice do banco de dados das páginas de manual (`man`),
-      permitindo pesquisas rápidas via terminal (como `apropos` e `whatis`).
+      permitindo pesquisas rápidas via terminal.
 
 4. **Atualizar banco de dados de arquivos Desktop (`update-desktop-database`)**
     - **Comando:** `/usr/bin/update-desktop-database -q`  
@@ -302,7 +299,7 @@ de **Kernel (`kernel-*`)**:
         desreferenciando links (`cp -L`), contornando a limitação de links em
         partições FAT32.
       - Analisa e atualiza o `/boot/efi/EFI/Slackware/elilo.conf`, criando seções
-        de boot individuais para cada versão de kernel detectada.
+        de boot individuais para cada versão de kernel mapeada.
 
 10. **Recompilar módulos do VirtualBox (`vboxconfig` / `rcvboxdrv`)**
     - **Comando:** `/sbin/vboxconfig` (com fallback para `/sbin/rcvboxdrv setup` ou `/etc/rc.d/rc.vboxdrv setup`)  
@@ -316,7 +313,7 @@ Geralmente, o **Helper** é um serviço executado com privilégios de **root** r
 por realizar operações privilegiadas que podem ser solicitadas por algum programa sendo
 executado como usuário comum.
 
-Como a comunicação no **Klass** ocorre através de um **QLocalServer** configurado com
+Como a comunicação no **Klass** ocorre usando um **QLocalServer** configurado com
 acesso global (`WorldAccessOption`), foram implementadas diversas camadas de validação
 para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre eles:
 
@@ -349,10 +346,10 @@ para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre 
 - **Confirmação dos privilégios do Helper**  
   Antes de aceitar qualquer operação privilegiada, o Helper verifica se realmente está
   sendo executado como root (`geteuid() == 0`). Caso contrário, nenhuma requisição é
-  aceita. Isso é mais uma prevenção contra possíveis falhas.
+  permitida. Isso é mais uma prevenção contra possíveis falhas.
 
 - **Protocolo Fechado**  
-  Aqui sim resolve para segurança real. O protocolo de comunicação aceita apenas um
+  É o que resolve para segurança real. O protocolo de comunicação aceita apenas um
   conjunto fixo de comandos previamente implementados, como instalação,
   remoção de pacotes, atualização da base de dados e gerenciamento de repositórios.
   Mensagens desconhecidas são descartadas e registradas em log. Não existe interpretação
@@ -364,7 +361,7 @@ para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre 
   será executada. Esse modelo impede que um processo cliente malicioso utilize o Helper
   para executar comandos arbitrários com privilégios de root, reduzindo
   significativamente a superfície para escalonamento de privilégios, que poderia ser
-  explorado por certos indivíduos.
+  explorado de alguma forma.
 
 - **Cliente Único**  
   O Helper aceita apenas **uma conexão ativa por vez**. Qualquer tentativa de
