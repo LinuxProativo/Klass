@@ -1,25 +1,64 @@
-Mon Oct 12 08:02:24 -03 2026:
-    - Corrigido processTransaction para monitorar operações em pacotes do kernel para condicionar a execução de
-      GenerateInitrd, UpdateGrub, UpdateLilo e ReinstallVBoxModules.
-    - Adicionado novas opções de configurações em Settings.
-    - Adicionado barra de status para controle de atualizaçoes e processos em segundo plano.
-    - Adicionado opções de inicialização do programa.
-    - Removidos membros de diálogos não-persistentes com adicão de métodos dedicados para abertura sob demanda.
-    - Retorno por referência constante em Packages, para evitar a duplicação em massa da lista e do mapa de pacotes.
-    - RepositoryTab atualizado para preencher `hasUpdate` no carregamento e ao trocar a versão selecionada,
-      e para despachar atualizações de status via `notifyStatusChanged`.
-    - Otimizações em VersionComboBoxDelegate:
-      - Método `paint()` agora executa em tempo constante O(1), lendo diretamente `hasUpdate` do modelo.
-      - Utiliza ícone pré-carregado no construtor.
-    - Otimização em PackageTableModel:
-      - Removida a `QStringList allVersions` redundante, economizando alocações de lista para cada pacote do sistema.
-      - Adicionado o campo `hasUpdate` pré-calculado.
-      - Adicionado `notifyStatusChanged` para atualizações de status em lote sem invalidar colunas desnecessárias.
-    - Adicionado `repoPriority` e `computeHasUpdate` em RepositoryTabUtils.
-    - Adicionado em Utils funções para extrair build tag, comparar versão e serializar transações.
-    - DefaultPath virou resolvedor estático com cache em memória sem I/O repetitivo de disco e chamadas frequentes a regex.
-Thu Oct 08 07:43:45 -03 2026:
+Wed Nov 04 14:40:38 -03 2026:
+--- MEMORY OPTIMIZATION RESULTS ---
+Official repo: 3 tabs (Official + Patches + Extra) + Extra mirrors: 7 tabs + All and Others tab: 2 tabs = 12 tabs.
+Packages: + 20k :: With the 'All' tab: + 40k :: 4 items per table: + 160k items.
 
+First Instance (SysTray): +/- 36MB.
+Second Instance (Interface): Initial: +/- 123MB :: Max: +/- 130MB.
+Third Instance (Helper Root): +/- 20MB.
+-----------------------------------
+    - Changed application instancing, with a dedicated primary instance for the system tray, stabilizing RAM consumption.
+    - Separated the system tray instance from the main window to increase long-term RAM savings in the background.
+    - Switched from QTreeWidget to QTreeView to improve performance and reduce RAM usage.
+    - Cleaned up code in HelperUtils and RepositoryTab due to bug fixes and optimizations.
+    - Refactored and cleaned up PackageUtils to remove duplicate code.
+    - Refactored code in Utils and RepositoryTabUtils.
+    - Moved and refactored RepoManager into RepoUtils using namespaces.
+    - Optimized memory consumption and fixed minor memory leaks.
+    - Optimized the database update verification system.
+    - Added a destructor to HelperController to ensure proper helper termination.
+    - Added support for the Pasture repository.
+    - Added a cache clearing feature after package installation and update operations.
+    - Added a feature to enable Pasture, Testing, and Extra repositories.
+    - Added signature and checksum verification management for third-party repositories.
+    - Fixed bugs and added experimental multiple kernel support for LILO during post-installation.
+    - Fixed bugs and added experimental multiple kernel support for ELILO.
+    - Fixed performance issues in the file list display, making batch loading unnecessary.
+    - Fixed row display issues in TableView.
+    - Fixed and optimized the Download function in Utils to download files directly to disk instead of memory.
+    - Fixed date comparison in the update verification process.
+    - Fixed an issue where the update check did not run every 30 minutes.
+    - Fixed cancellation behavior during database updates.
+    - Fixed VirtualBox module reinstallation during post-installation.
+    - Fixed the command used to generate the initrd during post-installation.
+    - Fixed package processing cancellation handling upon encountering errors.
+    - Fixed CMakeLists.txt not installing licenses in the correct path.
+    - Fixed rule configurations by category.
+    - Fixed listing of third-party repositories for Slackware Current.
+    - Removed "Compile GLib schemas" from post-installation as it was redundant.
+    - Removed an unnecessary timer in the helper; helper revocation is now immediate.
+Mon Oct 12 08:02:24 -03 2026:
+    - Fixed `processTransaction` to monitor operations involving kernel packages and conditionally execute
+      `GenerateInitrd`, `UpdateGrub`, `UpdateLilo`, and `ReinstallVBoxModules`.
+    - Added new configuration options to `Settings`.
+    - Added a status bar to track updates and background processes.
+    - Added program startup options.
+    - Removed members for non-persistent dialogs and introduced dedicated methods for on-demand dialog creation.
+    - Changed `Packages` to return constant references to avoid massive duplication of the package list and map.
+    - Updated `RepositoryTab` to populate `hasUpdate` during loading and when changing the selected version, and
+      to dispatch status updates via `notifyStatusChanged`.
+    - Optimized `VersionComboBoxDelegate`:
+      - The `paint()` method now runs in constant time, O(1), by reading `hasUpdate` directly from the model.
+      - Uses an icon preloaded in the constructor.
+    - Optimized `PackageTableModel`:
+      - Removed the redundant `QStringList allVersions`, reducing list allocations for every package in the system.
+      - Added a precomputed `hasUpdate` field.
+      - Added `notifyStatusChanged` for batch status updates without invalidating unnecessary columns.
+    - Added `repoPriority` and `computeHasUpdate` to `RepositoryTabUtils`.
+    - Added utility functions to extract build tags, compare versions, and serialize transactions.
+    - Refactored `DefaultPath` into a static resolver with an in-memory cache, eliminating repetitive disk I/O
+      and frequent regex operations.
+Thu Oct 08 07:43:45 -03 2026:
 --- MEMORY OPTIMIZATION RESULTS ---
 Official repo: 4 tabs + Extra mirrors configured: 8 tabs + All and Others tab: 2 tabs = 14 tabs.
 Packages: + 15k :: With the 'All' tab: + 30k :: 4 items per table: + 120k items.
@@ -37,19 +76,17 @@ Reduction: 33.3% less RAM.
 3. System Stability (Peak Fluctuation)
 Before: Spiked from 450 MB to 950 MB (+111% memory surge and leak).
 After: Rises from 300 MB to 315 MB (only +5% transient fluctuation).
-------------------------------------------
-
-- Fixed bug that loaded the repository database even when excluded from settings.
-- Fixed excessive memory consumption after package operations.
-- Fixed tabs not being cleared from memory after package operations.
-- Refactored code to map checksum information in Packages.
-- Optimized performance when populating tabs and tables at program startup.
-- Drastically optimized memory when configuring multiple repositories in the program.
-- Implemented a PackageTableModel for memory efficiency.
-- Minor adjustments and general performance fixes.
-- Minor fixes in comments.
-- Removed repository database when deleted from settings.
-
+-----------------------------------
+    - Fixed bug that loaded the repository database even when excluded from settings.
+    - Fixed excessive memory consumption after package operations.
+    - Fixed tabs not being cleared from memory after package operations.
+    - Refactored code to map checksum information in Packages.
+    - Optimized performance when populating tabs and tables at program startup.
+    - Drastically optimized memory when configuring multiple repositories in the program.
+    - Implemented a PackageTableModel for memory efficiency.
+    - Minor adjustments and general performance fixes.
+    - Minor fixes in comments.
+    - Removed repository database when deleted from settings.
 Sun Oct 04 10:09:17 -03 2026:
     - Cleaned up code in PackageUtils classes.
     - Cleaned up code in UI classes.
