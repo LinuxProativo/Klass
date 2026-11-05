@@ -16,7 +16,7 @@ class CenterDelegate : public QStyledItemDelegate {
     Q_OBJECT
 
 public:
-    explicit CenterDelegate(QObject *parent = nullptr);
+    explicit CenterDelegate(QObject *parent = {}): QStyledItemDelegate(parent) {}
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 };

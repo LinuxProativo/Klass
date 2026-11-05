@@ -57,6 +57,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    qunsetenv("QT_QPA_PLATFORMTHEME");
+    qunsetenv("QT_STYLE_OVERRIDE");
+
     QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings, true);
     QApplication::setAttribute(Qt::AA_CompressHighFrequencyEvents, true);
 

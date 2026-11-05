@@ -16,6 +16,8 @@
  */
 class NoFocusStyle : public QProxyStyle {
 public:
+    explicit NoFocusStyle(QStyle *baseStyle = nullptr) : QProxyStyle(baseStyle) {}
+
     void drawPrimitive(const PrimitiveElement element, const QStyleOption *option, QPainter *painter,
                        const QWidget *widget) const override {
         if (element == PE_FrameFocusRect) return;

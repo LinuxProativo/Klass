@@ -27,7 +27,9 @@ StatusBar::StatusBar(QWidget *parent) : QWidget(parent) {
     topLine->setFrameShadow(QFrame::Plain);
 
     QPalette linePal = topLine->palette();
-    linePal.setColor(QPalette::WindowText, this->palette().color(QPalette::Mid));
+    QColor line = linePal.color(QPalette::Text);
+    line.setAlpha(100);
+    linePal.setColor(QPalette::WindowText, line);
     topLine->setPalette(linePal);
 
     const auto container = new QWidget(this);

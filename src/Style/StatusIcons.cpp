@@ -20,7 +20,9 @@ void StatusIcons::init() {
     Icon::IconManager iconFactory;
     iconFactory.setSize(24);
 
-    const QIcon availableIcon = iconFactory.getIcon(Icon::Id::Unselect, QPalette().color(QPalette::Dark));
+    QColor unselect = QPalette().color(QPalette::Text);
+    unselect.setAlpha(100);
+    const QIcon availableIcon = iconFactory.getIcon(Icon::Id::Unselect, unselect);
 
     icons[static_cast<size_t>(PkgStatus::Reset)] = availableIcon;
     icons[static_cast<size_t>(PkgStatus::Available)] = availableIcon;

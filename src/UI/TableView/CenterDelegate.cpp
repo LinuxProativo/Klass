@@ -11,12 +11,6 @@
 #include <SlackwareDefines.hpp>
 
 /**
- * @brief Constructs a CenterDelegate instance.
- * @param parent The parent object, or nullptr if none.
- */
-CenterDelegate::CenterDelegate(QObject *parent): QStyledItemDelegate(parent) {}
-
-/**
  * @brief Renders the item using a customized layout option, font size, and color palette based on text content.
  * @param painter The painter object used to draw the item.
  * @param option The style options for the item being rendered.
@@ -55,7 +49,9 @@ void CenterDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option
         targetColor = QColor(COLOR_PURPLE);
         applyColor = true;
     } else if (isExcluded && !isInstalled) {
-        targetColor = QPalette().color(QPalette::Dark);
+        QColor unselect = QPalette().color(QPalette::Text);
+        unselect.setAlpha(100);
+        targetColor = unselect;
         applyColor = true;
     }
 
