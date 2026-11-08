@@ -47,7 +47,9 @@ namespace Icon {
             {u"check_reinstall", QStyle::SP_CustomBase},
             {u"check_rollback", QStyle::SP_CustomBase},
             {u"check_priority", QStyle::SP_CustomBase},
-            {u"check_block", QStyle::SP_CustomBase}
+            {u"check_block", QStyle::SP_CustomBase},
+            {u"available", QStyle::SP_MessageBoxInformation},
+            {u"ok", QStyle::SP_DialogApplyButton}
         }
     };
 
@@ -120,6 +122,9 @@ namespace Icon {
             const auto idx = static_cast<size_t>(iconId);
             return QApplication::style()->standardIcon(iconTable[idx].fallback);
         }
+
+        if (iconId == Id::Available || !color.isValid())
+            return QIcon(ico);
 
         return applyContrast(QIcon(ico), color);
     }

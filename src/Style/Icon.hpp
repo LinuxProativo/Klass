@@ -38,6 +38,8 @@ namespace Icon {
         MarkRollback,
         MarkPriority,
         MarkBlock,
+        Available,
+        Ok,
         Count
     };
 
