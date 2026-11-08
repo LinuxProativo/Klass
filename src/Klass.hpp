@@ -37,7 +37,9 @@ public:
 
     void onUpdateAvailable();
 
-    void setCheckingStatus(bool checking) const;
+    void setCheckingStatus(bool checking);
+
+    bool requestSafeQuit();
 
 signals:
     void databaseUpdateFinished();
@@ -141,7 +143,7 @@ private:
     QString pendingMirrorUrl{}, pendingAdminConfigPayload{};
     Mirrors::OfficialBranches pendingOfficialBranches{};
     RepoVerificationEntry pendingRepoVerification{};
-    bool updateNotificationShown{false}, started{false}, hasPendingMirrorUpdate{false};
+    bool updateNotificationShown{false}, started{false}, hasPendingMirrorUpdate{false}, isCheckingUpdates{false};
 };
 
 #endif

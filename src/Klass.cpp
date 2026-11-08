@@ -286,6 +286,11 @@ void Klass::reloadRules() const {
  * @brief Evaluates available updates across tabs and updates the status bar indicator.
  */
 void Klass::updateStatusIndicator() const {
+    if (isCheckingUpdates) {
+        statusBar->setStatus(StatusState::Checking);
+        return;
+    }
+
     if (updateNotificationShown) {
         statusBar->setStatus(StatusState::DatabaseAvailable);
         return;
@@ -315,11 +320,30 @@ void Klass::updateStatusIndicator() const {
  * @brief Sets the status bar checking state.
  * @param checking True when update checking is in progress.
  */
-void Klass::setCheckingStatus(const bool checking) const {
+void Klass::setCheckingStatus(const bool checking) {
+    isCheckingUpdates = checking;
     if (checking)
         statusBar->setStatus(StatusState::Checking);
     else
         updateStatusIndicator();
+}
+
+/**
+ * @brief Ensures terminal routines are canceled or completed cleanly before accepting forced exits.
+ * @return True if exit is allowed or all processes finished; False if user aborted the exit prompt.
+ */
+bool Klass::requestSafeQuit() {
+    if (terminalDialog && terminalDialog->isVisible() && !terminalDialog->isFinished()) {
+        this->show();
+        terminalDialog->raise();
+        terminalDialog->activateWindow();
+
+        if (!terminalDialog->confirmIfNeeded())
+            return false;
+    }
+
+    QCoreApplication::quit();
+    return true;
 }
 
 /**
