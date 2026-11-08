@@ -164,3 +164,19 @@ void SettingsManager::attachTesting(const bool b) {
 bool SettingsManager::attachTesting() const {
     return this->value("AttachTesting", false).toBool();
 }
+
+/**
+ * @brief Sets whether background checks limit checks to official repositories only.
+ * @param b True to avoid network polling to custom user repositories during Background checking.
+ */
+void SettingsManager::checkOnlyOfficialUpdates(const bool b) {
+    this->setValue("CheckOnlyOfficialUpdates", b);
+}
+
+/**
+ * @brief Retrieves whether background polling uses solely official branches.
+ * @return False by default.
+ */
+bool SettingsManager::checkOnlyOfficialUpdates() const {
+    return this->value("CheckOnlyOfficialUpdates", false).toBool();
+}

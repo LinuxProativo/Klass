@@ -70,8 +70,10 @@ private:
 
     void addPostInstallTask(const QString &label, PostInstallTask task) const;
 
+    void onCheckOnlyOfficialUpdatesToggled(bool checked) const;
+
     QCheckBox *autostartCheckBox{}, *startMaximizedCB{}, *startMinimizedCB{};
-    QCheckBox *confirmSelectUpdatesCB{}, *officialUpdatesOnlyCB{};
+    QCheckBox *confirmSelectUpdatesCB{}, *officialUpdatesOnlyCB{}, *checkOnlyOfficialUpdatesCB{};
     QCheckBox *attachPatchesCB{}, *attachTestingCB{}, *verifySignatureCB{}, *verifyChecksumCB{}, *keepCacheCB{};
     QComboBox *downloadMethodCombo{}, *checksumComboBox{};
     QGroupBox *verificationGroup{}, *cacheGroup{}, *postInstallGroup{}, *startupGroup{};

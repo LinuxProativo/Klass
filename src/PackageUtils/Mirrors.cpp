@@ -12,6 +12,7 @@
 #include <DefaultPath.hpp>
 #include <Mirrors.hpp>
 #include <RepoUtils.hpp>
+#include <SettingsManager.hpp>
 #include <SlackwareDefines.hpp>
 #include <Utils.hpp>
 
@@ -111,8 +112,7 @@ QList<Mirrors::MirrorEntry> Mirrors::listAll() {
  * @return The active mirror found in klass.conf or an empty entry.
  */
 Mirrors::MirrorEntry Mirrors::activeOne() {
-    const QString url = RepoUtils::readConfigValue(QStringLiteral("OFFICIAL_MIRROR="));
-    if (!url.isEmpty())
+    if (const QString url = RepoUtils::readConfigValue(QStringLiteral("OFFICIAL_MIRROR=")); !url.isEmpty())
         return {url, QStringLiteral("GLOBAL")};
     return {};
 }
@@ -193,9 +193,7 @@ QList<Mirrors::MirrorPlusEntry> Mirrors::catalogue() {
             continue;
 
         const QString name = parts[0].trimmed();
-        const QString url = parts[1].trimmed();
-
-        if (accept(url))
+        if (const QString url = parts[1].trimmed(); accept(url))
             result.append({name, url});
     }
     return result;
@@ -269,7 +267,9 @@ bool Mirrors::isUpdateRequired() {
 
     if (const auto [url, country] = activeOne(); !url.isEmpty())
         repos.append({SLACK_OFICIAL, url});
-    repos.append(listActive());
+
+    if (const SettingsManager sm; !sm.checkOnlyOfficialUpdates())
+        repos.append(listActive());
 
     for (const auto &[name, url]: repos) {
         const QStringView modifier = url.contains(u"multilib") ? u"../" : url.contains(u"alien") ? u"../../" : u"";

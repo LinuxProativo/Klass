@@ -61,6 +61,10 @@ public:
 
     [[nodiscard]] bool attachTesting() const;
 
+    void checkOnlyOfficialUpdates(bool b);
+
+    [[nodiscard]] bool checkOnlyOfficialUpdates() const;
+
 private:
     [[nodiscard]] QPoint center() const { return rect.center() - win->frameGeometry().center(); }
 

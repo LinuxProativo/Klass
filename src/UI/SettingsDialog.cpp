@@ -50,9 +50,14 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     officialUpdatesOnlyCB->setChecked(settingsManager->officialUpdatesOnly());
     connect(officialUpdatesOnlyCB, &QCheckBox::toggled, this, &SettingsDialog::onOfficialUpdatesOnlyToggled);
 
+    checkOnlyOfficialUpdatesCB = new QCheckBox(tr("Check for updates only in official repositories"), updateOptionsGroup);
+    checkOnlyOfficialUpdatesCB->setChecked(settingsManager->checkOnlyOfficialUpdates());
+    connect(checkOnlyOfficialUpdatesCB, &QCheckBox::toggled, this, &SettingsDialog::onCheckOnlyOfficialUpdatesToggled);
+
     updateOptionsLayout = new QVBoxLayout(updateOptionsGroup);
     updateOptionsLayout->addWidget(confirmSelectUpdatesCB);
     updateOptionsLayout->addWidget(officialUpdatesOnlyCB);
+    updateOptionsLayout->addWidget(checkOnlyOfficialUpdatesCB);
 
     repoGroup = new QGroupBox(tr("Repository Options"), interfaceTab);
     attachPatchesCB = new QCheckBox(tr("Attach 'patches' repository to official repository"), repoGroup);
@@ -247,6 +252,14 @@ void SettingsDialog::onConfirmSelectUpdatesToggled(const bool checked) const {
  */
 void SettingsDialog::onOfficialUpdatesOnlyToggled(const bool checked) const {
     settingsManager->officialUpdatesOnly(checked);
+}
+
+/**
+ * @brief Slot triggered when official check updates only option is toggled.
+ * @param checked True if enabled, false otherwise.
+ */
+void SettingsDialog::onCheckOnlyOfficialUpdatesToggled(const bool checked) const {
+    settingsManager->checkOnlyOfficialUpdates(checked);
 }
 
 /**
