@@ -98,8 +98,11 @@ void TreeWidget::drawBranches(QPainter *painter, const QRect &rect, const QModel
         this->style()->drawPrimitive(QStyle::PE_IndicatorBranch, &opt, painter, this);
     }
 
+    QColor unselect = QPalette().color(QPalette::Text);
+    unselect.setAlpha(60);
+
     painter->save();
-    painter->setPen(QPen(this->palette().color(QPalette::Mid), 1, Qt::SolidLine));
+    painter->setPen(QPen(unselect, 1, Qt::SolidLine));
 
     const int indent = this->indentation();
     const int centerX = rect.left() + rect.width() - indent + 8;
