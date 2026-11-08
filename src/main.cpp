@@ -44,6 +44,8 @@ inline const auto TRAY_IPC_SERVER = QStringLiteral("klass_tray_ipc");
 int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--helper") == 0) {
+            qunsetenv("QT_QPA_PLATFORMTHEME");
+            qunsetenv("QT_STYLE_OVERRIDE");
             qputenv("QT_QPA_PLATFORM", "minimal");
             qputenv("QT_NODBUS", "1");
             qputenv("QT_NO_GLIB", "1");
@@ -110,8 +112,22 @@ int main(int argc, char *argv[]) {
         ipcSocket.connectToServer(TRAY_IPC_SERVER);
 
         QObject::connect(&ipcSocket, &QLocalSocket::readyRead, [&] {
-            if (const QByteArray msg = ipcSocket.readAll(); msg.contains("UPDATE"))
+            const QByteArray msg = ipcSocket.readAll();
+
+            if (msg.contains("UPDATE\n")) {
                 klass.onUpdateAvailable();
+            }
+            if (msg.contains("CHECKING_START")) {
+                klass.setCheckingStatus(true);
+            }
+            if (msg.contains("CHECKING_DONE")) {
+                klass.setCheckingStatus(false);
+            }
+            if (msg.contains("ASK_QUIT")) {
+                if (!klass.requestSafeQuit()) {
+                    ipcSocket.write("QUIT_ABORTED\n");
+                }
+            }
         });
 
         QObject::connect(&klass, &Klass::databaseUpdateFinished, [&] {
@@ -139,9 +155,36 @@ int main(int argc, char *argv[]) {
     SysTray tray(&app);
     const SettingsManager sm;
 
-    bool hasUpdate = false;
+    bool hasUpdate = false, trayIsQuitting = false, isChecking = false;
     QProcess guiProcess;
     QPointer<QLocalSocket> guiSocket;
+
+    UpdateWorker checker(&app);
+
+    QObject::connect(&checker, &UpdateWorker::updateAvailable, &app, [&] {
+        isChecking = false;
+        hasUpdate = true;
+        tray.setUpdateAvailable(true);
+
+        if (guiSocket && guiSocket->state() == QLocalSocket::ConnectedState)
+            guiSocket->write("UPDATE\n");
+    });
+
+    QObject::connect(&checker, &UpdateWorker::checkStarted, &app, [&] {
+        isChecking = true;
+        if (guiSocket && guiSocket->state() == QLocalSocket::ConnectedState) {
+            guiSocket->write("CHECKING_START\n");
+            guiSocket->flush();
+        }
+    });
+
+    QObject::connect(&checker, &UpdateWorker::checkFinished, &app, [&] {
+        isChecking = false;
+        if (guiSocket && guiSocket->state() == QLocalSocket::ConnectedState) {
+            guiSocket->write("CHECKING_DONE\n");
+            guiSocket->flush();
+        }
+    });
 
     QLocalServer ipcServer(&app);
     QLocalServer::removeServer(TRAY_IPC_SERVER);
@@ -150,14 +193,23 @@ int main(int argc, char *argv[]) {
     QObject::connect(&ipcServer, &QLocalServer::newConnection, [&] {
         guiSocket = ipcServer.nextPendingConnection();
 
-        if (hasUpdate && guiSocket)
+        if (hasUpdate && guiSocket) {
             guiSocket->write("UPDATE\n");
+        } else if (isChecking && guiSocket) {
+            guiSocket->write("CHECKING_START\n");
+        }
 
         QObject::connect(guiSocket, &QLocalSocket::readyRead, [&] {
-            if (guiSocket && guiSocket->readAll().contains("UPDATE_DONE")) {
+            if (!guiSocket) return;
+            const QByteArray msg = guiSocket->readAll();
+
+            if (msg.contains("UPDATE_DONE")) {
                 hasUpdate = false;
                 tray.setUpdateAvailable(false);
+                checker.resetState();
             }
+            if (msg.contains("QUIT_ABORTED"))
+                trayIsQuitting = false;
         });
     });
 
@@ -171,7 +223,12 @@ int main(int argc, char *argv[]) {
 
             guiProcess.start(QCoreApplication::applicationFilePath(), runArgs);
         } else {
-            guiProcess.terminate();
+            if (guiSocket && guiSocket->state() == QLocalSocket::ConnectedState) {
+                guiSocket->write("ASK_QUIT\n");
+                guiSocket->flush();
+            } else {
+                guiProcess.terminate();
+            }
         }
     };
 
@@ -180,11 +237,19 @@ int main(int argc, char *argv[]) {
     });
 
     QObject::connect(&tray, &SysTray::quitRequested, [&] {
-        if (guiProcess.state() != QProcess::NotRunning) {
-            guiProcess.terminate();
-            guiProcess.waitForFinished(1000);
+        if (guiProcess.state() != QProcess::NotRunning &&
+            guiSocket && guiSocket->state() == QLocalSocket::ConnectedState) {
+            trayIsQuitting = true;
+            guiSocket->write("ASK_QUIT\n");
+            guiSocket->flush();
+        } else {
+            QCoreApplication::quit();
         }
-        QCoreApplication::quit();
+    });
+
+    QObject::connect(&guiProcess, &QProcess::stateChanged, [&](const QProcess::ProcessState state) {
+        if (state == QProcess::NotRunning && trayIsQuitting)
+            QCoreApplication::quit();
     });
 
     const MessageReceiver msg;
@@ -200,16 +265,6 @@ int main(int argc, char *argv[]) {
             }
             toggleGui({"-p", arg});
         }
-    });
-
-    UpdateWorker checker(&app);
-
-    QObject::connect(&checker, &UpdateWorker::updateAvailable, &app, [&] {
-        hasUpdate = true;
-        tray.setUpdateAvailable(true);
-
-        if (guiSocket && guiSocket->state() == QLocalSocket::ConnectedState)
-            guiSocket->write("UPDATE\n");
     });
 
     checker.start();

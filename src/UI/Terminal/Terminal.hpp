@@ -32,6 +32,10 @@ public:
 
     void setTaskRequest(const bool b) { taskRequest = b; }
 
+    [[nodiscard]] bool isFinished() const { return finished; }
+
+    bool confirmIfNeeded();
+
 signals:
     void inputEntered(const QByteArray &data);
 
@@ -45,11 +49,9 @@ protected:
     void closeEvent(QCloseEvent *event) override;
 
 private:
-    void appendText(const QString &text) const  { terminalView->appendTerminalText(text); }
+    void appendText(const QString &text) const { terminalView->appendTerminalText(text); }
 
     void resetTerminal();
-
-    bool confirmIfNeeded();
 
     QHBoxLayout *buttonLayout{};
     QPushButton *btnAction{};

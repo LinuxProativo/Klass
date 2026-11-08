@@ -8,18 +8,12 @@
 #include <UpdateWorker.hpp>
 
 /**
- * @brief Constructor for UpdateWorker.
- * @param parent The parent QObject for memory management.
- */
-UpdateWorker::UpdateWorker(QObject *parent) : QThread(parent) {}
-
-/**
  * @brief Destructor for UpdateWorker.
  */
 UpdateWorker::~UpdateWorker() {
-    requestInterruption();
-    quit();
-    wait();
+    this->requestInterruption();
+    this->quit();
+    this->wait();
 }
 
 /**
@@ -28,7 +22,7 @@ UpdateWorker::~UpdateWorker() {
 void UpdateWorker::run() {
     check();
 
-    if (isInterruptionRequested())
+    if (this->isInterruptionRequested())
         return;
 
     QTimer timer;
@@ -44,9 +38,15 @@ void UpdateWorker::run() {
  * @brief Checks whether the package database requires an update.
  */
 void UpdateWorker::check() {
-    if (isInterruptionRequested())
+    if (this->isInterruptionRequested() || updatePending.load(std::memory_order_relaxed))
         return;
 
-    if (Mirrors::isUpdateRequired())
+    emit checkStarted();
+
+    if (Mirrors::isUpdateRequired()) {
+        updatePending.store(true, std::memory_order_relaxed);
         emit updateAvailable();
+    } else {
+        emit checkFinished();
+    }
 }
