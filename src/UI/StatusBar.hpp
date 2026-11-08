@@ -8,6 +8,8 @@
 
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPainter>
+#include <QTimer>
 #include <QWidget>
 
 /**
@@ -31,11 +33,18 @@ class StatusBar final : public QWidget {
 public:
     explicit StatusBar(QWidget *parent = nullptr);
 
-    void setStatus(StatusState state, int count = 0) const;
+    void setStatus(StatusState state, int count = 0);
 
 private:
+    QFrame *topLine{};
     QHBoxLayout *mainLayout{};
     QLabel *iconLabel{}, *textLabel{};
+    QVBoxLayout *rootLayout{};
+    QWidget *container{};
+
+    QTimer *spinnerTimer{};
+    QPixmap baseCheckingPixmap{};
+    int rotationAngle{0};
 };
 
 #endif
