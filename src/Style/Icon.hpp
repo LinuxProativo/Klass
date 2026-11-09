@@ -39,6 +39,7 @@ namespace Icon {
         MarkPriority,
         MarkBlock,
         Available,
+        AvailableUpdate,
         Ok,
         Count
     };

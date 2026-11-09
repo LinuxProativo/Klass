@@ -32,14 +32,18 @@ StatusBar::StatusBar(QWidget *parent) : QWidget(parent) {
     container->setAutoFillBackground(false);
 
     mainLayout = new QHBoxLayout(container);
-    mainLayout->setContentsMargins(10, 3, 10, 4);
+    mainLayout->setContentsMargins(10, 4, 10, 5);
     mainLayout->setSpacing(8);
 
     iconLabel = new QLabel(container);
     iconLabel->setFixedSize(22, 22);
     iconLabel->setScaledContents(true);
 
+    QFont font = this->font();
+    font.setPointSizeF(font.pointSizeF() + 0.5);
+
     textLabel = new QLabel(container);
+    textLabel->setFont(font);
 
     mainLayout->addWidget(iconLabel);
     mainLayout->addWidget(textLabel);
@@ -106,8 +110,8 @@ void StatusBar::setStatus(const StatusState state, const int count) {
             break;
         }
         case StatusState::PackagesAvailable: {
-            iconPixmap = icon.getIcon(Icon::Id::Up).pixmap(22, 22);
-            message = QStringLiteral("%1 ").arg(count) + tr("package(s) available for update.");
+            iconPixmap = icon.getIcon(Icon::Id::AvailableUpdate, {}).pixmap(22, 22);
+            message = tr("Packages available for update") + QStringLiteral(": %1.").arg(count);
             break;
         }
         case StatusState::UpToDate:

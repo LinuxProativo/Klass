@@ -49,6 +49,7 @@ namespace Icon {
             {u"check_priority", QStyle::SP_CustomBase},
             {u"check_block", QStyle::SP_CustomBase},
             {u"available", QStyle::SP_MessageBoxInformation},
+            {u"available_update", QStyle::SP_ArrowUp},
             {u"ok", QStyle::SP_DialogApplyButton}
         }
     };
@@ -118,8 +119,8 @@ namespace Icon {
         const QString ico = selectIconPath(iconId);
 
         if (ico.isEmpty()) {
-            Debug::msg("Select Default Icon", "Icon", {ico, DColor::Orange, DColor::Blue});
             const auto idx = static_cast<size_t>(iconId);
+            Debug::msg("Default Icon", "Icon", {iconTable[idx].fileName.toString(), DColor::Orange, DColor::Blue});
             return QApplication::style()->standardIcon(iconTable[idx].fallback);
         }
 
