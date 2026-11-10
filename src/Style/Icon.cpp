@@ -50,7 +50,8 @@ namespace Icon {
             {u"check_block", QStyle::SP_CustomBase},
             {u"available", QStyle::SP_MessageBoxInformation},
             {u"available_update", QStyle::SP_ArrowUp},
-            {u"ok", QStyle::SP_DialogApplyButton}
+            {u"ok", QStyle::SP_DialogApplyButton},
+            {u"new", QStyle::SP_MessageBoxInformation},
         }
     };
 

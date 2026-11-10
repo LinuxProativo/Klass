@@ -41,6 +41,7 @@ namespace Icon {
         Available,
         AvailableUpdate,
         Ok,
+        New,
         Count
     };
 
