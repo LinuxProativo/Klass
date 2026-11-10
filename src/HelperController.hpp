@@ -25,7 +25,8 @@ enum class PendingAction {
     DeleteRule,
     EditRule,
     ProcessTransaction,
-    SaveAdminConfig
+    SaveAdminConfig,
+    ResolveNewConfig
 };
 
 /**
@@ -58,6 +59,8 @@ signals:
     void updateRules();
 
     void transactionFinished();
+
+    void newConfigFinished();
 
 private:
     void onHelperSocketError(QLocalSocket::LocalSocketError error);

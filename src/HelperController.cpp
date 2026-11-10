@@ -187,6 +187,8 @@ void HelperController::onHelperReadyRead() {
         } else if (line == "TRANSACTION_DONE") {
             emit transactionFinished();
             terminalDialog->setFinished(true);
+        } else if (line == "RESOLVE_NEW_CONFIG_DONE") {
+            emit newConfigFinished();
         } else if (line.startsWith(ERROR)) {
             Debug::msg(QString::fromUtf8(line.mid(ERROR_SIZE)), "Helper", {DColor::LightRed});
         }
