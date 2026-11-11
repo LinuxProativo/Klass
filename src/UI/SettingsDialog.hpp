@@ -72,12 +72,15 @@ private:
 
     void onCheckOnlyOfficialUpdatesToggled(bool checked) const;
 
+    void onBakOrigOverwriteToggled(bool checked) const;
+
     QCheckBox *autostartCheckBox{}, *startMaximizedCB{}, *startMinimizedCB{};
-    QCheckBox *confirmSelectUpdatesCB{}, *officialUpdatesOnlyCB{}, *checkOnlyOfficialUpdatesCB{};
-    QCheckBox *attachPatchesCB{}, *attachTestingCB{}, *verifySignatureCB{}, *verifyChecksumCB{}, *keepCacheCB{};
+    QCheckBox *confirmUpdateCB{}, *officialUpdatesOnlyCB{}, *ckOnlyOfficialUpdateCB{};
+    QCheckBox *attachPatchesCB{}, *attachTestingCB{}, *verifySignatureCB{}, *verifyChecksumCB{};
+    QCheckBox *bakOrigOverwriteCB{}, *keepCacheCB{};
     QComboBox *downloadMethodCombo{}, *checksumComboBox{};
     QGroupBox *verificationGroup{}, *cacheGroup{}, *postInstallGroup{}, *startupGroup{};
-    QGroupBox *updateOptionsGroup{}, *repoGroup{}, *downloadCommandsGroup{};
+    QGroupBox *updateOptionGroup{}, *repoGroup{}, *downloadCommandsGroup{};
     QHBoxLayout *checksumSelectLayout{};
     QLabel *downloadMethodLabel{}, *extraParamsLabel{}, *preferredChecksumLabel{};
     QLineEdit *extraParamsEdit{};

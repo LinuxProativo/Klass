@@ -41,23 +41,28 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     startupLayout->addWidget(startMaximizedCB);
     startupLayout->addWidget(startMinimizedCB);
 
-    updateOptionsGroup = new QGroupBox(tr("Update Options"), interfaceTab);
-    confirmSelectUpdatesCB = new QCheckBox(tr("Show confirmation dialog when selecting all updates"), updateOptionsGroup);
-    confirmSelectUpdatesCB->setChecked(settingsManager->confirmSelectAllUpdates());
-    connect(confirmSelectUpdatesCB, &QCheckBox::toggled, this, &SettingsDialog::onConfirmSelectUpdatesToggled);
+    updateOptionGroup = new QGroupBox(tr("Update Options"), interfaceTab);
+    confirmUpdateCB = new QCheckBox(tr("Show confirmation dialog when selecting all updates"), updateOptionGroup);
+    confirmUpdateCB->setChecked(settingsManager->confirmSelectAllUpdates());
+    connect(confirmUpdateCB, &QCheckBox::toggled, this, &SettingsDialog::onConfirmSelectUpdatesToggled);
 
-    officialUpdatesOnlyCB = new QCheckBox(tr("Select updates only from official repository"), updateOptionsGroup);
+    officialUpdatesOnlyCB = new QCheckBox(tr("Select updates only from official repository"), updateOptionGroup);
     officialUpdatesOnlyCB->setChecked(settingsManager->officialUpdatesOnly());
     connect(officialUpdatesOnlyCB, &QCheckBox::toggled, this, &SettingsDialog::onOfficialUpdatesOnlyToggled);
 
-    checkOnlyOfficialUpdatesCB = new QCheckBox(tr("Check for updates only in official repositories"), updateOptionsGroup);
-    checkOnlyOfficialUpdatesCB->setChecked(settingsManager->checkOnlyOfficialUpdates());
-    connect(checkOnlyOfficialUpdatesCB, &QCheckBox::toggled, this, &SettingsDialog::onCheckOnlyOfficialUpdatesToggled);
+    ckOnlyOfficialUpdateCB = new QCheckBox(tr("Check for updates only in official repositories"), updateOptionGroup);
+    ckOnlyOfficialUpdateCB->setChecked(settingsManager->checkOnlyOfficialUpdates());
+    connect(ckOnlyOfficialUpdateCB, &QCheckBox::toggled, this, &SettingsDialog::onCheckOnlyOfficialUpdatesToggled);
 
-    updateOptionsLayout = new QVBoxLayout(updateOptionsGroup);
-    updateOptionsLayout->addWidget(confirmSelectUpdatesCB);
+    bakOrigOverwriteCB = new QCheckBox(tr("Backup existing config (.orig) before applying .new"), updateOptionGroup);
+    bakOrigOverwriteCB->setChecked(settingsManager->backupOriginalOnOverwrite());
+    connect(bakOrigOverwriteCB, &QCheckBox::toggled, this, &SettingsDialog::onBakOrigOverwriteToggled);
+
+    updateOptionsLayout = new QVBoxLayout(updateOptionGroup);
+    updateOptionsLayout->addWidget(confirmUpdateCB);
     updateOptionsLayout->addWidget(officialUpdatesOnlyCB);
-    updateOptionsLayout->addWidget(checkOnlyOfficialUpdatesCB);
+    updateOptionsLayout->addWidget(ckOnlyOfficialUpdateCB);
+    updateOptionsLayout->addWidget(bakOrigOverwriteCB);
 
     repoGroup = new QGroupBox(tr("Repository Options"), interfaceTab);
     attachPatchesCB = new QCheckBox(tr("Attach 'patches' repository to official repository"), repoGroup);
@@ -74,7 +79,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
 
     interfaceLayout = new QVBoxLayout(interfaceTab);
     interfaceLayout->addWidget(startupGroup);
-    interfaceLayout->addWidget(updateOptionsGroup);
+    interfaceLayout->addWidget(updateOptionGroup);
     interfaceLayout->addWidget(repoGroup);
     interfaceLayout->addStretch();
 
@@ -195,6 +200,14 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
 SettingsDialog::~SettingsDialog() {
     delete adminConfigManager;
     delete settingsManager;
+}
+
+/**
+ * @brief Slot triggered when the option to keep .orig backup files is toggled.
+ * @param checked True to preserve .orig backups, false to delete old files directly.
+ */
+void SettingsDialog::onBakOrigOverwriteToggled(const bool checked) const {
+    settingsManager->backupOriginalOnOverwrite(checked);
 }
 
 /**
