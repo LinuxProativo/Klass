@@ -56,6 +56,7 @@ include_directories(
         src/Style
         src/UI
         src/UI/MirrorManager
+        src/UI/NewConfigDialog
         src/UI/RulesDialog
         src/UI/TableView
         src/UI/Terminal
@@ -70,6 +71,7 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
         src/Style/*
         src/UI/*
         src/UI/MirrorManager/*
+        src/UI/NewConfigDialog/*
         src/UI/RulesDialog/*
         src/UI/TableView/*
         src/UI/Terminal/*
