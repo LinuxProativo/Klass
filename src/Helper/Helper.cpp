@@ -182,6 +182,60 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                     const QString payload = QString::fromUtf8(raw.mid(15)).trimmed();
                     const bool ok = AdminConfigManager::savePayload(payload);
                     clientSocket->write(WRITE(ok, "Admin config saved", "Failed to save admin config") + SEP);
+                } else if (raw.startsWith("RESOLVENEWCONFIG:")) {
+                    const QString payload = QString::fromUtf8(raw.mid(17)).trimmed();
+                    bool allOk = true;
+
+                    for (const QString &item: payload.split(u';', Qt::SkipEmptyParts)) {
+                        const QStringList parts = item.split(u'|');
+                        const QString &action = parts[0], &newPath = parts[1];
+
+                        if (!newPath.startsWith(QLatin1String("/etc/")) || !newPath.endsWith(QLatin1String(".new")))
+                            continue;
+
+                        const QString origPath = newPath.chopped(4);
+
+                        if (action == QLatin1String("OVERWRITE")) {
+                            const QString backupPath = origPath + QStringLiteral(".orig");
+                            if (QFile::exists(origPath)) {
+                                QFile::remove(backupPath);
+                                if (!QFile::rename(origPath, backupPath))
+                                    allOk = false;
+                            }
+                            if (!QFile::rename(newPath, origPath))
+                                allOk = false;
+                        } else if (action == QLatin1String("REMOVE")) {
+                            if (!QFile::remove(newPath))
+                                allOk = false;
+                        }
+                    }
+
+                    clientSocket->write(WRITE(allOk, "Conf files updated", "Failed to update conf files")
+                                        + QByteArray("RESOLVE_NEW_CONFIG_DONE") + SEP);
+                } else if (raw.startsWith("READ_CONFIG_FILES:")) {
+                    const QString payload = QString::fromUtf8(raw.mid(18)).trimmed();
+                    const QStringList parts = payload.split(u'|');
+
+                    if (parts.size() == 2) {
+                        const QString oldPath = parts[0], newPath = parts[1];
+
+                        if (newPath.startsWith(QLatin1String("/etc/")) &&
+                            (oldPath.isEmpty() || oldPath.startsWith(QLatin1String("/etc/")))) {
+                            QByteArray oldContent, newContent;
+
+                            if (QFile fOld(oldPath); fOld.open(QIODevice::ReadOnly))
+                                oldContent = fOld.readAll();
+
+                            if (QFile fNew(newPath); fNew.open(QIODevice::ReadOnly))
+                                newContent = fNew.readAll();
+
+                            const QByteArray resp = QByteArray("ROOT_CONFIG_DATA:") + oldContent.toBase64() + "|" +
+                                                    newContent.toBase64() + "|" + oldPath.toUtf8() + "|" +
+                                                    newPath.toUtf8() + SEP;
+
+                            clientSocket->write(resp);
+                        }
+                    }
                 } else if (raw.startsWith(INPUT_CHAR)) {
                     task->sendInput(raw.mid(INPUT_SIZE));
                 }
