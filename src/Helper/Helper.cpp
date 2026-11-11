@@ -111,7 +111,7 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                         entry.verifyChecksum = parts[3] == QLatin1String("true") || parts[3] == QLatin1String("1");
                         entry.preferredChecksum = parts[4];
                         const bool ok = RepoVerificationManager::saveVerification(entry);
-                        clientSocket->write(WRITE(ok, "Repo verification updated", "Failed to update repo verification"));
+                        clientSocket->write(WRITE(ok, "Repo verification updated", "No update repo verification"));
                     }
                 } else if (raw.startsWith("DISABLEREPOS:")) {
                     for (const auto names = QString::fromUtf8(raw.mid(13)).trimmed().split(';', Qt::SkipEmptyParts);
