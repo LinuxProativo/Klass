@@ -65,6 +65,10 @@ public:
 
     [[nodiscard]] bool checkOnlyOfficialUpdates() const;
 
+    void backupOriginalOnOverwrite(bool b);
+
+    [[nodiscard]] bool backupOriginalOnOverwrite() const;
+
 private:
     [[nodiscard]] QPoint center() const { return rect.center() - win->frameGeometry().center(); }
 

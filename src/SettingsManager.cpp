@@ -180,3 +180,19 @@ void SettingsManager::checkOnlyOfficialUpdates(const bool b) {
 bool SettingsManager::checkOnlyOfficialUpdates() const {
     return this->value("CheckOnlyOfficialUpdates", false).toBool();
 }
+
+/**
+ * @brief Sets whether to back up original configuration files as .orig before overwriting.
+ * @param b True to create .orig backups, false to overwrite directly.
+ */
+void SettingsManager::backupOriginalOnOverwrite(const bool b) {
+    this->setValue(QStringLiteral("BackupOriginalOnOverwrite"), b);
+}
+
+/**
+ * @brief Retrieves whether to back up original configuration files as .orig before overwriting.
+ * @return True by default to maintain standard Slackware behavior.
+ */
+bool SettingsManager::backupOriginalOnOverwrite() const {
+    return this->value(QStringLiteral("BackupOriginalOnOverwrite"), true).toBool();
+}
