@@ -189,6 +189,16 @@ void HelperController::onHelperReadyRead() {
             terminalDialog->setFinished(true);
         } else if (line == "RESOLVE_NEW_CONFIG_DONE") {
             emit newConfigFinished();
+        } else if (line.startsWith("ROOT_CONFIG_DATA:")) {
+            const QByteArray payload = line.mid(17);
+            const QByteArrayList parts = payload.split('|');
+            if (parts.size() == 4) {
+                const QString oldText = QString::fromUtf8(QByteArray::fromBase64(parts[0]));
+                const QString newText = QString::fromUtf8(QByteArray::fromBase64(parts[1]));
+                const QString oldPath = QString::fromUtf8(parts[2]);
+                const QString newPath = QString::fromUtf8(parts[3]);
+                emit rootConfigDataReceived(oldText, newText, oldPath, newPath);
+            }
         } else if (line.startsWith(ERROR)) {
             Debug::msg(QString::fromUtf8(line.mid(ERROR_SIZE)), "Helper", {DColor::LightRed});
         }

@@ -62,6 +62,9 @@ signals:
 
     void newConfigFinished();
 
+    void rootConfigDataReceived(const QString &oldText, const QString &newText, const QString &oldPath,
+                                const QString &newPath);
+
 private:
     void onHelperSocketError(QLocalSocket::LocalSocketError error);
 
