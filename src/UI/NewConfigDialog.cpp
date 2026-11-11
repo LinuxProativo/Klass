@@ -1,21 +1,38 @@
 /**
  * @file NewConfigDialog.cpp
- * @brief Implementation of NewConfigDialog with non-HTML syntax-styled diff view.
+ * @brief Implementation of the dialog interface for resolving Slackware .new files.
  */
 
 #include <QApplication>
-#include <QFile>
-#include <DiffEngine.hpp>
-#include <NewConfigDialog.hpp>
-#include <SlackwareDefines.hpp>
+#include <QHeaderView>
+#include <QTextBlockFormat>
+#include <QTextCharFormat>
+#include <QTextCursor>
 
+#include <NewConfigDialog.hpp>
+
+/**
+ * @brief Constructs the dialog, initializes widgets, and spawns the background worker thread.
+ * @param items Initial list of detected .new files.
+ * @param parent Optional parent widget.
+ */
 NewConfigDialog::NewConfigDialog(const QList<NewConfigFileItem> &items, QWidget *parent)
     : Dialog(parent, Qt::ApplicationModal), fileItems(items) {
     this->setWindowTitle(tr("Slackware .new Configuration Files"));
-    this->setMinimumSize(960, 540);
+    this->setMinimumSize(1024, 576);
 
     setupUi();
     populateTable();
+
+    // Setup dedicated background worker thread for non-blocking diff computation
+    diffWorker = new NewConfigWorker();
+    diffWorker->moveToThread(&workerThread);
+
+    connect(&workerThread, &QThread::finished, diffWorker, &QObject::deleteLater);
+    connect(this, &NewConfigDialog::requestDiffComputation, diffWorker, &NewConfigWorker::processDiff);
+    connect(diffWorker, &NewConfigWorker::diffFinished, this, &NewConfigDialog::onDiffComputed);
+
+    workerThread.start();
 
     if (!fileItems.isEmpty()) {
         fileTable->selectRow(0);
@@ -23,27 +40,35 @@ NewConfigDialog::NewConfigDialog(const QList<NewConfigFileItem> &items, QWidget 
     }
 }
 
+/**
+ * @brief Destructor that terminates the background thread and cleans up models.
+ */
 NewConfigDialog::~NewConfigDialog() {
+    workerThread.quit();
+    workerThread.wait();
+
     if (tableModel)
         tableModel->clear();
 }
 
+/**
+ * @brief Assembles layout containers, buttons, file table, and diff viewer.
+ */
 void NewConfigDialog::setupUi() {
-    // Left: Table & File actions
     tableModel = new QStandardItemModel(this);
     tableModel->setHorizontalHeaderLabels({tr("Action"), tr("Target File"), tr("Status")});
 
     fileTable = new TableView(this);
     fileTable->setModel(tableModel);
     fileTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    fileTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    fileTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     fileTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    fileTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    fileTable->setSelectionMode(QAbstractItemView::SingleSelection);
 
     connect(fileTable->selectionModel(), &QItemSelectionModel::selectionChanged,
             this, &NewConfigDialog::onSelectionChanged);
 
-    // Bulk buttons
+    // Global bulk actions (Slackware defaults)
     auto *bulkLayout = new QHBoxLayout();
     btnKeepAll = new QPushButton(tr("Keep All (K)"), this);
     btnOverwriteAll = new QPushButton(tr("Overwrite All (O)"), this);
@@ -57,7 +82,7 @@ void NewConfigDialog::setupUi() {
     bulkLayout->addWidget(btnOverwriteAll);
     bulkLayout->addWidget(btnRemoveAll);
 
-    // Selected item buttons
+    // Contextual actions on selected items
     auto *itemActionsLayout = new QHBoxLayout();
     btnKeepSelected = new QPushButton(tr("Keep Selected"), this);
     btnOverwriteSelected = new QPushButton(tr("Overwrite Selected"), this);
@@ -74,15 +99,17 @@ void NewConfigDialog::setupUi() {
     auto *leftContainer = new QWidget(this);
     auto *leftLayout = new QVBoxLayout(leftContainer);
     leftLayout->setContentsMargins(0, 0, 0, 0);
-    leftLayout->addWidget(new QLabel(tr("Global Actions:"), this));
+    leftLayout->addWidget(new QLabel(tr("Bulk Actions:"), this));
     leftLayout->addLayout(bulkLayout);
     leftLayout->addWidget(fileTable);
-    leftLayout->addWidget(new QLabel(tr("Action on Selection:"), this));
+    leftLayout->addWidget(new QLabel(tr("Action on Selected Files:"), this));
     leftLayout->addLayout(itemActionsLayout);
 
-    // Right: Diff Viewer (Zero HTML)
+    QFont font = this->font();
+    font.setBold(true);
+
     diffHeaderLabel = new QLabel(tr("Select a file to inspect differences"), this);
-    diffHeaderLabel->setStyleSheet(QStringLiteral("font-weight: bold;"));
+    diffHeaderLabel->setFont(font);
 
     diffView = new QTextEdit(this);
     diffView->setReadOnly(true);
@@ -101,13 +128,10 @@ void NewConfigDialog::setupUi() {
     splitter->setStretchFactor(0, 1);
     splitter->setStretchFactor(1, 1);
 
-    // Bottom action bar
+    // Apply button does NOT close the dialog; user stays in control
     btnApply = new QPushButton(tr("Apply Decisions"), this);
     btnClose = new QPushButton(tr("Close"), this);
-    connect(btnApply, &QPushButton::clicked, this, [this] {
-        emit applyResolutionRequested(resolvedItems());
-        this->accept();
-    });
+    connect(btnApply, &QPushButton::clicked, this, &NewConfigDialog::onApplyClicked);
     connect(btnClose, &QPushButton::clicked, this, &QDialog::reject);
 
     auto *bottomLayout = new QHBoxLayout();
@@ -120,6 +144,9 @@ void NewConfigDialog::setupUi() {
     mainLayout->addLayout(bottomLayout);
 }
 
+/**
+ * @brief Populates the QTableView rows with file data and current action state.
+ */
 void NewConfigDialog::populateTable() {
     tableModel->setRowCount(0);
 
@@ -139,6 +166,9 @@ void NewConfigDialog::populateTable() {
     }
 }
 
+/**
+ * @brief Responds to table row selection changes by delegating diff work to the background thread.
+ */
 void NewConfigDialog::onSelectionChanged() {
     const auto selected = fileTable->selectionModel()->selectedRows();
     if (selected.isEmpty()) {
@@ -152,52 +182,84 @@ void NewConfigDialog::onSelectionChanged() {
         return;
 
     const auto &item = fileItems.at(row);
-    diffHeaderLabel->setText(tr("Diff: %1 vs %2").arg(item.originalFilePath, item.newFilePath));
-    renderDiff(item.originalFilePath, item.newFilePath);
+
+    ++currentRequestId;
+
+    diffHeaderLabel->setText(tr("Comparing: %1 (loading...)").arg(item.originalFilePath));
+    diffView->clear();
+    diffView->setPlainText(tr("Calculating diff in background..."));
+
+    emit requestDiffComputation(currentRequestId, item.originalFilePath, item.newFilePath);
 }
 
-void NewConfigDialog::renderDiff(const QString &oldPath, const QString &newPath) {
+/**
+ * @brief Receives the computed diff results and displays them if still relevant.
+ * @param requestId Monotonic ID used to discard obsolete diff results.
+ * @param oldPath Original file path.
+ * @param newPath New file path.
+ * @param diffLines The list of calculated DiffLine items.
+ * @param oldExists True if the baseline configuration file exists.
+ */
+void NewConfigDialog::onDiffComputed(const quint64 requestId, const QString &oldPath, const QString &newPath,
+                                     const QList<DiffEngine::DiffLine> &diffLines, const bool oldExists) const {
+    if (requestId != currentRequestId)
+        return;
+
+    diffHeaderLabel->setText(oldExists
+        ? tr("Diff: %1 vs %2").arg(oldPath, newPath)
+        : tr("Diff: %1 (Original does not exist — brand new file)").arg(newPath));
+
+    applyDiffToView(diffLines);
+}
+
+/**
+ * @brief Inserts the colored diff text into the QTextEdit using native blocks, avoiding redraw lag.
+ * @param diffLines Sequence of DiffLine objects to render.
+ */
+void NewConfigDialog::applyDiffToView(const QList<DiffEngine::DiffLine> &diffLines) const {
+    diffView->setUpdatesEnabled(false);
     diffView->clear();
 
-    const QString oldContent = NewConfigManager::readFileContent(oldPath);
-    const QString newContent = NewConfigManager::readFileContent(newPath);
-
-    if (oldContent.isEmpty() && !QFile::exists(oldPath)) {
-        QTextCursor cursor(diffView->document());
-        cursor.insertText(tr("Existing original file does not exist.\nThis is a brand new configuration file.\n\n"));
-        cursor.insertText(newContent);
-        return;
-    }
-
-    const QList<DiffEngine::DiffLine> diffs = DiffEngine::computeDiff(oldContent, newContent);
-
     QTextCursor cursor(diffView->document());
+    cursor.beginEditBlock();
+
     QTextBlockFormat blockFormat;
     QTextCharFormat charFormat;
 
-    for (const auto &line : diffs) {
+    constexpr QColor addBg(46, 204, 113, 50);
+    constexpr QColor remBg(218, 68, 83, 50);
+    const QColor textColor = palette().color(QPalette::Text);
+
+    for (const auto &line : diffLines) {
         if (line.type == DiffEngine::LineType::Added) {
-            blockFormat.setBackground(QColor(46, 204, 113, 60)); // Green tint
-            charFormat.setForeground(palette().color(QPalette::Text));
+            blockFormat.setBackground(addBg);
+            charFormat.setForeground(textColor);
             cursor.setBlockFormat(blockFormat);
             cursor.setCharFormat(charFormat);
             cursor.insertText(QStringLiteral("+ %1\n").arg(line.text));
         } else if (line.type == DiffEngine::LineType::Removed) {
-            blockFormat.setBackground(QColor(218, 68, 83, 60)); // Red tint
-            charFormat.setForeground(palette().color(QPalette::Text));
+            blockFormat.setBackground(remBg);
+            charFormat.setForeground(textColor);
             cursor.setBlockFormat(blockFormat);
             cursor.setCharFormat(charFormat);
             cursor.insertText(QStringLiteral("- %1\n").arg(line.text));
         } else {
             blockFormat.setBackground(Qt::transparent);
-            charFormat.setForeground(palette().color(QPalette::Text));
+            charFormat.setForeground(textColor);
             cursor.setBlockFormat(blockFormat);
             cursor.setCharFormat(charFormat);
             cursor.insertText(QStringLiteral("  %1\n").arg(line.text));
         }
     }
+
+    cursor.endEditBlock();
+    diffView->setUpdatesEnabled(true);
 }
 
+/**
+ * @brief Sets the resolution action for all selected files in the table.
+ * @param action Desired NewConfigAction.
+ */
 void NewConfigDialog::setActionForSelected(const NewConfigAction action) {
     const auto selected = fileTable->selectionModel()->selectedRows();
     QString actionStr;
@@ -214,6 +276,10 @@ void NewConfigDialog::setActionForSelected(const NewConfigAction action) {
     }
 }
 
+/**
+ * @brief Sets the resolution action for all files present in the list.
+ * @param action Desired NewConfigAction.
+ */
 void NewConfigDialog::setActionForAll(const NewConfigAction action) {
     QString actionStr;
     switch (action) {
@@ -228,6 +294,34 @@ void NewConfigDialog::setActionForAll(const NewConfigAction action) {
     }
 }
 
+/**
+ * @brief Emits the apply signal without closing the dialog.
+ */
+void NewConfigDialog::onApplyClicked() {
+    emit applyResolutionRequested(resolvedItems());
+}
+
+/**
+ * @brief Returns the list of items with their configured resolution actions.
+ * @return Resolved configuration file list.
+ */
 QList<NewConfigFileItem> NewConfigDialog::resolvedItems() const {
     return fileItems;
+}
+
+/**
+ * @brief Updates the dialog's file list when files have been modified or rescanned.
+ * @param newItems Updated list of .new configuration items.
+ */
+void NewConfigDialog::updateFileList(const QList<NewConfigFileItem> &newItems) {
+    fileItems = newItems;
+    populateTable();
+
+    if (!fileItems.isEmpty()) {
+        fileTable->selectRow(0);
+        onSelectionChanged();
+    } else {
+        diffHeaderLabel->setText(tr("All configuration files resolved."));
+        diffView->clear();
+    }
 }
