@@ -1,6 +1,6 @@
 /**
  * @file DiffEngine.hpp
- * @brief Internal diff algorithm for comparing files line by line without external processes.
+ * @brief High-performance Myers line diff algorithm with line hashing and prefix/suffix pruning.
  */
 
 #ifndef DIFFENGINE_HPP
@@ -9,10 +9,14 @@
 #include <QList>
 #include <QString>
 
+/**
+ * @namespace DiffEngine
+ * @brief Provides data structures and algorithms for computing line-by-line text differences.
+ */
 namespace DiffEngine {
     /**
      * @enum LineType
-     * @brief Indicates whether a line was added, removed, or kept as context.
+     * @brief Indicates whether a line was added, removed, or retained as context.
      */
     enum class LineType {
         Context,
@@ -22,7 +26,7 @@ namespace DiffEngine {
 
     /**
      * @struct DiffLine
-     * @brief Represents a single line in a diff sequence.
+     * @brief Represents a single line in a calculated diff sequence.
      */
     struct DiffLine {
         LineType type{LineType::Context};
