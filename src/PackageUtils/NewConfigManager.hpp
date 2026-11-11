@@ -1,6 +1,6 @@
 /**
  * @file NewConfigManager.hpp
- * @brief Utilities for finding and reading Slackware .new configuration files.
+ * @brief Header for scanning and reading Slackware .new configuration files.
  */
 
 #ifndef NEWCONFIGMANAGER_HPP
@@ -11,7 +11,7 @@
 
 /**
  * @enum NewConfigAction
- * @brief Action to apply to a .new configuration file.
+ * @brief Action to be executed on a discovered .new configuration file.
  */
 enum class NewConfigAction {
     Keep,
@@ -21,7 +21,7 @@ enum class NewConfigAction {
 
 /**
  * @struct NewConfigFileItem
- * @brief Metadata for a discovered .new file and its original counterpart.
+ * @brief Structure containing metadata and targeted action for a .new file.
  */
 struct NewConfigFileItem {
     QString newFilePath{};
@@ -32,7 +32,7 @@ struct NewConfigFileItem {
 
 /**
  * @class NewConfigManager
- * @brief Scanner and processor for Slackware system configuration updates.
+ * @brief Filesystem inspection utility for Slackware system configuration updates.
  */
 class NewConfigManager {
 public:

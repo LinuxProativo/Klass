@@ -1,6 +1,6 @@
 /**
  * @file NewConfigManager.cpp
- * @brief Implementation of filesystem scanning for .new configuration files.
+ * @brief Implementation of filesystem scanning and file reading for .new configurations.
  */
 
 #include <QDir>
@@ -11,6 +11,11 @@
 
 #include <NewConfigManager.hpp>
 
+/**
+ * @brief Scans a root directory recursively to find all files with a .new extension.
+ * @param rootDir The root directory where searching begins (defaults to /etc).
+ * @return A list of NewConfigFileItem structs representing each found .new file.
+ */
 QList<NewConfigFileItem> NewConfigManager::scanNewFiles(const QString &rootDir) {
     QList<NewConfigFileItem> results;
 
@@ -37,6 +42,11 @@ QList<NewConfigFileItem> NewConfigManager::scanNewFiles(const QString &rootDir) 
     return results;
 }
 
+/**
+ * @brief Reads the entire plain text content of a file from disk.
+ * @param filePath Absolute path of the file to be read.
+ * @return The content of the file as a QString, or an empty string if reading fails.
+ */
 QString NewConfigManager::readFileContent(const QString &filePath) {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
