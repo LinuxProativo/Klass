@@ -93,7 +93,8 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                     for (const auto &part: payload.split(';', Qt::SkipEmptyParts)) {
                         const QStringList kv = part.split('=');
                         if (kv.size() != 2) continue;
-                        const bool v = (kv[1].trimmed().compare(QLatin1String("true"), Qt::CaseInsensitive) == 0 || kv[1].trimmed() == QLatin1String("1"));
+                        const bool v = kv[1].trimmed().compare(QLatin1String("true"), Qt::CaseInsensitive) == 0 ||
+                                       kv[1].trimmed() == QLatin1String("1");
                         if (kv[0] == QLatin1String("pasture")) branches.pasture = v;
                         else if (kv[0] == QLatin1String("testing")) branches.testing = v;
                         else if (kv[0] == QLatin1String("extra")) branches.extra = v;
