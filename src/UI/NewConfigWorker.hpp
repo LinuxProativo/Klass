@@ -6,9 +6,9 @@
 #ifndef NEWCONFIGWORKER_HPP
 #define NEWCONFIGWORKER_HPP
 
+#include <QList>
 #include <QObject>
 #include <QString>
-#include <QList>
 
 #include <DiffEngine.hpp>
 
@@ -29,7 +29,10 @@ public slots:
 
 signals:
     void diffFinished(quint64 requestId, const QString &oldPath, const QString &newPath,
-                      const QList<DiffEngine::DiffLine> &diffLines, bool oldExists);
+                      const QList<DiffEngine::DiffLine> &diffLines, bool oldExists, bool permissionDenied);
+
+private:
+    static QString readFileSafe(const QString &path, bool &denied);
 };
 
 #endif
