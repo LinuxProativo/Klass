@@ -19,12 +19,11 @@
 NewConfigDialog::NewConfigDialog(const QList<NewConfigFileItem> &items, QWidget *parent)
     : Dialog(parent, Qt::ApplicationModal), fileItems(items) {
     this->setWindowTitle(tr("Slackware .new Configuration Files"));
-    this->setMinimumSize(1024, 576);
+    // this->setMinimumSize(1024, 576);
 
     setupUi();
     populateTable();
 
-    // Setup dedicated background worker thread for non-blocking diff computation
     diffWorker = new NewConfigWorker();
     diffWorker->moveToThread(&workerThread);
 
@@ -56,19 +55,17 @@ NewConfigDialog::~NewConfigDialog() {
  */
 void NewConfigDialog::setupUi() {
     tableModel = new QStandardItemModel(this);
-    tableModel->setHorizontalHeaderLabels({tr("Action"), tr("Target File"), tr("Status")});
+    tableModel->setHorizontalHeaderLabels({tr("Action"), tr("Target File")});
 
     fileTable = new TableView(this);
     fileTable->setModel(tableModel);
     fileTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     fileTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    fileTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     fileTable->setSelectionMode(QAbstractItemView::SingleSelection);
 
     connect(fileTable->selectionModel(), &QItemSelectionModel::selectionChanged,
             this, &NewConfigDialog::onSelectionChanged);
 
-    // Global bulk actions (Slackware defaults)
     auto *bulkLayout = new QHBoxLayout();
     btnKeepAll = new QPushButton(tr("Keep All (K)"), this);
     btnOverwriteAll = new QPushButton(tr("Overwrite All (O)"), this);
@@ -82,7 +79,6 @@ void NewConfigDialog::setupUi() {
     bulkLayout->addWidget(btnOverwriteAll);
     bulkLayout->addWidget(btnRemoveAll);
 
-    // Contextual actions on selected items
     auto *itemActionsLayout = new QHBoxLayout();
     btnKeepSelected = new QPushButton(tr("Keep Selected"), this);
     btnOverwriteSelected = new QPushButton(tr("Overwrite Selected"), this);
@@ -128,7 +124,6 @@ void NewConfigDialog::setupUi() {
     splitter->setStretchFactor(0, 1);
     splitter->setStretchFactor(1, 1);
 
-    // Apply button does NOT close the dialog; user stays in control
     btnApply = new QPushButton(tr("Apply Decisions"), this);
     btnClose = new QPushButton(tr("Close"), this);
     connect(btnApply, &QPushButton::clicked, this, &NewConfigDialog::onApplyClicked);
@@ -160,9 +155,8 @@ void NewConfigDialog::populateTable() {
 
         auto *actionItem = new QStandardItem(actionStr);
         auto *pathItem = new QStandardItem(item.originalFilePath);
-        auto *statusItem = new QStandardItem(item.originalExists ? tr("Replaces existing") : tr("New file only"));
 
-        tableModel->appendRow({actionItem, pathItem, statusItem});
+        tableModel->appendRow({actionItem, pathItem});
     }
 }
 
@@ -226,8 +220,8 @@ void NewConfigDialog::applyDiffToView(const QList<DiffEngine::DiffLine> &diffLin
     QTextBlockFormat blockFormat;
     QTextCharFormat charFormat;
 
-    constexpr QColor addBg(46, 204, 113, 50);
-    constexpr QColor remBg(218, 68, 83, 50);
+    const QColor addBg(46, 204, 113, 50);
+    const QColor remBg(218, 68, 83, 50);
     const QColor textColor = palette().color(QPalette::Text);
 
     for (const auto &line : diffLines) {
