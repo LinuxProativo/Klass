@@ -20,7 +20,9 @@ enum class StatusState {
     UpToDate,
     Checking,
     DatabaseAvailable,
-    PackagesAvailable
+    PackagesAvailable,
+    NewConfigAvailable,
+    PackagesAndNewConfigAvailable
 };
 
 /**
@@ -33,7 +35,7 @@ class StatusBar final : public QWidget {
 public:
     explicit StatusBar(QWidget *parent = nullptr);
 
-    void setStatus(StatusState state, int count = 0);
+    void setStatus(StatusState state, int count = 0, int newConfigCount = 0);
 
 private:
     QFrame *topLine{};
