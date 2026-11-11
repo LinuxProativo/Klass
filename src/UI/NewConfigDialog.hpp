@@ -6,6 +6,7 @@
 #ifndef NEWCONFIGDIALOG_HPP
 #define NEWCONFIGDIALOG_HPP
 
+#include <QHash>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
@@ -17,6 +18,7 @@
 
 #include <Dialog.hpp>
 #include <DiffEngine.hpp>
+#include <HelperController.hpp>
 #include <NewConfigManager.hpp>
 #include <NewConfigWorker.hpp>
 #include <TableView.hpp>
@@ -29,11 +31,12 @@ class NewConfigDialog final : public Dialog {
     Q_OBJECT
 
 public:
-    explicit NewConfigDialog(const QList<NewConfigFileItem> &items, QWidget *parent = nullptr);
+    explicit NewConfigDialog(const QList<NewConfigFileItem> &items,
+                             HelperController *helperController,
+                             QWidget *parent = nullptr);
     ~NewConfigDialog() override;
 
     [[nodiscard]] QList<NewConfigFileItem> resolvedItems() const;
-
     void updateFileList(const QList<NewConfigFileItem> &newItems);
 
 signals:
@@ -43,8 +46,11 @@ signals:
 private slots:
     void onSelectionChanged();
     void onDiffComputed(quint64 requestId, const QString &oldPath, const QString &newPath,
-                        const QList<DiffEngine::DiffLine> &diffLines, bool oldExists) const;
+                        const QList<DiffEngine::DiffLine> &diffLines, bool oldExists, bool permissionDenied) const;
     void onApplyClicked();
+    void onReadAsRootClicked();
+    void onRootConfigDataReceived(const QString &oldText, const QString &newText,
+                                  const QString &oldPath, const QString &newPath);
 
 private:
     void setupUi();
@@ -54,6 +60,9 @@ private:
     void applyDiffToView(const QList<DiffEngine::DiffLine> &diffLines) const;
 
     QList<NewConfigFileItem> fileItems;
+    HelperController *helper{nullptr};
+
+    QHash<QString, QList<DiffEngine::DiffLine>> rootDiffCache;
 
     TableView *fileTable{};
     QStandardItemModel *tableModel{};
@@ -63,6 +72,7 @@ private:
     QPushButton *btnKeepAll{};
     QPushButton *btnOverwriteAll{};
     QPushButton *btnRemoveAll{};
+    QPushButton *btnReadAsRoot{};
 
     QPushButton *btnKeepSelected{};
     QPushButton *btnOverwriteSelected{};
@@ -77,6 +87,8 @@ private:
     QThread workerThread;
     NewConfigWorker *diffWorker{};
     quint64 currentRequestId{0};
+    QString currentSelectedOldPath{};
+    QString currentSelectedNewPath{};
 };
 
-#endif // NEWCONFIGDIALOG_HPP
+#endif
