@@ -15,6 +15,8 @@
 #include <HelperController.hpp>
 #include <MirrorManager.hpp>
 #include <Mirrors.hpp>
+#include <NewConfigDialog.hpp>
+#include <NewConfigManager.hpp>
 #include <Packages.hpp>
 #include <RepoVerificationManager.hpp>
 #include <RepositoryTab.hpp>
@@ -112,6 +114,12 @@ private:
 
     void updateStatusIndicator() const;
 
+    void onOpenNewConfigManager();
+
+    void scanNewConfigFiles();
+
+    void handleResolveNewConfig(const QList<NewConfigFileItem> &items);
+
     QHBoxLayout *searchLayout{}, *toolBarLayout{};
     QLineEdit *searchBar{};
     QTabWidget *tabWidget{};
@@ -120,8 +128,9 @@ private:
     QTimer *searchDebounceTimer{};
 
     Buttons *btnAdd{}, *btnException{}, *btnUpdate{}, *btnUp{}, *btnApply{};
-    Buttons *btnSettings{}, *btnChangelog{}, *btnAbout{};
+    Buttons *btnSettings{}, *btnChangelog{}, *btnAbout{}, *btnNewConfig{};
     HelperController *helper{};
+    NewConfigDialog *newConfigDialog{};
     Packages *packagesManager{};
     SettingsManager *settingsManager{};
     StatusBar *statusBar{};
@@ -136,11 +145,12 @@ private:
     QList<PkgInfo> orphanAndExtraPackages{};
     QList<const PkgInfo *> allPackages{};
     QList<Mirrors::MirrorPlusEntry> pendingRepoEnable{};
+    QList<NewConfigFileItem> pendingNewConfigFiles{};
     QList<RuleEntry> pendingRules{};
     QMap<QString, QString> mirrorMap{};
     QStringList pendingRepoDisable{};
     QStringList cachedRepos{};
-    QString pendingMirrorUrl{}, pendingAdminConfigPayload{};
+    QString pendingMirrorUrl{}, pendingAdminConfigPayload{}, pendingNewConfigPayload{};
     Mirrors::OfficialBranches pendingOfficialBranches{};
     RepoVerificationEntry pendingRepoVerification{};
     bool updateNotificationShown{false}, started{false}, hasPendingMirrorUpdate{false}, isCheckingUpdates{false};
