@@ -184,9 +184,14 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                     clientSocket->write(WRITE(ok, "Admin config saved", "Failed to save admin config") + SEP);
                 } else if (raw.startsWith("RESOLVENEWCONFIG:")) {
                     const QString payload = QString::fromUtf8(raw.mid(17)).trimmed();
-                    bool allOk = true;
+                    bool allOk = true, backupOrig = true;
 
                     for (const QString &item: payload.split(u';', Qt::SkipEmptyParts)) {
+                        if (item.startsWith(QLatin1String("BACKUP="))) {
+                            backupOrig = (item.mid(7).trimmed() == QLatin1String("1"));
+                            continue;
+                        }
+
                         const QStringList parts = item.split(u'|');
                         const QString &action = parts[0], &newPath = parts[1];
 
@@ -196,12 +201,18 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                         const QString origPath = newPath.chopped(4);
 
                         if (action == QLatin1String("OVERWRITE")) {
-                            const QString backupPath = origPath + QStringLiteral(".orig");
-                            if (QFile::exists(origPath)) {
-                                QFile::remove(backupPath);
-                                if (!QFile::rename(origPath, backupPath))
-                                    allOk = false;
+                            if (backupOrig) {
+                                const QString backupPath = origPath + QStringLiteral(".orig");
+                                if (QFile::exists(origPath)) {
+                                    QFile::remove(backupPath);
+                                    if (!QFile::rename(origPath, backupPath))
+                                        allOk = false;
+                                }
+                            } else {
+                                if (QFile::exists(origPath))
+                                    QFile::remove(origPath);
                             }
+
                             if (!QFile::rename(newPath, origPath))
                                 allOk = false;
                         } else if (action == QLatin1String("REMOVE")) {
@@ -217,7 +228,7 @@ Helper::Helper(QObject *parent) : QObject(parent) {
                     const QStringList parts = payload.split(u'|');
 
                     if (parts.size() == 2) {
-                        const QString oldPath = parts[0], newPath = parts[1];
+                        const QString &oldPath = parts[0], &newPath = parts[1];
 
                         if (newPath.startsWith(QLatin1String("/etc/")) &&
                             (oldPath.isEmpty() || oldPath.startsWith(QLatin1String("/etc/")))) {
