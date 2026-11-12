@@ -31,64 +31,64 @@ class NewConfigDialog final : public Dialog {
     Q_OBJECT
 
 public:
-    explicit NewConfigDialog(const QList<NewConfigFileItem> &items,
-                             HelperController *helperController,
-                             QWidget *parent = nullptr);
+    explicit NewConfigDialog(const QList<NewConfigFileItem> &items, HelperController *helperC, QWidget *parent = {});
+
     ~NewConfigDialog() override;
 
     [[nodiscard]] QList<NewConfigFileItem> resolvedItems() const;
+
     void updateFileList(const QList<NewConfigFileItem> &newItems);
 
 signals:
     void applyResolutionRequested(const QList<NewConfigFileItem> &items);
+
     void requestDiffComputation(quint64 requestId, const QString &oldPath, const QString &newPath);
 
 private slots:
     void onSelectionChanged();
+
     void onDiffComputed(quint64 requestId, const QString &oldPath, const QString &newPath,
                         const QList<DiffEngine::DiffLine> &diffLines, bool oldExists, bool permissionDenied) const;
+
     void onApplyClicked();
+
     void onReadAsRootClicked();
-    void onRootConfigDataReceived(const QString &oldText, const QString &newText,
-                                  const QString &oldPath, const QString &newPath);
+
+    void onRootConfigDataReceived(const QString &oldText, const QString &newText, const QString &oldPath,
+                                  const QString &newPath);
 
 private:
     void setupUi();
+
     void populateTable();
+
     void setActionForSelected(NewConfigAction action);
+
     void setActionForAll(NewConfigAction action);
+
     void applyDiffToView(const QList<DiffEngine::DiffLine> &diffLines) const;
 
+    void setDiffHeader(const QString &oldPath, const QString &newP, bool isRoot = false, bool oldExists = true) const;
+
+    void clearDiffHeader() const;
+
+    QHash<QString, QList<DiffEngine::DiffLine> > rootDiffCache;
+    QLabel *lblDiffTitle{}, *lblOldPath{}, *lblNewPath{};
     QList<NewConfigFileItem> fileItems;
-    HelperController *helper{nullptr};
-
-    QHash<QString, QList<DiffEngine::DiffLine>> rootDiffCache;
-
-    TableView *fileTable{};
+    QPushButton *btnKeepAll{}, *btnOverwriteAll{}, *btnRemoveAll{}, *btnReadAsRoot{};
+    QPushButton *btnKeepSelected{}, *btnOverwriteSelected{}, *btnRemoveSelected{}, *btnApply{}, *btnClose{};
+    QSplitter *splitter{};
     QStandardItemModel *tableModel{};
     QTextEdit *diffView{};
-    QLabel *diffHeaderLabel{};
-
-    QPushButton *btnKeepAll{};
-    QPushButton *btnOverwriteAll{};
-    QPushButton *btnRemoveAll{};
-    QPushButton *btnReadAsRoot{};
-
-    QPushButton *btnKeepSelected{};
-    QPushButton *btnOverwriteSelected{};
-    QPushButton *btnRemoveSelected{};
-
-    QPushButton *btnApply{};
-    QPushButton *btnClose{};
-
-    QSplitter *splitter{};
     QVBoxLayout *mainLayout{};
 
-    QThread workerThread;
+    HelperController *helper{};
     NewConfigWorker *diffWorker{};
+    TableView *fileTable{};
+
     quint64 currentRequestId{0};
-    QString currentSelectedOldPath{};
-    QString currentSelectedNewPath{};
+    QString currentSelectedOldPath{}, currentSelectedNewPath{};
+    QThread workerThread{};
 };
 
 #endif
