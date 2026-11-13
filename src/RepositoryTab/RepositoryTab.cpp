@@ -121,15 +121,14 @@ RepositoryTab::RepositoryTab(QWidget *parent, const bool isvisible, Packages *pa
     });
 
     splitter = new QSplitter(Qt::Horizontal, this);
+    splitter->setHandleWidth(12);
+    splitter->setChildrenCollapsible(false);
     splitter->addWidget(catList);
     splitter->addWidget(packageTable);
     splitter->addWidget(detailsTab);
     splitter->setStretchFactor(0, 1);
     splitter->setStretchFactor(1, 3);
     splitter->setStretchFactor(2, 1);
-    splitter->setCollapsible(0, false);
-    splitter->setCollapsible(1, false);
-    splitter->setCollapsible(2, false);
 
     layout = new QVBoxLayout(this);
     layout->addWidget(splitter);
