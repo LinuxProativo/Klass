@@ -3,7 +3,6 @@
  * @brief Implementation of the dialog interface for resolving Slackware .new files.
  */
 
-#include <QApplication>
 #include <QHeaderView>
 #include <QTextBlockFormat>
 #include <QTextCharFormat>
@@ -15,20 +14,127 @@
 /**
  * @brief Constructs the dialog, initializes widgets, and spawns the background worker thread.
  * @param items Initial list of detected .new files.
- * @param helperController Pointer to the privileged helper controller.
+ * @param helperC Pointer to the privileged helper controller.
  * @param parent Optional parent widget.
  */
-NewConfigDialog::NewConfigDialog(const QList<NewConfigFileItem> &items,
-                                 HelperController *helperController,
-                                 QWidget *parent)
-    : Dialog(parent, Qt::ApplicationModal), fileItems(items), helper(helperController) {
+NewConfigDialog::NewConfigDialog(const QList<NewConfigFileItem> &items, HelperController *helperC, QWidget *parent)
+    : Dialog(parent, Qt::ApplicationModal), helper(helperC), fileItems(items) {
     this->setWindowTitle(tr("Slackware .new Configuration Files"));
-    this->setMinimumSize(1024, 576);
+    this->setMinimumSize(960, 540);
 
-    setupUi();
+    tableModel = new QStandardItemModel(this);
+    tableModel->setHorizontalHeaderLabels({tr("Action"), tr("Target File")});
+
+    fileTable = new TableView(this);
+    fileTable->setModel(tableModel);
+    fileTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    fileTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    fileTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    connect(fileTable->selectionModel(), &QItemSelectionModel::selectionChanged, this,
+            &NewConfigDialog::onSelectionChanged);
+
+    btnKeepAll = new QPushButton(tr("Keep All"), this);
+    btnOverwriteAll = new QPushButton(tr("Overwrite All"), this);
+    btnRemoveAll = new QPushButton(tr("Remove All"), this);
+
+    btnReadAsRoot = new QPushButton(tr("Read as Root"), this);
+    btnReadAsRoot->setEnabled(false);
+    btnReadAsRoot->setToolTip(tr("Read this configuration file with root privileges if permission was denied."));
+    connect(btnReadAsRoot, &QPushButton::clicked, this, &NewConfigDialog::onReadAsRootClicked);
+
+    connect(btnKeepAll, &QPushButton::clicked, this, [this] { setActionForAll(NewConfigAction::Keep); });
+    connect(btnOverwriteAll, &QPushButton::clicked, this, [this] { setActionForAll(NewConfigAction::Overwrite); });
+    connect(btnRemoveAll, &QPushButton::clicked, this, [this] { setActionForAll(NewConfigAction::Remove); });
+
+    bulkLayout = new QHBoxLayout();
+    bulkLayout->addWidget(btnKeepAll);
+    bulkLayout->addWidget(btnOverwriteAll);
+    bulkLayout->addWidget(btnRemoveAll);
+    bulkLayout->addStretch();
+    bulkLayout->addWidget(btnReadAsRoot);
+
+    btnKeepSelected = new QPushButton(tr("Keep"), this);
+    btnOverwriteSel = new QPushButton(tr("Overwrite"), this);
+    btnRemoveSelected = new QPushButton(tr("Remove"), this);
+
+    connect(btnKeepSelected, &QPushButton::clicked, this, [this] { setActForSelected(NewConfigAction::Keep); });
+    connect(btnOverwriteSel, &QPushButton::clicked, this, [this] { setActForSelected(NewConfigAction::Overwrite); });
+    connect(btnRemoveSelected, &QPushButton::clicked, this, [this] { setActForSelected(NewConfigAction::Remove); });
+
+    itemActionsLayout = new QHBoxLayout();
+    itemActionsLayout->addWidget(new QLabel(tr("Action on Selected Files:"), this), 0, Qt::AlignTop);
+    itemActionsLayout->addSpacing(5);
+    itemActionsLayout->addWidget(btnKeepSelected);
+    itemActionsLayout->addWidget(btnOverwriteSel);
+    itemActionsLayout->addWidget(btnRemoveSelected);
+    itemActionsLayout->addStretch();
+
+    leftContainer = new QWidget(this);
+    leftLayout = new QVBoxLayout(leftContainer);
+    leftLayout->setContentsMargins(0, 0, 0, 0);
+    leftLayout->addLayout(bulkLayout);
+    leftLayout->addWidget(fileTable);
+    leftLayout->addSpacing(5);
+    leftLayout->addLayout(itemActionsLayout);
+
+    QFont boldFont = this->font();
+    boldFont.setBold(true);
+
+    lblDiffTitle = new QLabel(tr("Diff:"), this);
+    lblDiffTitle->setFont(boldFont);
+
+    lblOldPath = new QLabel(tr("Select a file to inspect differences"), this);
+    lblOldPath->setFont(boldFont);
+
+    lblNewPath = new QLabel(this);
+    lblNewPath->setFont(boldFont);
+
+    pathsLayout = new QVBoxLayout();
+    pathsLayout->setSpacing(0);
+    pathsLayout->addWidget(lblOldPath);
+    pathsLayout->addWidget(lblNewPath);
+
+    headerLayout = new QHBoxLayout();
+    headerLayout->addSpacing(5);
+    headerLayout->addWidget(lblDiffTitle, 0, Qt::AlignTop);
+    headerLayout->addLayout(pathsLayout, 1);
+
+    diffView = new QTextEdit(this);
+    diffView->setReadOnly(true);
+    diffView->setLineWrapMode(QTextEdit::NoWrap);
+    diffView->setFontFamily(QStringLiteral("monospace"));
+
+    btnApply = new QPushButton(tr("Apply Operations"), this);
+    btnClose = new QPushButton(tr("Close"), this);
+    connect(btnApply, &QPushButton::clicked, this, &NewConfigDialog::onApplyClicked);
+    connect(btnClose, &QPushButton::clicked, this, &QDialog::reject);
+
+    bottomLayout = new QHBoxLayout();
+    bottomLayout->addStretch();
+    bottomLayout->addWidget(btnApply);
+    bottomLayout->addWidget(btnClose);
+
+    rightContainer = new QWidget(this);
+    rightLayout = new QVBoxLayout(rightContainer);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->addLayout(headerLayout);
+    rightLayout->addWidget(diffView);
+    rightLayout->addSpacing(5);
+    rightLayout->addLayout(bottomLayout);
+
+    splitter = new QSplitter(Qt::Horizontal, this);
+    splitter->setHandleWidth(12);
+    splitter->setChildrenCollapsible(false);
+    splitter->addWidget(leftContainer);
+    splitter->addWidget(rightContainer);
+    splitter->setStretchFactor(0, 1);
+    splitter->setStretchFactor(1, 2);
+
+    mainLayout = new QVBoxLayout(this);
+    mainLayout->addWidget(splitter);
+
     populateTable();
 
-    // Setup background diff calculation worker
     diffWorker = new NewConfigWorker();
     diffWorker->moveToThread(&workerThread);
 
@@ -37,7 +143,7 @@ NewConfigDialog::NewConfigDialog(const QList<NewConfigFileItem> &items,
     connect(diffWorker, &NewConfigWorker::diffFinished, this, &NewConfigDialog::onDiffComputed);
 
     if (helper)
-        connect(helper, &HelperController::rootConfigDataReceived,this, &NewConfigDialog::onRootConfigDataReceived);
+        connect(helper, &HelperController::rootConfigDataReceived, this, &NewConfigDialog::onRootConfigDataReceived);
 
     workerThread.start();
 
@@ -56,101 +162,6 @@ NewConfigDialog::~NewConfigDialog() {
 
     if (tableModel)
         tableModel->clear();
-}
-
-/**
- * @brief Assembles layout containers, buttons, file table, and diff viewer.
- */
-void NewConfigDialog::setupUi() {
-    tableModel = new QStandardItemModel(this);
-    tableModel->setHorizontalHeaderLabels({tr("Action"), tr("Target File")});
-
-    fileTable = new TableView(this);
-    fileTable->setModel(tableModel);
-    fileTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    fileTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    fileTable->setSelectionMode(QAbstractItemView::SingleSelection);
-
-    connect(fileTable->selectionModel(), &QItemSelectionModel::selectionChanged,
-            this, &NewConfigDialog::onSelectionChanged);
-
-    auto *bulkLayout = new QHBoxLayout();
-    btnKeepAll = new QPushButton(tr("Keep All"), this);
-    btnOverwriteAll = new QPushButton(tr("Overwrite All"), this);
-    btnRemoveAll = new QPushButton(tr("Remove All"), this);
-
-    btnReadAsRoot = new QPushButton(tr("Read as Root"), this);
-    btnReadAsRoot->setEnabled(false);
-    btnReadAsRoot->setToolTip(tr("Read this configuration file with root privileges if permission was denied."));
-    connect(btnReadAsRoot, &QPushButton::clicked, this, &NewConfigDialog::onReadAsRootClicked);
-
-    connect(btnKeepAll, &QPushButton::clicked, this, [this] { setActionForAll(NewConfigAction::Keep); });
-    connect(btnOverwriteAll, &QPushButton::clicked, this, [this] { setActionForAll(NewConfigAction::Overwrite); });
-    connect(btnRemoveAll, &QPushButton::clicked, this, [this] { setActionForAll(NewConfigAction::Remove); });
-
-    bulkLayout->addWidget(btnKeepAll);
-    bulkLayout->addWidget(btnOverwriteAll);
-    bulkLayout->addWidget(btnRemoveAll);
-    bulkLayout->addWidget(btnReadAsRoot);
-
-    auto *itemActionsLayout = new QHBoxLayout();
-    btnKeepSelected = new QPushButton(tr("Keep Selected"), this);
-    btnOverwriteSelected = new QPushButton(tr("Overwrite Selected"), this);
-    btnRemoveSelected = new QPushButton(tr("Remove Selected"), this);
-
-    connect(btnKeepSelected, &QPushButton::clicked, this, [this] { setActionForSelected(NewConfigAction::Keep); });
-    connect(btnOverwriteSelected, &QPushButton::clicked, this,[this] { setActionForSelected(NewConfigAction::Overwrite); });
-    connect(btnRemoveSelected, &QPushButton::clicked, this, [this] { setActionForSelected(NewConfigAction::Remove); });
-
-    itemActionsLayout->addWidget(btnKeepSelected);
-    itemActionsLayout->addWidget(btnOverwriteSelected);
-    itemActionsLayout->addWidget(btnRemoveSelected);
-
-    auto *leftContainer = new QWidget(this);
-    auto *leftLayout = new QVBoxLayout(leftContainer);
-    leftLayout->setContentsMargins(0, 0, 0, 0);
-    leftLayout->addWidget(new QLabel(tr("Bulk Actions:"), this));
-    leftLayout->addLayout(bulkLayout);
-    leftLayout->addWidget(fileTable);
-    leftLayout->addWidget(new QLabel(tr("Action on Selected Files:"), this));
-    leftLayout->addLayout(itemActionsLayout);
-
-    QFont font = this->font();
-    font.setBold(true);
-
-    diffHeaderLabel = new QLabel(tr("Select a file to inspect differences"), this);
-    diffHeaderLabel->setFont(font);
-
-    diffView = new QTextEdit(this);
-    diffView->setReadOnly(true);
-    diffView->setLineWrapMode(QTextEdit::NoWrap);
-    diffView->setFontFamily(QStringLiteral("monospace"));
-
-    auto *rightContainer = new QWidget(this);
-    auto *rightLayout = new QVBoxLayout(rightContainer);
-    rightLayout->setContentsMargins(0, 0, 0, 0);
-    rightLayout->addWidget(diffHeaderLabel);
-    rightLayout->addWidget(diffView);
-
-    splitter = new QSplitter(Qt::Horizontal, this);
-    splitter->addWidget(leftContainer);
-    splitter->addWidget(rightContainer);
-    splitter->setStretchFactor(0, 1);
-    splitter->setStretchFactor(1, 1);
-
-    btnApply = new QPushButton(tr("Apply Operations"), this);
-    btnClose = new QPushButton(tr("Close"), this);
-    connect(btnApply, &QPushButton::clicked, this, &NewConfigDialog::onApplyClicked);
-    connect(btnClose, &QPushButton::clicked, this, &QDialog::reject);
-
-    auto *bottomLayout = new QHBoxLayout();
-    bottomLayout->addStretch();
-    bottomLayout->addWidget(btnApply);
-    bottomLayout->addWidget(btnClose);
-
-    mainLayout = new QVBoxLayout(this);
-    mainLayout->addWidget(splitter);
-    mainLayout->addLayout(bottomLayout);
 }
 
 /**
@@ -183,7 +194,7 @@ void NewConfigDialog::populateTable() {
 void NewConfigDialog::onSelectionChanged() {
     const auto selected = fileTable->selectionModel()->selectedRows();
     if (selected.isEmpty()) {
-        diffHeaderLabel->setText(tr("No file selected"));
+        clearDiffHeader();
         diffView->clear();
         btnReadAsRoot->setEnabled(false);
         return;
@@ -199,7 +210,7 @@ void NewConfigDialog::onSelectionChanged() {
 
     if (rootDiffCache.contains(item.newFilePath)) {
         btnReadAsRoot->setEnabled(false);
-        diffHeaderLabel->setText(tr("Diff (Root Privileges): %1 vs %2").arg(item.originalFilePath, item.newFilePath));
+        setDiffHeader(item.originalFilePath, item.newFilePath, true);
         applyDiffToView(rootDiffCache.value(item.newFilePath));
         return;
     }
@@ -207,7 +218,9 @@ void NewConfigDialog::onSelectionChanged() {
     btnReadAsRoot->setEnabled(false);
 
     ++currentRequestId;
-    diffHeaderLabel->setText(tr("Comparing: %1 (loading...)").arg(item.originalFilePath));
+    lblDiffTitle->setText(tr("Comparing:"));
+    lblOldPath->setText(item.originalFilePath + QStringLiteral(" (loading...)"));
+    lblNewPath->clear();
     diffView->clear();
     diffView->setPlainText(tr("Calculating diff in background..."));
 
@@ -231,18 +244,16 @@ void NewConfigDialog::onDiffComputed(const quint64 requestId, const QString &old
 
     if (permissionDenied) {
         btnReadAsRoot->setEnabled(true);
-        diffHeaderLabel->setText(tr("Permission Denied: %1").arg(oldPath));
+        lblDiffTitle->setText(tr("Denied:"));
+        lblOldPath->setText(oldPath);
+        lblNewPath->setText(newPath);
         diffView->setPlainText(tr("Permission denied reading configuration file.\n"
             "Click 'Read as Root' button above to inspect this file using root privileges."));
         return;
     }
 
     btnReadAsRoot->setEnabled(false);
-
-    diffHeaderLabel->setText(oldExists
-                                 ? tr("Diff: %1 vs %2").arg(oldPath, newPath)
-                                 : tr("Diff: %1 (Original does not exist — brand new file)").arg(newPath));
-
+    setDiffHeader(oldPath, newPath, false, oldExists);
     applyDiffToView(diffLines);
 }
 
@@ -260,8 +271,7 @@ void NewConfigDialog::applyDiffToView(const QList<DiffEngine::DiffLine> &diffLin
     QTextBlockFormat blockFormat;
     QTextCharFormat charFormat;
 
-    const QColor addBg(46, 204, 113, 50);
-    const QColor remBg(218, 68, 83, 50);
+    constexpr QColor addBg(46, 204, 113, 50), remBg(218, 68, 83, 50);
     const QColor textColor = palette().color(QPalette::Text);
 
     for (const auto &line: diffLines) {
@@ -299,9 +309,9 @@ void NewConfigDialog::onReadAsRootClicked() {
 
     diffView->setPlainText(tr("Requesting file contents with root privileges..."));
 
-    auto sendRequest = [this]() {
-        const QString payload = QStringLiteral("READ_CONFIG_FILES:") +
-                                currentSelectedOldPath + u'|' + currentSelectedNewPath + SEP;
+    auto sendRequest = [this] {
+        const QString payload =
+                QStringLiteral("READ_CONFIG_FILES:") + currentSelectedOldPath + u'|' + currentSelectedNewPath + SEP;
         helper->socket()->write(payload.toUtf8());
     };
 
@@ -324,12 +334,11 @@ void NewConfigDialog::onRootConfigDataReceived(const QString &oldText, const QSt
                                                const QString &oldPath, const QString &newPath) {
     const QList<DiffEngine::DiffLine> diff = DiffEngine::computeDiff(oldText, newText);
 
-    // Save in cache so returning to this file doesn't require root elevation again
     rootDiffCache.insert(newPath, diff);
 
     if (newPath == currentSelectedNewPath) {
         btnReadAsRoot->setEnabled(false);
-        diffHeaderLabel->setText(tr("Diff (Root Privileges): %1 vs %2").arg(oldPath, newPath));
+        setDiffHeader(oldPath, newPath, true);
         applyDiffToView(diff);
     }
 }
@@ -338,15 +347,18 @@ void NewConfigDialog::onRootConfigDataReceived(const QString &oldText, const QSt
  * @brief Sets the resolution action for all selected files in the table.
  * @param action Desired NewConfigAction.
  */
-void NewConfigDialog::setActionForSelected(const NewConfigAction action) {
+void NewConfigDialog::setActForSelected(const NewConfigAction action) {
     const auto selected = fileTable->selectionModel()->selectedRows();
     QString actionStr;
     switch (action) {
-        case NewConfigAction::Keep: actionStr = tr("Keep");
+        case NewConfigAction::Keep:
+            actionStr = tr("Keep");
             break;
-        case NewConfigAction::Overwrite: actionStr = tr("Overwrite");
+        case NewConfigAction::Overwrite:
+            actionStr = tr("Overwrite");
             break;
-        case NewConfigAction::Remove: actionStr = tr("Remove");
+        case NewConfigAction::Remove:
+            actionStr = tr("Remove");
             break;
     }
 
@@ -364,11 +376,14 @@ void NewConfigDialog::setActionForSelected(const NewConfigAction action) {
 void NewConfigDialog::setActionForAll(const NewConfigAction action) {
     QString actionStr;
     switch (action) {
-        case NewConfigAction::Keep: actionStr = tr("Keep");
+        case NewConfigAction::Keep:
+            actionStr = tr("Keep");
             break;
-        case NewConfigAction::Overwrite: actionStr = tr("Overwrite");
+        case NewConfigAction::Overwrite:
+            actionStr = tr("Overwrite");
             break;
-        case NewConfigAction::Remove: actionStr = tr("Remove");
+        case NewConfigAction::Remove:
+            actionStr = tr("Remove");
             break;
     }
 
@@ -376,21 +391,6 @@ void NewConfigDialog::setActionForAll(const NewConfigAction action) {
         fileItems[i].action = action;
         tableModel->item(i, 0)->setText(actionStr);
     }
-}
-
-/**
- * @brief Emits the apply signal without closing the dialog.
- */
-void NewConfigDialog::onApplyClicked() {
-    emit applyResolutionRequested(resolvedItems());
-}
-
-/**
- * @brief Returns the list of items with their configured resolution actions.
- * @return Resolved configuration file list.
- */
-QList<NewConfigFileItem> NewConfigDialog::resolvedItems() const {
-    return fileItems;
 }
 
 /**
@@ -416,8 +416,39 @@ void NewConfigDialog::updateFileList(const QList<NewConfigFileItem> &newItems) {
         fileTable->selectRow(0);
         onSelectionChanged();
     } else {
-        diffHeaderLabel->setText(tr("All configuration files resolved."));
+        lblDiffTitle->setText(tr("Status:"));
+        lblOldPath->setText(tr("All configuration files resolved."));
+        lblNewPath->clear();
         diffView->clear();
         btnReadAsRoot->setEnabled(false);
     }
+}
+
+/**
+ * @brief Updates the diff header paths aligned vertically in a grid layout.
+ * @param oldPath Original file path.
+ * @param newP Incoming .new file path.
+ * @param isRoot True if loaded with root privileges.
+ * @param oldExists True if the baseline file exists on disk.
+ */
+void NewConfigDialog::setDiffHeader(const QString &oldPath, const QString &newP, const bool isRoot,
+                                    const bool oldExists) const {
+    lblDiffTitle->setText(isRoot ? tr("Diff (Root):") : tr("Diff:"));
+
+    if (oldExists) {
+        lblOldPath->setText(oldPath);
+    } else {
+        lblOldPath->setText(tr("(Original does not exist — brand new file)"));
+    }
+
+    lblNewPath->setText(newP);
+}
+
+/**
+ * @brief Resets the diff header labels to the default state.
+ */
+void NewConfigDialog::clearDiffHeader() const {
+    lblDiffTitle->setText(tr("Diff:"));
+    lblOldPath->setText(tr("No file selected"));
+    lblNewPath->clear();
 }

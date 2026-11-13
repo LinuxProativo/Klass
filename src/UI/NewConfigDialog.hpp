@@ -35,7 +35,7 @@ public:
 
     ~NewConfigDialog() override;
 
-    [[nodiscard]] QList<NewConfigFileItem> resolvedItems() const;
+    [[nodiscard]] QList<NewConfigFileItem> resolvedItems() const { return fileItems; }
 
     void updateFileList(const QList<NewConfigFileItem> &newItems);
 
@@ -50,7 +50,7 @@ private slots:
     void onDiffComputed(quint64 requestId, const QString &oldPath, const QString &newPath,
                         const QList<DiffEngine::DiffLine> &diffLines, bool oldExists, bool permissionDenied) const;
 
-    void onApplyClicked();
+    void onApplyClicked() { emit applyResolutionRequested(resolvedItems()); }
 
     void onReadAsRootClicked();
 
@@ -58,11 +58,9 @@ private slots:
                                   const QString &newPath);
 
 private:
-    void setupUi();
-
     void populateTable();
 
-    void setActionForSelected(NewConfigAction action);
+    void setActForSelected(NewConfigAction action);
 
     void setActionForAll(NewConfigAction action);
 
@@ -72,22 +70,24 @@ private:
 
     void clearDiffHeader() const;
 
-    QHash<QString, QList<DiffEngine::DiffLine> > rootDiffCache;
+    QHBoxLayout *bulkLayout, *itemActionsLayout{}, *headerLayout{}, *bottomLayout{};
     QLabel *lblDiffTitle{}, *lblOldPath{}, *lblNewPath{};
-    QList<NewConfigFileItem> fileItems;
     QPushButton *btnKeepAll{}, *btnOverwriteAll{}, *btnRemoveAll{}, *btnReadAsRoot{};
-    QPushButton *btnKeepSelected{}, *btnOverwriteSelected{}, *btnRemoveSelected{}, *btnApply{}, *btnClose{};
+    QPushButton *btnKeepSelected{}, *btnOverwriteSel{}, *btnRemoveSelected{}, *btnApply{}, *btnClose{};
     QSplitter *splitter{};
     QStandardItemModel *tableModel{};
     QTextEdit *diffView{};
-    QVBoxLayout *mainLayout{};
+    QVBoxLayout *mainLayout{}, *leftLayout{}, *pathsLayout{}, *rightLayout{};
+    QWidget *leftContainer{}, *rightContainer{};
 
     HelperController *helper{};
     NewConfigWorker *diffWorker{};
     TableView *fileTable{};
 
-    quint64 currentRequestId{0};
+    QHash<QString, QList<DiffEngine::DiffLine> > rootDiffCache{};
+    QList<NewConfigFileItem> fileItems{};
     QString currentSelectedOldPath{}, currentSelectedNewPath{};
+    quint64 currentRequestId{0};
     QThread workerThread{};
 };
 
