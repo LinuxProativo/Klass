@@ -1,15 +1,17 @@
 /**
-* @file StatusBar.hpp
+ * @file StatusBar.hpp
  * @brief Header for the custom application status bar displaying update status and health metrics.
  */
 
 #ifndef STATUSBAR_HPP
 #define STATUSBAR_HPP
 
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QPainter>
+#include <QPixmap>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <QWidget>
 
 /**
@@ -27,7 +29,7 @@ enum class StatusState {
 
 /**
  * @class StatusBar
- * @brief Lightweight status bar widget with an icon and status message.
+ * @brief Lightweight status bar widget with dynamic icons and state indicators.
  */
 class StatusBar final : public QWidget {
     Q_OBJECT
@@ -39,10 +41,11 @@ public:
 
 private:
     QFrame *topLine{};
-    QHBoxLayout *mainLayout{};
-    QLabel *iconLabel{}, *textLabel{};
+    QHBoxLayout *mainLayout{}, *primaryTextLayout{}, *configLayout{}, *secondaryTextLayout{};
+    QLabel *iconLabel{}, *textLabel{}, *countLabel{}, *suffixLabel{};
+    QLabel *iconLabel2{}, *midTextLabel{}, *countLabel2{}, *suffixLabel2{};
     QVBoxLayout *rootLayout{};
-    QWidget *container{};
+    QWidget *container{}, *configContainer{};
 
     QTimer *spinnerTimer{};
     QPixmap baseCheckingPixmap{};
