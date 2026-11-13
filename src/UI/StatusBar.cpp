@@ -82,8 +82,9 @@ StatusBar::StatusBar(QWidget *parent) : QWidget(parent) {
  * @brief Updates the status bar icon and label according to current application state.
  * @param state The target status state.
  * @param count Number of pending packages when state is PackagesAvailable.
+ * @param newConfigCount - TODO COMENTAR
  */
-void StatusBar::setStatus(const StatusState state, const int count) {
+void StatusBar::setStatus(const StatusState state, const int count, const int newConfigCount) {
     if (state == StatusState::Checking) {
         if (!spinnerTimer->isActive()) {
             const Icon::IconManager icon(22);
@@ -112,6 +113,17 @@ void StatusBar::setStatus(const StatusState state, const int count) {
         case StatusState::PackagesAvailable: {
             iconPixmap = icon.getIcon(Icon::Id::AvailableUpdate, {}).pixmap(22, 22);
             message = tr("Packages available for update") + QStringLiteral(": %1.").arg(count);
+            break;
+        }
+        case StatusState::NewConfigAvailable: {
+            iconPixmap = icon.getIcon(Icon::Id::New, COLOR_ORANGE).pixmap(22, 22);
+            message = tr("Files .new pending for review") + QStringLiteral(": %1.").arg(newConfigCount);
+            break;
+        }
+        case StatusState::PackagesAndNewConfigAvailable: {
+            iconPixmap = icon.getIcon(Icon::Id::AvailableUpdate, {}).pixmap(22, 22);
+            message = tr("Packages available for update") + QStringLiteral(": %1. ").arg(count) +
+                      tr("Files .new pending for review") + QStringLiteral(": %1.").arg(newConfigCount);
             break;
         }
         case StatusState::UpToDate:
