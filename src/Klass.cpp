@@ -34,6 +34,7 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     connect(helper, &HelperController::updateFinished, this, &Klass::onUpdateFinished);
     connect(helper, &HelperController::updateRules, this, &Klass::reloadRules);
     connect(helper, &HelperController::transactionFinished, this, &Klass::onTransactionFinished);
+    connect(helper, &HelperController::newConfigFinished, this, &Klass::scanNewConfigFiles);
 
     settingsManager = new SettingsManager(this);
     packagesManager = new Packages(this);
@@ -75,6 +76,9 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     btnAbout = new Buttons(Icon::Id::About, tr("About"));
     connect(btnAbout, &Buttons::clicked, this, &Klass::onShowAbout);
 
+    btnNewConfig = new Buttons(Icon::Id::New, tr("Manage .new Configuration Files"));
+    connect(btnNewConfig, &Buttons::clicked, this, &Klass::onOpenNewConfigManager);
+
     searchLayout = new QHBoxLayout(searchBar);
     searchLayout->addWidget(resetButton, 0, Qt::AlignRight | Qt::AlignVCenter);
     searchLayout->setContentsMargins(0, 0, 2, 0);
@@ -90,6 +94,7 @@ Klass::Klass(QWidget *parent) : QWidget(parent) {
     toolBarLayout->addWidget(btnUpdate);
     toolBarLayout->addWidget(btnUp);
     toolBarLayout->addWidget(btnApply);
+    toolBarLayout->addWidget(btnNewConfig);
     toolBarLayout->addSpacing(15);
     toolBarLayout->addWidget(searchBar);
     toolBarLayout->addSpacing(15);
@@ -310,10 +315,65 @@ void Klass::updateStatusIndicator() const {
         }
     }
 
-    if (updateCount > 0)
+    const int newConfigCount = static_cast<int>(pendingNewConfigFiles.size());
+
+    if (updateCount > 0 && newConfigCount > 0)
+        statusBar->setStatus(StatusState::PackagesAndNewConfigAvailable, updateCount, newConfigCount);
+    else if (updateCount > 0)
         statusBar->setStatus(StatusState::PackagesAvailable, updateCount);
+    else if (newConfigCount > 0)
+        statusBar->setStatus(StatusState::NewConfigAvailable, 0, newConfigCount);
     else
         statusBar->setStatus(StatusState::UpToDate);
+}
+
+/**
+ * @brief Scans the filesystem for Slackware .new configuration files and updates UI status.
+ */
+void Klass::scanNewConfigFiles() {
+    pendingNewConfigFiles = NewConfigManager::scanNewFiles();
+    updateStatusIndicator();
+
+    if (newConfigDialog && newConfigDialog->isVisible())
+        newConfigDialog->updateFileList(pendingNewConfigFiles);
+}
+
+/**
+ * @brief Opens the Slackware .new configuration resolution dialog or notifies if none exist.
+ */
+void Klass::onOpenNewConfigManager() {
+    scanNewConfigFiles();
+    if (pendingNewConfigFiles.isEmpty()) {
+        QMessageBox::information(this, tr("Configuration Files"),
+                                 tr("No .new configuration files found on the system."));
+        return;
+    }
+
+    newConfigDialog = new NewConfigDialog(pendingNewConfigFiles, helper, this);
+    connect(newConfigDialog, &NewConfigDialog::applyResolutionRequested, this, &Klass::handleResolveNewConfig);
+    newConfigDialog->show();
+    newConfigDialog = {}; // Ver se é a melhor opção, mas resolve.
+}
+
+/**
+ * @brief Serializes the resolution actions and dispatches them to the privileged helper.
+ * @param items List of configuration files and their assigned resolution actions.
+ */
+void Klass::handleResolveNewConfig(const QList<NewConfigFileItem> &items) {
+    QStringList parts;
+    for (const auto &item : items) {
+        if (item.action == NewConfigAction::Overwrite)
+            parts << QStringLiteral("OVERWRITE|") + item.newFilePath;
+        else if (item.action == NewConfigAction::Remove)
+            parts << QStringLiteral("REMOVE|") + item.newFilePath;
+    }
+
+    if (parts.isEmpty())
+        return;
+
+    const bool backup = settingsManager ? settingsManager->backupOriginalOnOverwrite() : true;
+    pendingNewConfigPayload = QStringLiteral("BACKUP=%1;").arg(backup ? 1 : 0) + parts.join(u';');
+    helper->setupHelper(PendingAction::ResolveNewConfig);
 }
 
 /**
@@ -532,7 +592,7 @@ void Klass::loadRepositoryTabs() {
         }
     }
 
-    updateStatusIndicator();
+    scanNewConfigFiles();
     Utils::releaseFreeMemory();
 }
 
@@ -851,6 +911,9 @@ void Klass::onHelperReady() {
     } else if (pending == PendingAction::SaveAdminConfig && !pendingAdminConfigPayload.isEmpty()) {
         helper->socket()->write(QByteArray("SETADMINCONFIG:") + pendingAdminConfigPayload.toUtf8() + SEP);
         pendingAdminConfigPayload.clear();
+    } else if (pending == PendingAction::ResolveNewConfig && !pendingNewConfigPayload.isEmpty()) {
+        helper->socket()->write(QByteArray("RESOLVENEWCONFIG:") + pendingNewConfigPayload.toUtf8() + SEP);
+        pendingNewConfigPayload.clear();
     }
     helper->setPendingAct(PendingAction::None);
 }
