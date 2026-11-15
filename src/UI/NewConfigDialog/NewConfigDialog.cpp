@@ -62,7 +62,7 @@ NewConfigDialog::NewConfigDialog(const QList<NewConfigFileItem> &items, HelperCo
     connect(btnRemoveSelected, &QPushButton::clicked, this, [this] { setActForSelected(NewConfigAction::Remove); });
 
     itemActionsLayout = new QHBoxLayout();
-    itemActionsLayout->addWidget(new QLabel(tr("Action on Selected Files:"), this), 0, Qt::AlignTop);
+    itemActionsLayout->addWidget(new QLabel(tr("Action on Selected File:"), this), 0, Qt::AlignTop);
     itemActionsLayout->addSpacing(5);
     itemActionsLayout->addWidget(btnKeepSelected);
     itemActionsLayout->addWidget(btnOverwriteSel);
@@ -219,7 +219,7 @@ void NewConfigDialog::onSelectionChanged() {
 
     ++currentRequestId;
     lblDiffTitle->setText(tr("Comparing:"));
-    lblOldPath->setText(item.originalFilePath + QStringLiteral(" (loading...)"));
+    lblOldPath->setText(item.originalFilePath);
     lblNewPath->clear();
     diffView->clear();
     diffView->setPlainText(tr("Calculating diff in background..."));

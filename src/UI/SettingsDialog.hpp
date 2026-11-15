@@ -79,6 +79,7 @@ private:
     QCheckBox *attachPatchesCB{}, *attachTestingCB{}, *verifySignatureCB{}, *verifyChecksumCB{};
     QCheckBox *bakOrigOverwriteCB{}, *keepCacheCB{};
     QComboBox *downloadMethodCombo{}, *checksumComboBox{};
+    QFrame *hLine{};
     QGroupBox *verificationGroup{}, *cacheGroup{}, *postInstallGroup{}, *startupGroup{};
     QGroupBox *updateOptionGroup{}, *repoGroup{}, *downloadCommandsGroup{};
     QHBoxLayout *checksumSelectLayout{};

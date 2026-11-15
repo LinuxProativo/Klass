@@ -23,9 +23,17 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     autostartCheckBox->setChecked(settingsManager->autostart());
     connect(autostartCheckBox, &QCheckBox::toggled, this, &SettingsDialog::onAutostartToggled);
 
-    auto *hLine = new QFrame(startupGroup);
+    hLine = new QFrame(startupGroup);
     hLine->setFrameShape(QFrame::HLine);
-    hLine->setFrameShadow(QFrame::Sunken);
+    hLine->setFrameShadow(QFrame::Plain);
+    hLine->setLineWidth(1);
+
+    QPalette pal = hLine->palette();
+    QColor corTextoSistema = pal.color(QPalette::WindowText);
+    corTextoSistema.setAlpha(30);
+    pal.setColor(QPalette::Dark, corTextoSistema);
+    pal.setColor(QPalette::WindowText, corTextoSistema);
+    hLine->setPalette(pal);
 
     startMaximizedCB = new QCheckBox(tr("Start program maximized"), startupGroup);
     startMaximizedCB->setChecked(settingsManager->startMaximized());
@@ -131,7 +139,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     verifyChecksumCB->setChecked(adminConfigManager->verifyChecksum());
     connect(verifyChecksumCB, &QCheckBox::toggled, this, &SettingsDialog::onVerifyChecksumToggled);
 
-    preferredChecksumLabel = new QLabel(tr("Preferred Checksum:"), verificationGroup);
+    preferredChecksumLabel = new QLabel(tr("Preferred Algorithm:"), verificationGroup);
     checksumComboBox = new QComboBox(verificationGroup);
     checksumComboBox->addItem(QStringLiteral("MD5"));
     checksumComboBox->setCurrentText(adminConfigManager->preferredChecksum());
