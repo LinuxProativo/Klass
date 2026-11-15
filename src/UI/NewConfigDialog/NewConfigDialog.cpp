@@ -247,8 +247,8 @@ void NewConfigDialog::onDiffComputed(const quint64 requestId, const QString &old
         lblDiffTitle->setText(tr("Denied:"));
         lblOldPath->setText(oldPath);
         lblNewPath->setText(newPath);
-        diffView->setPlainText(tr("Permission denied reading configuration file.\n"
-            "Click 'Read as Root' button above to inspect this file using root privileges."));
+        diffView->setPlainText(tr("Permission denied reading configuration file.") + "\n" +
+                               tr("Click 'Read as Root' button above to inspect this file using root privileges."));
         return;
     }
 

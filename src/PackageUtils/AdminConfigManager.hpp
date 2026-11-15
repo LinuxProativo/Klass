@@ -14,7 +14,6 @@
  * @brief Identifiers for post-installation administrative maintenance tasks.
  */
 enum class PostInstallTask {
-    Ldconfig,
     UpdateMimeDatabase,
     UpdateManDb,
     UpdateDesktopDatabase,

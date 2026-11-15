@@ -390,11 +390,6 @@ void HelperUtils::processTransaction(QLocalSocket *socket, TaskManager *task, co
         socket->write(OUTPUT + QByteArray("Running System Post-Configuration ...") + SEP);
         socket->write(OUTPUT + QByteArray("==================================================\n") + SEP);
 
-        if (adminConfig.postInstallTask(PostInstallTask::Ldconfig) && QFile::exists("/sbin/ldconfig")) {
-            socket->write(OUTPUT + QByteArray("Updating shared libraries cache (ldconfig)...") + SEP);
-            runTask("/sbin/ldconfig", {});
-        }
-
         if (adminConfig.postInstallTask(PostInstallTask::UpdateMimeDatabase) &&
             QFile::exists("/usr/bin/update-mime-database") && QDir("/usr/share/mime").exists()) {
             socket->write(OUTPUT + QByteArray("\nUpdating MIME database...") + SEP);

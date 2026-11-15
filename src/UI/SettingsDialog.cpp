@@ -58,7 +58,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     officialUpdatesOnlyCB->setChecked(settingsManager->officialUpdatesOnly());
     connect(officialUpdatesOnlyCB, &QCheckBox::toggled, this, &SettingsDialog::onOfficialUpdatesOnlyToggled);
 
-    ckOnlyOfficialUpdateCB = new QCheckBox(tr("Check for updates only in official repositories"), updateOptionGroup);
+    ckOnlyOfficialUpdateCB = new QCheckBox(tr("Check for updates only in official repository"), updateOptionGroup);
     ckOnlyOfficialUpdateCB->setChecked(settingsManager->checkOnlyOfficialUpdates());
     connect(ckOnlyOfficialUpdateCB, &QCheckBox::toggled, this, &SettingsDialog::onCheckOnlyOfficialUpdatesToggled);
 
@@ -171,9 +171,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) : Dialog(parent, Qt::Application
     postInstallList = new QListWidget(postInstallGroup);
     postInstallList->setSelectionMode(QAbstractItemView::NoSelection);
 
-    addPostInstallTask(tr("Run ldconfig"), PostInstallTask::Ldconfig);
-    addPostInstallTask(tr("Update MIME database"), PostInstallTask::UpdateMimeDatabase);
     addPostInstallTask(tr("Update man database (mandb)"), PostInstallTask::UpdateManDb);
+    addPostInstallTask(tr("Update MIME database"), PostInstallTask::UpdateMimeDatabase);
     addPostInstallTask(tr("Update desktop database"), PostInstallTask::UpdateDesktopDatabase);
     addPostInstallTask(tr("Update GTK icon cache"), PostInstallTask::UpdateGtkIconCache);
     addPostInstallTask(tr("Update GRUB bootloader"), PostInstallTask::UpdateGrub);

@@ -11,8 +11,7 @@
  * @brief Constructs an AdminConfigManager instance and loads existing settings.
  */
 AdminConfigManager::AdminConfigManager() {
-    postInstallTasks[PostInstallTask::Ldconfig] = true;
-    postInstallTasks[PostInstallTask::UpdateMimeDatabase] = true;
+    postInstallTasks[PostInstallTask::UpdateMimeDatabase] = false;
     postInstallTasks[PostInstallTask::UpdateManDb] = true;
     postInstallTasks[PostInstallTask::UpdateDesktopDatabase] = false;
     postInstallTasks[PostInstallTask::UpdateGtkIconCache] = false;
@@ -32,8 +31,6 @@ AdminConfigManager::AdminConfigManager() {
  */
 QString AdminConfigManager::taskToKey(const PostInstallTask task) {
     switch (task) {
-        case PostInstallTask::Ldconfig:
-            return QStringLiteral("TASK_LDCONFIG");
         case PostInstallTask::UpdateMimeDatabase:
             return QStringLiteral("TASK_UPDATE_MIME_DATABASE");
         case PostInstallTask::UpdateManDb:
