@@ -26,7 +26,7 @@ void UpdateWorker::run() {
         return;
 
     QTimer timer;
-    timer.setInterval(1000 * 60 * 30); // 30 minutos
+    timer.setInterval(1000 * 360); // 60 minutos
     connect(&timer, &QTimer::timeout, this, &UpdateWorker::check);
     timer.start();
 
@@ -46,7 +46,7 @@ void UpdateWorker::check() {
     if (Mirrors::isUpdateRequired()) {
         updatePending.store(true, std::memory_order_relaxed);
         emit updateAvailable();
-    } else {
-        emit checkFinished();
     }
+
+    emit checkFinished();
 }

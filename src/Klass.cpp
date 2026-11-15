@@ -361,7 +361,7 @@ void Klass::onOpenNewConfigManager() {
  */
 void Klass::handleResolveNewConfig(const QList<NewConfigFileItem> &items) {
     QStringList parts;
-    for (const auto &item : items) {
+    for (const auto &item: items) {
         if (item.action == NewConfigAction::Overwrite)
             parts << QStringLiteral("OVERWRITE|") + item.newFilePath;
         else if (item.action == NewConfigAction::Remove)
@@ -675,11 +675,14 @@ void Klass::onShowChangelog() {
  */
 void Klass::onUpdateFinished() {
     hasPendingMirrorUpdate = false;
+    isCheckingUpdates = false;
+
     if (mirrorManager)
         mirrorManager->pendingUpdate(false);
 
     updateNotificationShown = false;
     emit databaseUpdateFinished();
+
     packagesManager->loadPackages();
     loadRepositoryTabs();
 }
@@ -922,7 +925,11 @@ void Klass::onHelperReady() {
  * @brief Displays an indicator on the status bar when an update is available.
  */
 void Klass::onUpdateAvailable() {
-    if (updateNotificationShown) return;
+    isCheckingUpdates = false;
+
+    if (updateNotificationShown)
+        return;
+
     updateNotificationShown = true;
     statusBar->setStatus(StatusState::DatabaseAvailable);
 }

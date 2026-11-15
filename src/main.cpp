@@ -114,14 +114,14 @@ int main(int argc, char *argv[]) {
         QObject::connect(&ipcSocket, &QLocalSocket::readyRead, [&] {
             const QByteArray msg = ipcSocket.readAll();
 
-            if (msg.contains("UPDATE\n")) {
-                klass.onUpdateAvailable();
-            }
             if (msg.contains("CHECKING_START")) {
                 klass.setCheckingStatus(true);
             }
             if (msg.contains("CHECKING_DONE")) {
                 klass.setCheckingStatus(false);
+            }
+            if (msg.contains("UPDATE\n")) {
+                klass.onUpdateAvailable();
             }
             if (msg.contains("ASK_QUIT")) {
                 if (!klass.requestSafeQuit()) {
@@ -166,8 +166,10 @@ int main(int argc, char *argv[]) {
         hasUpdate = true;
         tray.setUpdateAvailable(true);
 
-        if (guiSocket && guiSocket->state() == QLocalSocket::ConnectedState)
-            guiSocket->write("UPDATE\n");
+        if (guiSocket && guiSocket->state() == QLocalSocket::ConnectedState) {
+            guiSocket->write("CHECKING_DONE\nUPDATE\n");
+            guiSocket->flush();
+        }
     });
 
     QObject::connect(&checker, &UpdateWorker::checkStarted, &app, [&] {
