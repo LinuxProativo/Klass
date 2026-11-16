@@ -26,7 +26,7 @@ void UpdateWorker::run() {
         return;
 
     QTimer timer;
-    timer.setInterval(1000 * 360); // 60 minutos
+    timer.setInterval(1000 * 3600); // 60 minutos
     connect(&timer, &QTimer::timeout, this, &UpdateWorker::check);
     timer.start();
 
