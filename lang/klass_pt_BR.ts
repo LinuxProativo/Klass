@@ -676,7 +676,7 @@
     <message>
         <location filename="../src/UI/MirrorManager/RepoVerificationDialog.cpp" line="31"/>
         <source>Preferred Algorithm:</source>
-        <translation>Algoritmo-Preferencial:</translation>
+        <translation>Algoritmo Preferencial:</translation>
     </message>
 </context>
 <context>
@@ -1033,7 +1033,7 @@
     <message>
         <location filename="../src/UI/SettingsDialog.cpp" line="142"/>
         <source>Preferred Algorithm:</source>
-        <translation>Algoritmo-Preferencial:</translation>
+        <translation>Algoritmo Preferencial:</translation>
     </message>
     <message>
         <location filename="../src/UI/SettingsDialog.cpp" line="162"/>
