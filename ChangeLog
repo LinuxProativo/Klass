@@ -1,3 +1,16 @@
+Mon Nov 16 11:51:04 -03 2026:
+    - Added support for managing and reviewing .new configuration files.
+    - Added new icons for status indicators and new features.
+    - Added an option to check for updates only from the official repository.
+    - Adjusted the default theme to exclusively support custom styling in the future.
+    - Added full translation support for the application.
+    - Reviewed and refined the application's visual styling.
+    - Fixed StatusBar behavior and icon display issues.
+    - Fixed spelling errors in the application's translation.
+    - Fixed the update check message displayed when starting a verification.
+    - Fixed an issue where the database update message was displayed repeatedly.
+    - Fixed cancellation behavior when closing the application from the system tray.
+    - Removed post-installation ldconfig execution, as installpkg and removepkg already run it natively.
 Thu Nov 05 16:40:52 -03 2026:
     - Modifications to the program's default theme.
 Wed Nov 04 14:40:38 -03 2026:

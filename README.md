@@ -16,22 +16,26 @@
 
 ## 🔍 Visão Geral
 
-> VERSÃO RELEASE CANDIDATE 4 - AVISOS
+> VERSÃO RELEASE CANDIDATE 5 - AVISOS
 >
-> - RC5 será focado em otimizações de Performance/Memória e adição de rotina para arquivos.new.
-> - Não há qualquer tentativa de autoreinstalação de modulos dkms — sem previsão.
-> - Não há verificações relacionadas ao uso de NVIDIA — sem previsão.
-> - Não há uma configuração de pós-instalação para o VMWare — sem previsão.
+> - RC6 FINAL será focado em otimizações de Estabilidade e suporte inicial a instalação txz via interface.
+> - Não há qualquer tentativa de autoreinstalação de modulos dkms adicionais.
+> - Não há verificações automatizadas relacionadas ao uso de NVIDIA.
+> - Não há uma configuração de pós-instalação para o VMWare.
+> - Pós-instalação opcional de geração de initrd será removido nas versões para
+>   Slackware 16, pois não será necessário.
 >
-> Ajustes mapeados para a versão estável:
-> - EM BREVE: Rotina pós-instalação para mapear arquivos.new após upgrade. -> Implementação RC5.
+> Ajustes mapeados para a próxima versão estável:
 > - Opção de proceder com a atualização do sistema logo após o update.
 > - Rollback em caso de necessidade.
-> - Download paralelo opcional.
-> - Regras avançadas de controle manual.
+> - Download paralelo opcional (aria2c).
 > - Menu para atualizar a base de dados sem abrir a interface.
 > - Atualização da lista de pacotes na interface, no hide/show, e via parametro --list-update.
-> - Ferramenta de migração de regras do slackpkg blacklist. 
+> - Regras avançadas de controle manual, se precisar (ex: controle manual do pacote).
+> - Ferramenta de migração de regras do slackpkg blacklist.
+> - Suporte a checksum SHA256SUM, atualmente verifica apenas MD5.
+> - TODO: ajustar tradução especificando que as ações é pra .new.
+> - TODO: atualizar tabela apos aplicar ações .new. 
 
 O **Klass** (Slac**K**ware c**LASS**ification Package Manager) é um gerenciador de
 pacote gráfico desenvolvido em `C++ moderno`, usando como interface gráfica o `Qt`.
@@ -118,6 +122,18 @@ geral dos pacotes (instalação, atualização, etc) segue a mesma lógica.
   usuário poderá acessar as configurações do programa e escolher quais opções de
   pós-instalação faz sentido para ele.
 
+- **🛠️ Gerenciamento de Arquivos de Configuração (.new)**  
+  Agora o programa conta com suporte integrado para localizar, revisar e gerenciar
+  os arquivos de configuração `.new` gerados após as atualizações do Slackware. O
+  usuário pode comparar as diferenças diretamente pela interface e decidir se deseja
+  manter o arquivo atual, ou aplicar o novo criando um backup `.orig` para segurança.
+
+- **📜 Visualizador de Changelogs dos Repositórios**  
+  O programa também possui um visualizador integrado para acompanhar os históricos
+  de alterações (*changelogs*) de todos os repositórios configurados, facilitando a
+  consulta do que foi adicionado, atualizado ou corrigido antes mesmo de aplicar as
+  atualizações no sistema.
+
 - **📦 Gerenciamento de Pacotes Disponíveis até o Momento**
 
   - **Instalação:** Suporte a instalação com busca de dependências adicionais. Usa
@@ -155,7 +171,7 @@ alguém seria doido de mexer nesses pacotes, mas vale o aviso).
 ## 📥 Compilação e Instalação
 
 Se você preferir compilar o pacote, vai precisar do kit de desenvolvimento `d`
-instalado no Slackware, o que já é o padrão em uma instalação completa.
+instalado no Slackware, o que já é o padrão em instalações completas.
 
 ### ⚙️ Build Tradicional
 
@@ -202,11 +218,13 @@ usuário e redução de curva de aprendizagem. Dentre os principais:
 - Interface simplificada.
 - Ícone na área de notificação e opção de inicialização com o sistema.
 - Digita a senha de superusuário apenas uma vez quando é soliciado, isso inicia um
-  helper privilegiado que só tem o seu privilégio revogado 30s aṕos fechar o programa
-  para a área de notificação. Assim, não precisa digitar a senha um monte de vez. 
+  helper privilegiado que só tem o seu privilégio revogado imediatamente aṕos fechar o
+  programa para a área de notificação. Assim, não precisa digitar a senha sempre. 
 - As informações de pacotes nas tabs de `Informações` e `Arquivos` são copiáveis.
-- **EM BREVE:** Pacotes baixados manualmente pode ser instalados via interface usando klass.
+- **EM BREVE:** Pacotes baixados manualmente podem ser instalados via interface usando klass.
 - **EM BREVE:** Pacotes deb e rpm poderão ser convertidos e instalados facilmente.
+- **EM BREVE:** AppImage poderão ser intregrados com facilidade.
+- **EM BREVE:** Pacotes Slackbuilds poderão ser gerenciados de forma simplificada. 
 
 ## ⚙️ Comportamento e Configurações
 
@@ -221,6 +239,11 @@ e fazer o download dos pacotes para a instalação:
 
 - `/etc/klass/klass.conf`  
   Onde ficam as configurações do gerenciador de pacotes.
+
+## 📟 Economia de memória
+
+Trabalhando para mais melhorias. Relatório assim que possível.  
+Changelog já dá uma ideia.
 
 ## 🛠️ Opções de Tarefas de Pós-Instalação Disponíveis
 
@@ -237,29 +260,23 @@ aplicativo para que o usuário decida quais opções fazem mais sentido ativar.
 
 Executadas sempre que pacotes são adicionados, atualizados ou removidos:
 
-1. **Atualizar cache de bibliotecas compartilhadas (`ldconfig`)**
-    - **Comando:** `/sbin/ldconfig`  
-      Atualiza as ligações simbólicas e o cache binário (`/etc/ld.so.cache`)
-      para que o vinculador dinâmico do sistema localize imediatamente as novas
-      bibliotecas compartilhadas (`.so`).
-
-2. **Atualizar banco de dados MIME (`update-mime-database`)**
+1. **Atualizar banco de dados MIME (`update-mime-database`)**
     - **Comando:** `/usr/bin/update-mime-database /usr/share/mime`  
       Registra e padroniza as associações de tipos de arquivo (MIME types)
       do sistema para que os gerenciadores de arquivos e aplicações
       identifiquem novos formatos.
     
-3. **Atualizar índice de páginas de manual (`mandb`)**
+2. **Atualizar índice de páginas de manual (`mandb`)**
     - **Comando:** `/usr/bin/mandb -q`  
       Reconstrói o índice do banco de dados das páginas de manual (`man`),
       permitindo pesquisas rápidas via terminal.
 
-4. **Atualizar banco de dados de arquivos Desktop (`update-desktop-database`)**
+3. **Atualizar banco de dados de arquivos Desktop (`update-desktop-database`)**
     - **Comando:** `/usr/bin/update-desktop-database -q`  
       Atualiza o cache dos lançadores `.desktop`, garantindo que os novos aplicativos
       instalados apareçam instantaneamente no menu do ambiente gráfico.
 
-5. **Atualizar cache de temas de ícones GTK (`gtk-update-icon-cache`)**
+4. **Atualizar cache de temas de ícones GTK (`gtk-update-icon-cache`)**
     - **Comando:** `/usr/bin/gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor`  
       Regenera o arquivo `icon-theme.cache` do tema base, otimizando o consumo de
       memória e acelerando o carregamento visual dos ícones nas aplicações.
@@ -269,7 +286,7 @@ Executadas sempre que pacotes são adicionados, atualizados ou removidos:
 Disparadas automaticamente e em ordem prioritária caso a transação envolva pacotes
 de **Kernel (`kernel-*`)**:
 
-6. **Gerar initrd com proteção contra falhas (`mkinitrd`)**  
+5. **Gerar initrd com proteção contra falhas (`mkinitrd`)**  
     - **Comando:** `/usr/share/mkinitrd/mkinitrd_command_generator.sh | bash`  
       Detecta a configuração de hardware do sistema e compila a imagem de boot em
       RAM necessária para inicializar o kernel genérico (`generic`).
@@ -279,12 +296,12 @@ de **Kernel (`kernel-*`)**:
       temporária é removido; em caso de falha, a cópia anterior é restaurada
       automaticamente para não comprometer o boot.
 
-7. **Atualizar carregador de boot GRUB (`grub-mkconfig`)**
+6. **Atualizar carregador de boot GRUB (`grub-mkconfig`)**
     - **Comando:** `/usr/sbin/grub-mkconfig -o /boot/grub/grub.cfg`  
       Detecta dinamicamente todos os kernels e sistemas operacionais instalados
       na máquina e regrava o arquivo de configuração `/boot/grub/grub.cfg`.
 
-8. **Atualizar carregador de boot LILO (`lilo`) com suporte multi-kernel**
+7. **Atualizar carregador de boot LILO (`lilo`) com suporte multi-kernel**
     - **Comando:** `/sbin/lilo` (com varredura dinâmica e teste preventivo)  
       Varre `/boot/vmlinuz-*` e `/boot/initrd-*.gz`, gerando novas entradas no
       `/etc/lilo.conf` para versões de kernel ainda não cadastradas
@@ -292,7 +309,7 @@ de **Kernel (`kernel-*`)**:
       (`/sbin/lilo -t`) e, somente após confirmação de integridade, grava o
       novo mapa na MBR do disco.
 
-9. **Atualizar carregador de boot ELILO (Sincronização UEFI multi-kernel)**
+8. **Atualizar carregador de boot ELILO (Sincronização UEFI multi-kernel)**
     - **Comando:** Sincronização automatizada para `/boot/efi/EFI/Slackware/`  
       Projeta o suporte nativo a múltiplos kernels em sistemas UEFI com ELILO:
       - Copia kernels (`vmlinuz-*`) e initrds (`initrd-*.gz`) para o diretório EFI
@@ -301,7 +318,7 @@ de **Kernel (`kernel-*`)**:
       - Analisa e atualiza o `/boot/efi/EFI/Slackware/elilo.conf`, criando seções
         de boot individuais para cada versão de kernel mapeada.
 
-10. **Recompilar módulos do VirtualBox (`vboxconfig` / `rcvboxdrv`)**
+9. **Recompilar módulos do VirtualBox (`vboxconfig` / `rcvboxdrv`)**
     - **Comando:** `/sbin/vboxconfig` (com fallback para `/sbin/rcvboxdrv setup` ou `/etc/rc.d/rc.vboxdrv setup`)  
       Recompila e recarrega os módulos de driver do VirtualBox
       (`vboxdrv`, `vboxnetflt`, `vboxnetadp`) contra os cabeçalhos (`kernel-headers`)
@@ -363,7 +380,7 @@ para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre 
   significativamente a superfície para escalonamento de privilégios, que poderia ser
   explorado de alguma forma.
 
-- **Cliente Único**  
+- **Cliente Inteiramente Único**  
   O Helper aceita apenas **uma conexão ativa por vez**. Qualquer tentativa de
   estabelecer uma segunda conexão simultânea é imediatamente rejeitada. Isso simplifica
   o controle de estado interno e evita concorrência entre clientes. E por fim,
@@ -403,19 +420,21 @@ para garantir que o Helper seja utilizado apenas pelo próprio programa. Dentre 
 
 Segue as implementações para o futuro:
   - Melhorias na interface.
-  - Rollback de pacotes.
-  - Suporte a gerenciamento de Slackbuilds nativo ou plugin sbopkg.
+  - Suporte a Rollback de pacotes.
+  - Suporte a gerenciamento de Slackbuilds nativo.
   - Conversão e instalação de pacotes RPM.
   - Conversão e instalação de pacotes DEB.
+  - Suporte a Integração de Binários AppImage.
   - Suporte a configuração de plugins adicionais:
     - cpak.
     - dbin.
     - soar.
-  - Verificação de dependencias estimadas.
-  - Integrador AppImage.
+  - Sistema de catálogo de dependências baseado nas dependencias de pacotes do
+    repositório de SlackBuilds, para prever dependencias necessárias.
+  - Verificação de dependencias estimadas via ldd e binários.
   - Plugin de configuração e instalação de drivers nvidia.
   - Suporte a checksum mais seguros se disponíveis.
-  - Remoção de pacotes obsoletos oficiais. 
+  - Remoção de pacotes obsoletos oficiais, para o current. 
 
 A remoção de pacotes obsoletos vai ignorar por padrão pacotes de terceiros e só
 vai agir em pacotes sem tag e tags tipo _slack*. Para quem criar os próprios pacotes,
@@ -430,7 +449,7 @@ adicionar as suas próprias tags ajudam a evitar remoções acidentais.
 > Sei que tem gente que usa no Slackware e não vive sem, mesmos termos acima.
 >
 > **INTEGRAÇÃO SNAP:**  
-> Eu já vi gente (pelo menos um) querendo isso no Slackware. Não vai dar não.
+> Eu já vi gente (pelo menos um) querendo isso no Slackware. Systemd, Esquece.
 
 ## Contrubuição
 
