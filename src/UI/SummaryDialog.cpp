@@ -50,7 +50,7 @@ namespace {
  * @param parent Pointer to the parent widget container.
  */
 SummaryDialog::SummaryDialog(QWidget *parent) : Dialog(parent, Qt::ApplicationModal) {
-    this->setWindowTitle(tr("Transaction Summary"));
+    this->setWindowTitle(tr("Pending Package Changes Summary"));
     this->setAttribute(Qt::WA_DeleteOnClose, false);
     this->minimum();
     this->fixed();
@@ -69,8 +69,12 @@ SummaryDialog::SummaryDialog(QWidget *parent) : Dialog(parent, Qt::ApplicationMo
     mainLayout->addWidget(headerLabel);
     mainLayout->addWidget(summaryTree);
 
-    totalStatsLabel = new QLabel(tr("Summary: 0 operations pending."), this);
-    totalStatsLabel->setStyleSheet(QStringLiteral("font-weight: bold;"));
+    QFont font = this->font();
+    font.setBold(true);
+    font.setPointSizeF(font.pointSizeF() + 0.5);
+
+    totalStatsLabel = new QLabel(tr("Pending package changes") + QStringLiteral(": 0."), this);
+    totalStatsLabel->setFont(font);
     mainLayout->addWidget(totalStatsLabel);
 
     cancelBtn = new QPushButton(tr("Cancel"), this);
@@ -110,7 +114,7 @@ void SummaryDialog::loadTransaction(const QList<PendingPkg> &installs, const QLi
     summaryTree->expandAll();
 
     const int total = installCount + updateCount + reinstallCount + removeCount;
-    totalStatsLabel->setText(tr("Summary: %1 operation(s) pending.").arg(total));
+    totalStatsLabel->setText(tr("Pending package changes") + QStringLiteral(": %1.").arg(total));
     confirmBtn->setEnabled(total > 0);
 }
 
