@@ -101,7 +101,7 @@
     <message>
         <location filename="../src/UI/MirrorManager/CustomRepoDialog.cpp" line="31"/>
         <source>Repo Name</source>
-        <translation>Nome de Repositório</translation>
+        <translation>Nome do Repositório</translation>
     </message>
     <message>
         <location filename="../src/UI/MirrorManager/CustomRepoDialog.cpp" line="32"/>
@@ -154,112 +154,115 @@
         <translation>Gerenciador de Pacotes Klass</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="43"/>
+        <location filename="../src/Klass.cpp" line="44"/>
         <source>Search packages</source>
         <translation>Pesquisar Pacotes</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="46"/>
+        <location filename="../src/Klass.cpp" line="47"/>
         <source>Clear Search</source>
         <translation>Limpar Pesquisa</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="54"/>
+        <location filename="../src/Klass.cpp" line="55"/>
         <source>Add/Manage Slackware Mirrors</source>
         <translation>Adicionar/Gerenciar Repositórios do Slackware</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="57"/>
+        <location filename="../src/Klass.cpp" line="58"/>
         <source>Manage Priorities/Exception Rules</source>
         <translation>Gerenciar Régras de Prioridades/Exceções</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="60"/>
-        <location filename="../src/Klass.cpp" line="701"/>
+        <location filename="../src/Klass.cpp" line="61"/>
+        <location filename="../src/Klass.cpp" line="764"/>
         <source>Update Database</source>
         <translation>Atualizar Base de Dados</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="63"/>
+        <location filename="../src/Klass.cpp" line="64"/>
         <source>Select Updates</source>
         <translation>Selecionar Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="66"/>
+        <location filename="../src/Klass.cpp" line="67"/>
         <source>Apply Updates</source>
         <translation>Aplicar Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="69"/>
+        <location filename="../src/Klass.cpp" line="70"/>
         <source>Settings</source>
         <translation>Configurações</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="72"/>
+        <location filename="../src/Klass.cpp" line="73"/>
         <source>View Changelog</source>
         <translation>Visualizar Changelog do Slackware</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="75"/>
+        <location filename="../src/Klass.cpp" line="76"/>
         <source>About</source>
         <translation>Sobre o Programa</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="171"/>
+        <location filename="../src/Klass.cpp" line="79"/>
+        <source>Manage .new Configuration Files</source>
+        <translation>Gerenciar Arquivos de Configurações (.new)</translation>
+    </message>
+    <message>
+        <location filename="../src/Klass.cpp" line="176"/>
         <source>Select All Updates</source>
         <translation>Selecionar Todas as Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="172"/>
+        <location filename="../src/Klass.cpp" line="177"/>
         <source>Are you sure you want to select all available package updates?</source>
         <translation>Tem Certeza que Deseja Selecionar Todas as Atualizações de Pacotes Disponíveis?</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="481"/>
+        <location filename="../src/Klass.cpp" line="347"/>
+        <source>Configuration Files</source>
+        <translation>Arquivos de Configurações</translation>
+    </message>
+    <message>
+        <location filename="../src/Klass.cpp" line="348"/>
+        <source>No .new configuration files found on the system.</source>
+        <translation>Nenhum Arquivo de Configuração .new Encontrado no Sistema.</translation>
+    </message>
+    <message>
+        <location filename="../src/Klass.cpp" line="541"/>
         <source>All Packages</source>
         <translation>Todos os Pacotes</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="524"/>
+        <location filename="../src/Klass.cpp" line="584"/>
         <source>Others</source>
         <translation>Outros</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="693"/>
+        <location filename="../src/Klass.cpp" line="756"/>
         <source>Configuration Required</source>
         <translation>Configurações Necessárias</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="693"/>
+        <location filename="../src/Klass.cpp" line="756"/>
         <source>Enable official mirror to update.</source>
         <translation>É Necessário Habilitar um Espelho Oficial Antes de Atualizar.</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="702"/>
+        <location filename="../src/Klass.cpp" line="765"/>
         <source>No update notification was received. Would you like to update the database anyway?</source>
         <translation>Nenhuma Notificação de Atualização foi Recebida. Deseja Atualizar a Base de Dados Mesmo Assim?</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="768"/>
+        <location filename="../src/Klass.cpp" line="831"/>
         <source>Update Slackware Database</source>
         <translation>Atualizar Base de Dados do Slackware</translation>
     </message>
     <message>
-        <location filename="../src/Klass.cpp" line="822"/>
+        <location filename="../src/Klass.cpp" line="885"/>
         <source>Processing Packages</source>
         <translation>Processando Pacotes</translation>
-    </message>
-    <message>
-        <source>Database Update Available</source>
-        <translation type="vanished">Atualizações Disponíveis</translation>
-    </message>
-    <message>
-        <source>A newer Slackware package database is available.</source>
-        <translation type="vanished">Uma Nova Base de Dados de Pacotes do Slackware está Disponível.</translation>
-    </message>
-    <message>
-        <source>Klass Package Manager - Database Updates are Available</source>
-        <translation type="vanished">Gerenciador de Pacotes Klass - Atualizações da Base de Dados Disponíveis</translation>
     </message>
 </context>
 <context>
@@ -296,12 +299,12 @@
     <message>
         <location filename="../src/UI/MirrorManager/MirrorManager.cpp" line="39"/>
         <source>Enable Testing</source>
-        <translation>Ativar-Testing</translation>
+        <translation>Ativar Testing</translation>
     </message>
     <message>
         <location filename="../src/UI/MirrorManager/MirrorManager.cpp" line="40"/>
         <source>Enable Extra</source>
-        <translation>Ativar-Extra</translation>
+        <translation>Ativar Extra</translation>
     </message>
     <message>
         <location filename="../src/UI/MirrorManager/MirrorManager.cpp" line="61"/>
@@ -404,6 +407,155 @@
     </message>
 </context>
 <context>
+    <name>NewConfigDialog</name>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="22"/>
+        <source>Slackware .new Configuration Files</source>
+        <translation>Gerenciamento de Arquivos de Configuração (.new)</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="26"/>
+        <source>Action</source>
+        <translation>Ação</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="26"/>
+        <source>Target File</source>
+        <translation>Local do Arquivo</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="36"/>
+        <source>Keep All</source>
+        <translation>Manter Todos</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="37"/>
+        <source>Overwrite All</source>
+        <translation>Sobrescrever Todos</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="38"/>
+        <source>Remove All</source>
+        <translation>Remover Todos</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="40"/>
+        <source>Read as Root</source>
+        <translation>Abrir como Root</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="42"/>
+        <source>Read this configuration file with root privileges if permission was denied.</source>
+        <translation>Ler um Arquivo de Configuração com Privilégios de Root se a Permissão foi Negada.</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="56"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="177"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="355"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="380"/>
+        <source>Keep</source>
+        <translation>Manter</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="57"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="180"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="358"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="383"/>
+        <source>Overwrite</source>
+        <translation>Sobrescrever</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="58"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="183"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="361"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="386"/>
+        <source>Remove</source>
+        <translation>Remover</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="65"/>
+        <source>Action on Selected File:</source>
+        <translation>Ações para o Arquivo Selecionado:</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="83"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="436"/>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="451"/>
+        <source>Diff:</source>
+        <translation>Diferença:</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="86"/>
+        <source>Select a file to inspect differences</source>
+        <translation>Selecione o Arquivo para Inspecionar as Diferenças</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="107"/>
+        <source>Apply Operations</source>
+        <translation>Aplicar Operações</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="108"/>
+        <source>Close</source>
+        <translation>Fechar</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="221"/>
+        <source>Comparing:</source>
+        <translation>Comparando:</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="225"/>
+        <source>Calculating diff in background...</source>
+        <translation>Calculando Diff em Segundo Plano...</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="247"/>
+        <source>Denied:</source>
+        <translation>Acesso Negado:</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="250"/>
+        <source>Permission denied reading configuration file.</source>
+        <translation>Permissão Negada ao Ler o Arquivo de Configuração.</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="251"/>
+        <source>Click &apos;Read as Root&apos; button above to inspect this file using root privileges.</source>
+        <translation>Clique no Botão &apos;Abrir como Root&apos; Acima para Inspecionar este Arquivo Usando Privilégios de Root.</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="310"/>
+        <source>Requesting file contents with root privileges...</source>
+        <translation>Solicitando o Conteúdo do Arquivo com Privilégios de Root...</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="419"/>
+        <source>Status:</source>
+        <translation>Estado:</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="420"/>
+        <source>All configuration files resolved.</source>
+        <translation>Todos os arquivos de configuração (.new) foram resolvidos.</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="436"/>
+        <source>Diff (Root):</source>
+        <translation>Diferença (Root):</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="441"/>
+        <source>(Original does not exist — brand new file)</source>
+        <translation>(O Arquivo Original não Existe — Arquivo Completamente Novo)</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/NewConfigDialog/NewConfigDialog.cpp" line="452"/>
+        <source>No file selected</source>
+        <translation>Nenhum Arquivo Selecionado</translation>
+    </message>
+</context>
+<context>
     <name>PackageTableModel</name>
     <message>
         <location filename="../src/Models/PackageTableModel.cpp" line="43"/>
@@ -499,7 +651,7 @@
     <message>
         <location filename="../src/UI/MirrorManager/RepoVerificationDialog.cpp" line="21"/>
         <source>Configuring verifications for</source>
-        <translation type="unfinished"></translation>
+        <translation>Configurando Verificações para</translation>
     </message>
     <message>
         <location filename="../src/UI/MirrorManager/RepoVerificationDialog.cpp" line="24"/>
@@ -509,51 +661,31 @@
     <message>
         <location filename="../src/UI/MirrorManager/RepoVerificationDialog.cpp" line="26"/>
         <source>Verify package OpenPGP signature (.asc)</source>
-        <translation type="unfinished"></translation>
+        <translation>Verificar Assinatura dos Pacotes (.asc)</translation>
     </message>
     <message>
         <location filename="../src/UI/MirrorManager/RepoVerificationDialog.cpp" line="27"/>
         <source>Verify CHECKSUMS file signature (.asc)</source>
-        <translation type="unfinished"></translation>
+        <translation>Verificar Assinatura (.asc) do Arquivo CHECKSUMS.md5</translation>
     </message>
     <message>
         <location filename="../src/UI/MirrorManager/RepoVerificationDialog.cpp" line="28"/>
         <source>Verify package checksum integrity</source>
-        <translation type="unfinished"></translation>
+        <translation>Ativar Checksum para Verificar Integridade Pacote</translation>
     </message>
     <message>
         <location filename="../src/UI/MirrorManager/RepoVerificationDialog.cpp" line="31"/>
         <source>Preferred Algorithm:</source>
-        <translation type="unfinished"></translation>
+        <translation>Algoritmo-Preferencial:</translation>
     </message>
 </context>
 <context>
     <name>RepositoryTab</name>
     <message>
         <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="29"/>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="467"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="466"/>
         <source>Categories</source>
         <translation>Categorias</translation>
-    </message>
-    <message>
-        <source>Status</source>
-        <translation type="vanished">Estado</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation type="vanished">Nome do Pacote</translation>
-    </message>
-    <message>
-        <source>Version</source>
-        <translation type="vanished">Versão</translation>
-    </message>
-    <message>
-        <source>Description</source>
-        <translation type="vanished">Descrição</translation>
-    </message>
-    <message>
-        <source>File List</source>
-        <translation type="vanished">Lista de Arquivos</translation>
     </message>
     <message>
         <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="115"/>
@@ -562,79 +694,79 @@
     </message>
     <message>
         <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="116"/>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="258"/>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="270"/>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="393"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="257"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="269"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="392"/>
         <source>Files</source>
         <translation>Arquivos</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="321"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="320"/>
         <source>Package Name</source>
         <translation>Nome do Pacote</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="322"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="321"/>
         <source>Package Version</source>
         <translation>Versão</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="323"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="322"/>
         <source>Package Repository</source>
         <translation>Repositório</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="324"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="323"/>
         <source>Mirror URL</source>
         <translation>Link do Repositório</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="325"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="324"/>
         <source>Package Size</source>
         <translation>Tamanho</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="326"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="325"/>
         <source>Installed Package Size</source>
         <translation>Tamanho Instalado</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="327"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="326"/>
         <source>Package MD5</source>
         <translation>CheckSum MD5</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="328"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="327"/>
         <source>Signature MD5</source>
         <translation>MD5 da Assinatura</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="329"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="328"/>
         <source>Repository Path</source>
         <translation>Local do Repositório</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="330"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="329"/>
         <source>Package Required</source>
         <translation>Pacotes Requeridos</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="331"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="330"/>
         <source>Package Conflicts</source>
         <translation>Pacotes Conflitantes</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="332"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="331"/>
         <source>Package Suggests</source>
         <translation>Pacotes Sugeridos</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="371"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="370"/>
         <source>Package Description</source>
         <translation>Descrição</translation>
     </message>
     <message>
-        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="558"/>
+        <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="557"/>
         <source>Overview</source>
         <translation>Visão Geral</translation>
     </message>
@@ -656,7 +788,7 @@
     <message>
         <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="73"/>
         <source>Rollback</source>
-        <translation type="unfinished"></translation>
+        <translation>Reverter</translation>
     </message>
     <message>
         <location filename="../src/RepositoryTab/RepositoryTab.cpp" line="78"/>
@@ -690,14 +822,6 @@
         <location filename="../src/UI/RulesDialog/RuleEditDialog.cpp" line="23"/>
         <source>Edit Priority</source>
         <translation>Editar Régra de Prioridade</translation>
-    </message>
-    <message>
-        <source>Any Repository</source>
-        <translation type="vanished">Todos</translation>
-    </message>
-    <message>
-        <source>Others</source>
-        <translation type="vanished">Outros</translation>
     </message>
     <message>
         <location filename="../src/UI/RulesDialog/RuleEditDialog.cpp" line="41"/>
@@ -832,177 +956,177 @@
         <translation>Opções de Inicialização</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="30"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="38"/>
         <source>Start program maximized</source>
         <translation>Iniciar Programa Maximizado</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="34"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="42"/>
         <source>Start program minimized to tray</source>
-        <translation>Iniciar Programa Minimizado na Área de Notificação</translation>
+        <translation>Iniciar Programa Minimizado na Área de Notificação do Sistema</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="44"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="52"/>
         <source>Update Options</source>
         <translation>Opções de Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="45"/>
-        <source>Show confirmation dialog when selecting all updates</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="49"/>
-        <source>Select updates only from official repository</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../src/UI/SettingsDialog.cpp" line="53"/>
-        <source>Check for updates only in official repositories</source>
-        <translation type="unfinished"></translation>
+        <source>Show confirmation dialog when selecting all updates</source>
+        <translation>Exibir Diálogo de Confirmação ao Pressionar para Selecionar Todas as Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="62"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="57"/>
+        <source>Select updates only from official repository</source>
+        <translation>Selecionar Atualizações Apenas do Repositório Oficial</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SettingsDialog.cpp" line="65"/>
+        <source>Backup existing config (.orig) before applying .new</source>
+        <translation>Salvar Backup do Arquivo de Configuração Atual (.orig) Antes de Aplicar o Arquivo .new</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SettingsDialog.cpp" line="75"/>
         <source>Repository Options</source>
         <translation>opções de Repositório</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="82"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="95"/>
         <source>Download Options</source>
         <translation>Opções de Download</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="84"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="97"/>
         <source>Download Command:</source>
-        <translation type="unfinished"></translation>
+        <translation>Comando para Download:</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="86"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="99"/>
         <source>Native</source>
-        <translation type="unfinished"></translation>
+        <translation>Nativo</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="93"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="106"/>
         <source>Extra Parameters:</source>
-        <translation type="unfinished"></translation>
+        <translation>Parâmetros Adicionais:</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="95"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="108"/>
         <source>e.g. -c --timeout=30</source>
-        <translation type="unfinished"></translation>
+        <translation>ex: -c --timeout=30</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="119"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="132"/>
         <source>Verifications</source>
         <translation>Verificações</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="121"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="134"/>
         <source>Enable signature verification</source>
         <translation>Ativar Verificação de Assinatura de Pacotes</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="125"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="138"/>
         <source>Enable checksum verification</source>
         <translation>Ativar Verificação de Checksum</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="129"/>
-        <source>Preferred Checksum:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="149"/>
-        <source>Package Cache Options</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="150"/>
-        <source>Keep downloaded package files (.txz) in cache</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="157"/>
-        <source>Post-Installation Tasks</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="161"/>
-        <source>Run ldconfig</source>
-        <translation type="unfinished"></translation>
+        <location filename="../src/UI/SettingsDialog.cpp" line="142"/>
+        <source>Preferred Algorithm:</source>
+        <translation>Algoritmo-Preferencial:</translation>
     </message>
     <message>
         <location filename="../src/UI/SettingsDialog.cpp" line="162"/>
+        <source>Package Cache Options</source>
+        <translation>Opções de Cache de Pacotes</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SettingsDialog.cpp" line="163"/>
+        <source>Keep downloaded package files (.txz) in cache</source>
+        <translation>Manter Baixado os Arquivos de Pacotes (.txz) em Cache</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SettingsDialog.cpp" line="170"/>
+        <source>Post-Installation Tasks</source>
+        <translation>Tarefas de Pós Instalação</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SettingsDialog.cpp" line="175"/>
         <source>Update MIME database</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="163"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="174"/>
         <source>Update man database (mandb)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="164"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="61"/>
+        <source>Check for updates only in official repository</source>
+        <translation>Verificar Atualizações Apenas no Repositório Oficial</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SettingsDialog.cpp" line="176"/>
         <source>Update desktop database</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="165"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="177"/>
         <source>Update GTK icon cache</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="166"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="178"/>
         <source>Update GRUB bootloader</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="167"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="179"/>
         <source>Update LILO bootloader</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="168"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="180"/>
         <source>Update ELILO bootloader</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="169"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="181"/>
         <source>Generate initrd for generic kernel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="170"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="182"/>
         <source>Reinstall VirtualBox kernel modules</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="184"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="196"/>
         <source>Interface</source>
         <translation>Interface do Programa</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="185"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="197"/>
         <source>External Commands</source>
         <translation>Comandos Externos</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="186"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="198"/>
         <source>Administrative Actions</source>
         <translation>Demais Ações Administrativas</translation>
     </message>
     <message>
         <location filename="../src/UI/SettingsDialog.cpp" line="22"/>
         <source>Start application automatically on system boot</source>
-        <translation>Abrir Programa Automaticamente na Inicialização do Sistema</translation>
+        <translation>Iniciar o Programa Automaticamente Durante a Inicialização do Sistema Operacional</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="63"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="76"/>
         <source>Attach &apos;patches&apos; repository to official repository</source>
-        <translation>Anexar o Repositório &apos;Patches&apos; ao Repositório Oficial</translation>
+        <translation>Anexar o Repositório &apos;Patches&apos; ao Repositório Oficial (Recomendado)</translation>
     </message>
     <message>
-        <location filename="../src/UI/SettingsDialog.cpp" line="67"/>
+        <location filename="../src/UI/SettingsDialog.cpp" line="80"/>
         <source>Attach &apos;testing&apos; repository to official repository</source>
         <translation>Anexar o Repositório &apos;Testing&apos; ao Repositório Oficial</translation>
     </message>
@@ -1010,80 +1134,83 @@
 <context>
     <name>StatusBar</name>
     <message>
-        <location filename="../src/UI/StatusBar.cpp" line="91"/>
+        <location filename="../src/UI/StatusBar.cpp" line="146"/>
         <source>Checking for updates</source>
         <translation>Procurando por Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/UI/StatusBar.cpp" line="105"/>
+        <location filename="../src/UI/StatusBar.cpp" line="166"/>
         <source>Database update is available.</source>
         <translation>Atualizações da Base de Dados de Pacotes Disponíveis.</translation>
     </message>
     <message>
-        <location filename="../src/UI/StatusBar.cpp" line="110"/>
-        <source>package(s) available for update.</source>
-        <translation>Pacotes Disponíveis para Atualização.</translation>
+        <location filename="../src/UI/StatusBar.cpp" line="171"/>
+        <location filename="../src/UI/StatusBar.cpp" line="185"/>
+        <source>Packages available for update: </source>
+        <translation>Pacotes Disponíveis para Atualização: </translation>
     </message>
     <message>
-        <location filename="../src/UI/StatusBar.cpp" line="116"/>
+        <location filename="../src/UI/StatusBar.cpp" line="178"/>
+        <location filename="../src/UI/StatusBar.cpp" line="190"/>
+        <source>Files .new pending for review: </source>
+        <translation>Arquivos (.new) Pendentes para Revisão: </translation>
+    </message>
+    <message>
+        <location filename="../src/UI/StatusBar.cpp" line="200"/>
         <source>All packages are up to date.</source>
-        <translation>Todos os Pacotes Estão Atualizados.</translation>
+        <translation>Todos os Pacotes estão Atualizados.</translation>
     </message>
 </context>
 <context>
     <name>SummaryDialog</name>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="53"/>
-        <source>Transaction Summary</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../src/UI/SummaryDialog.cpp" line="58"/>
         <source>The following package changes are ready to be processed:</source>
-        <translation type="unfinished"></translation>
+        <translation>As Seguintes Alterações de Pacotes Estão Prontas para Serem Aplicadas:</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="72"/>
-        <source>Summary: 0 operations pending.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="160"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="164"/>
         <source>dependency</source>
         <translation>dependência</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="105"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="109"/>
         <source>To Install</source>
         <translation>Marcados para Instalação</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="106"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="53"/>
+        <source>Pending Package Changes Summary</source>
+        <translation>Resumo das Alterações de Pacotes Pendentes</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SummaryDialog.cpp" line="76"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="117"/>
+        <source>Pending package changes</source>
+        <translation>Alterações de Pacotes Pendentes</translation>
+    </message>
+    <message>
+        <location filename="../src/UI/SummaryDialog.cpp" line="110"/>
         <source>To Upgrade</source>
         <translation>Marcados para Atualização</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="113"/>
-        <source>Summary: %1 operation(s) pending.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="107"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="111"/>
         <source>To Reinstall</source>
         <translation>Marcados para Reinstalação</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="108"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="112"/>
         <source>To Remove</source>
         <translation>Marcados para Remoção</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="76"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="80"/>
         <source>Cancel</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../src/UI/SummaryDialog.cpp" line="77"/>
+        <location filename="../src/UI/SummaryDialog.cpp" line="81"/>
         <source>Proceed</source>
         <translation>Continuar</translation>
     </message>
